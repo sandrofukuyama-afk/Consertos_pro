@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
+import {
+  buildTechnicalDocumentIndexPayload,
+  extractTechnicalDocumentText,
+} from "@/lib/services/document-indexing";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signInAction(formData: FormData) {
@@ -423,7 +427,13 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const file = formData.get("file");
 
-  if (!title || !documentType || !(file instanceof File) || file.size === 0) {
+  if (
+    !title ||
+    !documentType ||
+    !manufacturerId ||
+    !(file instanceof File) ||
+    file.size === 0
+  ) {
     redirect("/biblioteca?error=Documento invalido.");
   }
 
@@ -442,21 +452,99 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
     redirect(`/biblioteca?error=${encodeURIComponent(uploadError.message)}`);
   }
 
-  const { error } = await supabase.from("technical_documents").insert({
-    title,
-    document_type: documentType,
-    manufacturer_id: manufacturerId,
-    storage_path: storagePath,
-    mime_type: file.type || "application/octet-stream",
-    file_size_bytes: file.size,
-    notes,
-  });
+  const { data: insertedDocument, error } = await supabase
+    .from("technical_documents")
+    .insert({
+      title,
+      document_type: documentType,
+      manufacturer_id: manufacturerId,
+      storage_path: storagePath,
+      mime_type: file.type || "application/octet-stream",
+      file_size_bytes: file.size,
+      notes,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    redirect(`/biblioteca?error=${encodeURIComponent(error.message)}`);
+  if (error || !insertedDocument) {
+    redirect(
+      `/biblioteca?error=${encodeURIComponent(error?.message ?? "Falha ao registrar o documento.")}`,
+    );
+  }
+
+  let message = "Documento tecnico enviado.";
+
+  try {
+    const manufacturerName = manufacturerId
+      ? (
+          await supabase
+            .from("manufacturers")
+            .select("name")
+            .eq("id", manufacturerId)
+            .maybeSingle()
+        ).data?.name
+      : null;
+
+    const extractedText = await extractTechnicalDocumentText(file);
+    const payload = buildTechnicalDocumentIndexPayload({
+      title,
+      documentType,
+      manufacturerName,
+      notes,
+      fileName: file.name,
+      mimeType: file.type || "application/octet-stream",
+      extractedText,
+    });
+
+    const { error: chunkError } = await supabase.from("document_chunks").insert(
+      payload.chunks.map((chunk) => ({
+        technical_document_id: insertedDocument.id,
+        chunk_order: chunk.chunkOrder,
+        section_label: chunk.sectionLabel,
+        chunk_text: chunk.chunkText,
+        token_estimate: chunk.tokenEstimate,
+      })),
+    );
+
+    if (chunkError) {
+      throw chunkError;
+    }
+
+    const { error: sourceError } = await supabase.from("embedding_sources").insert({
+      source_type: "technical_document",
+      source_id: insertedDocument.id,
+      content_role: "summary",
+      content_text: payload.summaryText,
+      content_hash: payload.summaryHash,
+      is_active: true,
+      last_generated_at: new Date().toISOString(),
+    });
+
+    if (sourceError) {
+      throw sourceError;
+    }
+
+    const { error: indexFlagError } = await supabase
+      .from("technical_documents")
+      .update({ is_indexed: true })
+      .eq("id", insertedDocument.id);
+
+    if (indexFlagError) {
+      throw indexFlagError;
+    }
+
+    message = `Documento tecnico enviado e indexado em ${payload.chunks.length} chunks.`;
+  } catch {
+    await supabase
+      .from("technical_documents")
+      .update({ is_indexed: false })
+      .eq("id", insertedDocument.id);
+
+    message = "Documento tecnico enviado, mas a indexacao inicial ficou pendente.";
   }
 
   revalidatePath("/biblioteca");
+  revalidatePath("/busca");
   revalidatePath("/");
-  redirect("/biblioteca?message=Documento tecnico enviado.");
+  redirect(`/biblioteca?message=${encodeURIComponent(message)}`);
 }

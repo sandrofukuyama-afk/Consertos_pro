@@ -106,9 +106,12 @@ export function AppShell({
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex min-w-[240px] items-center rounded-full border border-[var(--panel-border)] bg-white/80 px-4 py-3 text-sm text-[var(--muted)]">
+              <Link
+                href="/busca"
+                className="flex min-w-[240px] items-center rounded-full border border-[var(--panel-border)] bg-white/80 px-4 py-3 text-sm text-[var(--muted)] hover:border-[rgba(184,109,60,0.3)]"
+              >
                 Buscar por modelo, placa, componente ou sintoma
-              </div>
+              </Link>
               <Link
                 href={actionHref}
                 className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(184,109,60,0.28)] hover:-translate-y-0.5 hover:bg-[#a95f31]"

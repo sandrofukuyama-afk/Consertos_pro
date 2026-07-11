@@ -36,11 +36,14 @@ export function TechnicalDocumentUploadForm({
         <option value="voltage_map">Voltage map</option>
       </select>
       <select
+        required
         name="manufacturer_id"
         defaultValue=""
         className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       >
-        <option value="">Fabricante opcional</option>
+        <option value="" disabled>
+          Fabricante do documento
+        </option>
         {manufacturers.map((item) => (
           <option key={item.id} value={item.id}>
             {item.name}

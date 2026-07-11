@@ -159,5 +159,41 @@ export type TechnicalDocumentListItem = {
   manufacturer: string;
   relation: string;
   uploadedAt: string;
+  chunksCount: number;
+  isIndexed: boolean;
   signedUrl: string | null;
+};
+
+export type SearchFilters = {
+  q: string;
+  scope: "all" | "diagnostics" | "documents";
+  status: string;
+  categoryId: string;
+};
+
+export type SearchDiagnosticResult = {
+  id: string;
+  label: string;
+  category: string;
+  manufacturer: string;
+  status: string;
+  summary: string;
+  updatedAt: string;
+};
+
+export type SearchDocumentResult = {
+  id: string;
+  title: string;
+  documentType: string;
+  manufacturer: string;
+  relation: string;
+  uploadedAt: string;
+  signedUrl: string | null;
+};
+
+export type SearchPageData = {
+  filters: SearchFilters;
+  categories: CatalogOption[];
+  diagnostics: SearchDiagnosticResult[];
+  documents: SearchDocumentResult[];
 };

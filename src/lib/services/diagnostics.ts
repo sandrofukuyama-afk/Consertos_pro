@@ -307,11 +307,13 @@ export async function getTechnicalDocuments() {
         id,
         title,
         document_type,
+        is_indexed,
         created_at,
         storage_path,
         manufacturers(name),
         equipment_models(model_name),
-        boards(board_code)
+        boards(board_code),
+        document_chunks(id)
       `,
     )
     .order("created_at", { ascending: false })
@@ -322,6 +324,7 @@ export async function getTechnicalDocuments() {
       const manufacturer = pickRelation(row.manufacturers);
       const model = pickRelation(row.equipment_models);
       const board = pickRelation(row.boards);
+      const chunks = Array.isArray(row.document_chunks) ? row.document_chunks : [];
       const { data: signed } = await supabase.storage
         .from("technical-documents")
         .createSignedUrl(row.storage_path, 3600);
@@ -333,6 +336,8 @@ export async function getTechnicalDocuments() {
         manufacturer: manufacturer?.name ?? "Nao informado",
         relation: model?.model_name ?? board?.board_code ?? "Referencia geral",
         uploadedAt: formatRelativeTime(row.created_at),
+        chunksCount: chunks.length,
+        isIndexed: row.is_indexed,
         signedUrl: signed?.signedUrl ?? null,
       } satisfies TechnicalDocumentListItem;
     }),

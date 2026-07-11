@@ -73,6 +73,20 @@ export default async function BibliotecaPage({
                     <p className="mt-1 text-sm text-[var(--muted)]">
                       Relacao: {item.relation}
                     </p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-white px-3 py-1 text-[var(--foreground)]">
+                        {item.chunksCount} chunks
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 ${
+                          item.isIndexed
+                            ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
+                            : "bg-[rgba(202,106,85,0.12)] text-[var(--danger)]"
+                        }`}
+                      >
+                        {item.isIndexed ? "Indexado" : "Indexacao pendente"}
+                      </span>
+                    </div>
                     {item.signedUrl ? (
                       <a
                         href={item.signedUrl}
