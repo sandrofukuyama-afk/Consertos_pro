@@ -85,6 +85,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
     return {
       id: row.id.slice(0, 8).toUpperCase(),
+      recordId: row.id,
       category: category?.name ?? "Nao classificado",
       equipment: modelName,
       symptom: extractFirstSentence(

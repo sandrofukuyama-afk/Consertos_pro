@@ -5,6 +5,7 @@ import { requireCurrentUser } from "@/lib/auth";
 import { hypotheses, timeline } from "@/lib/mock-data";
 import { getDashboardData } from "@/lib/services/dashboard";
 import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
+import Link from "next/link";
 
 type HomePageProps = {
   searchParams: Promise<{
@@ -122,8 +123,9 @@ export default async function Home({ searchParams }: HomePageProps) {
                   <span>Status</span>
                 </div>
                 {dashboard.diagnostics.map((diagnostic) => (
-                  <div
+                  <Link
                     key={diagnostic.id}
+                    href={`/diagnosticos/${diagnostic.recordId}`}
                     className="grid grid-cols-1 gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
                   >
                     <div>
@@ -154,7 +156,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                     <div className="flex items-start">
                       <StatusPill label={diagnostic.status} />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (

@@ -20,6 +20,7 @@ export type Kpi = {
 
 export type DiagnosticCase = {
   id: string;
+  recordId?: string;
   category: string;
   equipment: string;
   symptom: string;
@@ -70,4 +71,54 @@ export type DashboardData = {
 export type CatalogOption = {
   id: string;
   name: string;
+};
+
+export type SymptomOption = CatalogOption & {
+  group?: string | null;
+};
+
+export type TestOption = CatalogOption & {
+  group?: string | null;
+  unit?: string | null;
+};
+
+export type DiagnosticDetail = {
+  id: string;
+  category: string;
+  manufacturer: string;
+  label: string;
+  status: string;
+  priority: string;
+  summary: string;
+  initialReport: string;
+  physicalNotes: string;
+  openedBy: string;
+  createdAt: string;
+  symptoms: Array<{
+    id: string;
+    name: string;
+    severity: string;
+    sourceType: string;
+    isPrimary: boolean;
+    capturedAt: string;
+  }>;
+  tests: Array<{
+    id: string;
+    testName: string;
+    resultStatus: string;
+    stepOrder: number;
+    procedureNotes: string;
+    actualResult: string;
+    performedAt: string;
+    technician: string;
+  }>;
+  measurements: Array<{
+    id: string;
+    measurementType: string;
+    pointLabel: string;
+    measuredValue: string;
+    expectedValue: string;
+    measuredAt: string;
+    technician: string;
+  }>;
 };
