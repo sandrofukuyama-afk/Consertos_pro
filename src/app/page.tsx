@@ -8,14 +8,53 @@ import {
   knowledgeItems,
   timeline,
 } from "@/lib/mock-data";
+import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 
 export default function Home() {
+  const supabaseReady = isSupabaseConfigured();
+  const { url } = getSupabaseEnv();
+
   return (
     <AppShell
       title="Diagnosticos em andamento"
       description="Primeira central operacional do ConsertosPro. Esta base ja organiza casos ativos, proximo passo sugerido, timeline tecnica, hipoteses e memoria confirmada seguindo o escopo do MVP."
     >
       <div className="grid gap-4">
+        <section
+          className={`rounded-[26px] border p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)] ${
+            supabaseReady
+              ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)]"
+              : "border-[rgba(184,109,60,0.24)] bg-[rgba(184,109,60,0.08)]"
+          }`}
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                Integracao Supabase
+              </p>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+                {supabaseReady
+                  ? "Projeto conectado ao ambiente do Supabase"
+                  : "Base conectada ao projeto, aguardando chave publishable"}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                URL configurada: {url ?? "nao definida"}.
+                {!supabaseReady &&
+                  " Falta preencher NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY para ativar auth, queries e storage no app."}
+              </p>
+            </div>
+            <span
+              className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
+                supabaseReady
+                  ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
+                  : "bg-[rgba(184,109,60,0.14)] text-[var(--accent-copper)]"
+              }`}
+            >
+              {supabaseReady ? "Configurado" : "Pendente"}
+            </span>
+          </div>
+        </section>
+
         <section className="grid gap-4 xl:grid-cols-3">
           {kpis.map((item) => (
             <article
