@@ -4,12 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { LogoutButton } from "@/components/logout-button";
 import { navItems } from "@/lib/mock-data";
+import type { AppUser } from "@/types/domain";
 
 type AppShellProps = {
   title: string;
   description: string;
   actionLabel?: string;
+  actionHref?: string;
+  user: AppUser;
   children: ReactNode;
 };
 
@@ -17,6 +21,8 @@ export function AppShell({
   title,
   description,
   actionLabel = "Novo diagnostico",
+  actionHref = "/diagnosticos/novo",
+  user,
   children,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -79,7 +85,7 @@ export function AppShell({
                 Proxima fase
               </p>
               <p className="mt-2 text-sm leading-6 text-[rgba(255,245,236,0.82)]">
-                Schema SQL, auth, services de diagnostico e storage de evidencias.
+                Formularios operacionais, timeline real, anexos e busca integrada.
               </p>
             </div>
           </div>
@@ -103,12 +109,16 @@ export function AppShell({
               <div className="flex min-w-[240px] items-center rounded-full border border-[var(--panel-border)] bg-white/80 px-4 py-3 text-sm text-[var(--muted)]">
                 Buscar por modelo, placa, componente ou sintoma
               </div>
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(184,109,60,0.28)] hover:-translate-y-0.5 hover:bg-[#a95f31]">
+              <Link
+                href={actionHref}
+                className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(184,109,60,0.28)] hover:-translate-y-0.5 hover:bg-[#a95f31]"
+              >
                 {actionLabel}
-              </button>
+              </Link>
               <div className="rounded-full border border-[var(--panel-border)] bg-white/70 px-4 py-3 text-sm font-medium text-[var(--foreground)]">
-                Patricia Araujo
+                {user.fullName}
               </div>
+              <LogoutButton />
             </div>
           </header>
 

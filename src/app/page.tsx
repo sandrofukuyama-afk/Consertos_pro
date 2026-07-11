@@ -1,25 +1,37 @@
 import { AppShell } from "@/components/app-shell";
+import { DashboardEmptyState } from "@/components/dashboard-empty-state";
 import { StatusPill } from "@/components/status-pill";
-import {
-  activeDiagnostics,
-  documents,
-  hypotheses,
-  kpis,
-  knowledgeItems,
-  timeline,
-} from "@/lib/mock-data";
+import { requireCurrentUser } from "@/lib/auth";
+import { hypotheses, timeline } from "@/lib/mock-data";
+import { getDashboardData } from "@/lib/services/dashboard";
 import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 
-export default function Home() {
+type HomePageProps = {
+  searchParams: Promise<{
+    message?: string;
+  }>;
+};
+
+export default async function Home({ searchParams }: HomePageProps) {
+  const user = await requireCurrentUser();
+  const params = await searchParams;
   const supabaseReady = isSupabaseConfigured();
   const { url } = getSupabaseEnv();
+  const dashboard = await getDashboardData();
 
   return (
     <AppShell
       title="Diagnosticos em andamento"
       description="Primeira central operacional do ConsertosPro. Esta base ja organiza casos ativos, proximo passo sugerido, timeline tecnica, hipoteses e memoria confirmada seguindo o escopo do MVP."
+      user={user}
     >
       <div className="grid gap-4">
+        {params.message ? (
+          <section className="rounded-[26px] border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] p-5 text-sm text-[var(--accent-teal)] shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+            {params.message}
+          </section>
+        ) : null}
+
         <section
           className={`rounded-[26px] border p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)] ${
             supabaseReady
@@ -56,7 +68,7 @@ export default function Home() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          {kpis.map((item) => (
+          {dashboard.kpis.map((item) => (
             <article
               key={item.label}
               className="rounded-[26px] border border-[var(--panel-border)] bg-white/82 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]"
@@ -100,50 +112,56 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="mt-5 overflow-hidden rounded-[24px] border border-[var(--panel-border)]">
-              <div className="grid grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                <span>Equipamento</span>
-                <span>Defeito atual</span>
-                <span>Placa</span>
-                <span>Tecnico</span>
-                <span>Status</span>
-              </div>
-              {activeDiagnostics.map((diagnostic) => (
-                <div
-                  key={diagnostic.id}
-                  className="grid grid-cols-1 gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {diagnostic.category}
-                    </p>
-                    <p className="mt-1 text-sm text-[var(--muted)]">
-                      {diagnostic.equipment}
-                    </p>
-                    <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                      {diagnostic.id}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-[var(--foreground)]">
-                      {diagnostic.symptom}
-                    </p>
-                    <p className="mt-2 text-xs text-[var(--muted)]">
-                      Atualizado {diagnostic.updatedAt}
-                    </p>
-                  </div>
-                  <p className="text-sm leading-6 text-[var(--foreground)]">
-                    {diagnostic.board}
-                  </p>
-                  <p className="text-sm leading-6 text-[var(--foreground)]">
-                    {diagnostic.technician}
-                  </p>
-                  <div className="flex items-start">
-                    <StatusPill label={diagnostic.status} />
-                  </div>
+            {dashboard.diagnostics.length ? (
+              <div className="mt-5 overflow-hidden rounded-[24px] border border-[var(--panel-border)]">
+                <div className="grid grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                  <span>Equipamento</span>
+                  <span>Defeito atual</span>
+                  <span>Placa</span>
+                  <span>Tecnico</span>
+                  <span>Status</span>
                 </div>
-              ))}
-            </div>
+                {dashboard.diagnostics.map((diagnostic) => (
+                  <div
+                    key={diagnostic.id}
+                    className="grid grid-cols-1 gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {diagnostic.category}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--muted)]">
+                        {diagnostic.equipment}
+                      </p>
+                      <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
+                        {diagnostic.id}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[var(--foreground)]">
+                        {diagnostic.symptom}
+                      </p>
+                      <p className="mt-2 text-xs text-[var(--muted)]">
+                        Atualizado {diagnostic.updatedAt}
+                      </p>
+                    </div>
+                    <p className="text-sm leading-6 text-[var(--foreground)]">
+                      {diagnostic.board}
+                    </p>
+                    <p className="text-sm leading-6 text-[var(--foreground)]">
+                      {diagnostic.technician}
+                    </p>
+                    <div className="flex items-start">
+                      <StatusPill label={diagnostic.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5">
+                <DashboardEmptyState />
+              </div>
+            )}
           </article>
 
           <div className="grid gap-4">
@@ -236,7 +254,7 @@ export default function Home() {
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {documents.map((item) => (
+              {dashboard.documents.map((item) => (
                 <article
                   key={item.title}
                   className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5"
@@ -263,7 +281,7 @@ export default function Home() {
               Memoria forte da bancada
             </h3>
             <div className="mt-4 space-y-3">
-              {knowledgeItems.map((item) => (
+              {dashboard.knowledgeItems.map((item) => (
                 <div
                   key={item.cause}
                   className="rounded-[22px] border border-white/10 bg-white/6 p-4"

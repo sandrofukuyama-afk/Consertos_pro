@@ -4,6 +4,13 @@ export type NavItem = {
   description: string;
 };
 
+export type AppUser = {
+  id: string;
+  authUserId: string;
+  fullName: string;
+  email: string;
+};
+
 export type Kpi = {
   label: string;
   value: string;
@@ -50,4 +57,17 @@ export type KnowledgeItem = {
 export type ModuleTask = {
   title: string;
   description: string;
+};
+
+export type DashboardData = {
+  kpis: Kpi[];
+  diagnostics: DiagnosticCase[];
+  documents: DocumentItem[];
+  knowledgeItems: KnowledgeItem[];
+  hasLiveData: boolean;
+};
+
+export type CatalogOption = {
+  id: string;
+  name: string;
 };
