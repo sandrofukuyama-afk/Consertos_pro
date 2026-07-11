@@ -3,9 +3,12 @@ import Link from "next/link";
 import {
   addDiagnosticSymptomAction,
   addDiagnosticTestAction,
+  addHypothesisAction,
   addMeasurementAction,
+  uploadAttachmentAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
+import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
 import { StatusPill } from "@/components/status-pill";
 import { requireCurrentUser } from "@/lib/auth";
 import {
@@ -280,6 +283,81 @@ export default async function DiagnosticDetailPage({
 
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+              Hipoteses
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+              Linhas de investigacao
+            </h3>
+
+            <form action={addHypothesisAction} className="mt-5 grid gap-3">
+              <input type="hidden" name="diagnostic_id" value={detail.id} />
+              <input
+                required
+                type="text"
+                name="title"
+                placeholder="Titulo da hipotese"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <textarea
+                name="description"
+                rows={3}
+                placeholder="Descricao da suspeita tecnica"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <textarea
+                name="evidence_summary"
+                rows={3}
+                placeholder="Evidencias observadas"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                name="confidence_score"
+                placeholder="Confianca de 0 a 1"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
+                Registrar hipotese
+              </button>
+            </form>
+
+            <div className="mt-5 space-y-3">
+              {detail.hypotheses.length ? (
+                detail.hypotheses.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        {item.title}
+                      </p>
+                      <StatusPill label="Ativo" />
+                    </div>
+                    <p className="mt-2 text-sm text-[var(--foreground)]">
+                      {item.description}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      Evidencia: {item.evidence}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Confianca {item.confidence} • {item.createdAt}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">
+                  Nenhuma hipotese registrada ainda.
+                </p>
+              )}
+            </div>
+          </article>
+
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Medicoes
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
@@ -371,6 +449,114 @@ export default async function DiagnosticDetailPage({
                 </p>
               )}
             </div>
+          </article>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+              Evidencias
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+              Anexos do caso
+            </h3>
+
+            <form action={uploadAttachmentAction} className="mt-5 grid gap-3">
+              <input type="hidden" name="diagnostic_id" value={detail.id} />
+              <input
+                required
+                type="text"
+                name="title"
+                placeholder="Titulo do anexo"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <select
+                name="attachment_type"
+                defaultValue="report"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              >
+                <option value="photo">Foto</option>
+                <option value="video">Video</option>
+                <option value="screenshot">Captura</option>
+                <option value="waveform">Waveform</option>
+                <option value="report">Relatorio</option>
+              </select>
+              <textarea
+                name="description"
+                rows={3}
+                placeholder="Descricao do arquivo"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <input
+                required
+                type="file"
+                name="file"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
+                Enviar anexo
+              </button>
+            </form>
+
+            <div className="mt-5 space-y-3">
+              {detail.attachments.length ? (
+                detail.attachments.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                  >
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      {item.title}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--foreground)]">
+                      {item.description}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      {item.attachmentType} • {item.uploadedAt}
+                    </p>
+                    {item.signedUrl ? (
+                      <a
+                        href={item.signedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex text-sm font-semibold text-[var(--accent-copper)]"
+                      >
+                        Abrir arquivo
+                      </a>
+                    ) : null}
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">
+                  Nenhum anexo enviado ainda.
+                </p>
+              )}
+            </div>
+          </article>
+
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+              Encerramento
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+              Consolidar causa e solucao
+            </h3>
+
+            {detail.resolvedCase ? (
+              <div className="mt-5 rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+                <p className="text-sm font-semibold text-[var(--foreground)]">
+                  Caso encerrado como {detail.resolvedCase.caseStatus}
+                </p>
+                <p className="mt-2 text-sm text-[var(--foreground)]">
+                  {detail.resolvedCase.resolutionSummary}
+                </p>
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  Resultado: {detail.resolvedCase.repairOutcome}
+                </p>
+              </div>
+            ) : (
+              <DiagnosticClosureForm diagnosticId={detail.id} />
+            )}
           </article>
         </section>
 

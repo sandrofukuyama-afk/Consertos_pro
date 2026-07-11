@@ -211,3 +211,203 @@ export async function addMeasurementAction(formData: FormData) {
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Medicao registrada.`);
 }
+
+export async function addHypothesisAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const evidenceSummary =
+    String(formData.get("evidence_summary") ?? "").trim() || null;
+  const confidenceRaw = String(formData.get("confidence_score") ?? "").trim();
+  const confidenceScore = confidenceRaw ? Number(confidenceRaw) : null;
+
+  if (!diagnosticId || !title) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Hipotese invalida.`);
+  }
+
+  const { error } = await supabase.from("hypotheses").insert({
+    diagnostic_id: diagnosticId,
+    title,
+    description,
+    evidence_summary: evidenceSummary,
+    confidence_score:
+      confidenceScore !== null && !Number.isNaN(confidenceScore)
+        ? confidenceScore
+        : null,
+    status: "open",
+    created_by_type: "technician",
+    created_by_user_id: user.id,
+  });
+
+  if (error) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Hipotese registrada.`);
+}
+
+export async function uploadAttachmentAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const attachmentType = String(formData.get("attachment_type") ?? "report");
+  const file = formData.get("file");
+
+  if (!diagnosticId || !title || !(file instanceof File) || file.size === 0) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Anexo invalido.`);
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `${diagnosticId}/${Date.now()}-${safeName}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  const { error: uploadError } = await supabase.storage
+    .from("diagnostic-attachments")
+    .upload(storagePath, bytes, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(uploadError.message)}`);
+  }
+
+  const { error } = await supabase.from("attachments").insert({
+    diagnostic_id: diagnosticId,
+    attachment_type: attachmentType,
+    title,
+    description,
+    storage_path: storagePath,
+    mime_type: file.type || "application/octet-stream",
+    file_size_bytes: file.size,
+    uploaded_by_user_id: user.id,
+  });
+
+  if (error) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Anexo enviado.`);
+}
+
+export async function closeDiagnosticAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "");
+  const caseStatus = String(formData.get("case_status") ?? "");
+  const resolutionSummary = String(formData.get("resolution_summary") ?? "").trim();
+  const repairOutcome = String(formData.get("repair_outcome") ?? "").trim();
+  const finalFailureMode =
+    String(formData.get("final_failure_mode") ?? "").trim() || null;
+  const causeType = String(formData.get("cause_type") ?? "").trim() || null;
+  const causeTitle = String(formData.get("cause_title") ?? "").trim() || null;
+  const technicalExplanation =
+    String(formData.get("technical_explanation") ?? "").trim() || null;
+  const solutionType =
+    String(formData.get("solution_type") ?? "").trim() || null;
+  const solutionTitle =
+    String(formData.get("solution_title") ?? "").trim() || null;
+  const procedureDescription =
+    String(formData.get("procedure_description") ?? "").trim() || null;
+
+  if (!diagnosticId || !caseStatus || !resolutionSummary || !repairOutcome) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Encerramento incompleto.`);
+  }
+
+  const { data: existing } = await supabase
+    .from("resolved_cases")
+    .select("id")
+    .eq("diagnostic_id", diagnosticId)
+    .maybeSingle();
+
+  if (existing) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Este diagnostico ja foi encerrado.`);
+  }
+
+  const mappedStatus = caseStatus === "unresolved" ? "unresolved" : "resolved";
+
+  const { error: diagnosticError } = await supabase
+    .from("diagnostics")
+    .update({
+      status: mappedStatus,
+      completed_at: new Date().toISOString(),
+      current_summary: resolutionSummary,
+    })
+    .eq("id", diagnosticId);
+
+  if (diagnosticError) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(diagnosticError.message)}`);
+  }
+
+  const { data: resolvedCase, error: resolvedError } = await supabase
+    .from("resolved_cases")
+    .insert({
+      diagnostic_id: diagnosticId,
+      case_status: caseStatus,
+      resolution_summary: resolutionSummary,
+      final_failure_mode: finalFailureMode,
+      repair_outcome: repairOutcome,
+      reviewed_by_user_id: user.id,
+      reviewed_at: new Date().toISOString(),
+      knowledge_promoted_at:
+        caseStatus === "confirmed" ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
+
+  if (resolvedError) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(resolvedError.message)}`);
+  }
+
+  let confirmedCauseId: string | null = null;
+
+  if (causeType && causeTitle && technicalExplanation) {
+    const { data: cause, error: causeError } = await supabase
+      .from("confirmed_causes")
+      .insert({
+        resolved_case_id: resolvedCase.id,
+        cause_type: causeType,
+        title: causeTitle,
+        technical_explanation: technicalExplanation,
+        is_primary: true,
+      })
+      .select("id")
+      .single();
+
+    if (causeError) {
+      redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(causeError.message)}`);
+    }
+
+    confirmedCauseId = cause.id;
+  }
+
+  if (solutionType && solutionTitle && procedureDescription) {
+    const { error: solutionError } = await supabase.from("applied_solutions").insert({
+      resolved_case_id: resolvedCase.id,
+      confirmed_cause_id: confirmedCauseId,
+      solution_type: solutionType,
+      title: solutionTitle,
+      procedure_description: procedureDescription,
+      was_effective: caseStatus !== "unresolved",
+      performed_by_user_id: user.id,
+      performed_at: new Date().toISOString(),
+    });
+
+    if (solutionError) {
+      redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(solutionError.message)}`);
+    }
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  revalidatePath("/");
+  redirect(`/diagnosticos/${diagnosticId}?message=Diagnostico encerrado com sucesso.`);
+}

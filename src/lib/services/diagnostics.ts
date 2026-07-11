@@ -34,6 +34,11 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         equipment_categories(name),
         manufacturers(name),
         users!diagnostics_opened_by_user_id_fkey(full_name),
+        resolved_cases(
+          case_status,
+          resolution_summary,
+          repair_outcome
+        ),
         diagnostic_symptoms(
           id,
           severity,
@@ -62,6 +67,23 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           expected_value_text,
           measured_at,
           users!measurements_measured_by_user_id_fkey(full_name)
+        ),
+        hypotheses(
+          id,
+          title,
+          description,
+          status,
+          confidence_score,
+          evidence_summary,
+          created_at
+        ),
+        attachments(
+          id,
+          title,
+          description,
+          attachment_type,
+          created_at,
+          storage_path
         )
       `,
     )
@@ -75,6 +97,24 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const category = pickRelation(data.equipment_categories);
   const manufacturer = pickRelation(data.manufacturers);
   const openedBy = pickRelation(data.users);
+  const resolvedCase = pickRelation(data.resolved_cases);
+
+  const attachments = await Promise.all(
+    (data.attachments ?? []).map(async (item) => {
+      const { data: signed } = await supabase.storage
+        .from("diagnostic-attachments")
+        .createSignedUrl(item.storage_path, 3600);
+
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description ?? "Sem descricao.",
+        attachmentType: prettifyStatus(item.attachment_type),
+        uploadedAt: formatRelativeTime(item.created_at),
+        signedUrl: signed?.signedUrl ?? null,
+      };
+    }),
+  );
 
   return {
     id: data.id,
@@ -88,6 +128,13 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     physicalNotes: data.physical_condition_notes ?? "Sem observacoes fisicas.",
     openedBy: openedBy?.full_name ?? "Usuario interno",
     createdAt: formatRelativeTime(data.created_at),
+    resolvedCase: resolvedCase
+      ? {
+          caseStatus: prettifyStatus(resolvedCase.case_status),
+          resolutionSummary: resolvedCase.resolution_summary,
+          repairOutcome: resolvedCase.repair_outcome,
+        }
+      : null,
     symptoms: (data.diagnostic_symptoms ?? []).map((item) => {
       const symptom = pickRelation(item.symptoms);
 
@@ -133,6 +180,19 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         technician: tech?.full_name ?? "Tecnico interno",
       };
     }),
+    hypotheses: (data.hypotheses ?? []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description ?? "Sem descricao complementar.",
+      status: prettifyStatus(item.status),
+      confidence:
+        item.confidence_score !== null && item.confidence_score !== undefined
+          ? String(item.confidence_score)
+          : "0",
+      evidence: item.evidence_summary ?? "Sem evidencia registrada.",
+      createdAt: formatRelativeTime(item.created_at),
+    })),
+    attachments,
   } satisfies DiagnosticDetail;
 }
 

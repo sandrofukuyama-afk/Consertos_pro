@@ -94,6 +94,11 @@ export type DiagnosticDetail = {
   physicalNotes: string;
   openedBy: string;
   createdAt: string;
+  resolvedCase: {
+    caseStatus: string;
+    resolutionSummary: string;
+    repairOutcome: string;
+  } | null;
   symptoms: Array<{
     id: string;
     name: string;
@@ -120,5 +125,22 @@ export type DiagnosticDetail = {
     expectedValue: string;
     measuredAt: string;
     technician: string;
+  }>;
+  hypotheses: Array<{
+    id: string;
+    title: string;
+    description: string;
+    status: string;
+    confidence: string;
+    evidence: string;
+    createdAt: string;
+  }>;
+  attachments: Array<{
+    id: string;
+    title: string;
+    description: string;
+    attachmentType: string;
+    uploadedAt: string;
+    signedUrl: string | null;
   }>;
 };
