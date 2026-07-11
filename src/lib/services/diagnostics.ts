@@ -2,7 +2,12 @@ import { notFound } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime } from "@/lib/utils";
-import type { DiagnosticDetail, SymptomOption, TestOption } from "@/types/domain";
+import type {
+  DiagnosticDetail,
+  SymptomOption,
+  TechnicalDocumentListItem,
+  TestOption,
+} from "@/types/domain";
 
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
@@ -116,6 +121,61 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     }),
   );
 
+  const timeline = [
+    ...(data.diagnostic_symptoms ?? []).map((item) => {
+      const symptom = pickRelation(item.symptoms);
+
+      return {
+        id: `symptom-${item.id}`,
+        kind: "Sintoma",
+        title: symptom?.name ?? "Sintoma registrado",
+        description: item.severity ?? "Sem severidade informada.",
+        happenedAt: item.captured_at ?? new Date().toISOString(),
+      };
+    }),
+    ...(data.diagnostic_test_runs ?? []).map((item) => {
+      const test = pickRelation(item.tests);
+
+      return {
+        id: `test-${item.id}`,
+        kind: "Teste",
+        title: test?.name ?? "Teste executado",
+        description: item.actual_result ?? item.procedure_notes ?? "Sem resultado registrado.",
+        happenedAt: item.performed_at ?? new Date().toISOString(),
+      };
+    }),
+    ...(data.measurements ?? []).map((item) => ({
+      id: `measurement-${item.id}`,
+      kind: "Medicao",
+      title: item.point_label ?? "Leitura registrada",
+      description:
+        item.measured_value_text ??
+        (item.measured_value_numeric !== null && item.measured_value_numeric !== undefined
+          ? `${item.measured_value_numeric}${item.unit ? ` ${item.unit}` : ""}`
+          : "Sem valor informado."),
+      happenedAt: item.measured_at ?? new Date().toISOString(),
+    })),
+    ...(data.hypotheses ?? []).map((item) => ({
+      id: `hypothesis-${item.id}`,
+      kind: "Hipotese",
+      title: item.title,
+      description: item.evidence_summary ?? item.description ?? "Hipotese adicionada.",
+      happenedAt: item.created_at ?? new Date().toISOString(),
+    })),
+    ...(data.attachments ?? []).map((item) => ({
+      id: `attachment-${item.id}`,
+      kind: "Anexo",
+      title: item.title,
+      description: item.description ?? "Arquivo anexado ao caso.",
+      happenedAt: item.created_at ?? new Date().toISOString(),
+    })),
+  ]
+    .sort((a, b) => new Date(b.happenedAt).getTime() - new Date(a.happenedAt).getTime())
+    .map((item) => ({
+      ...item,
+      happenedAt: formatRelativeTime(item.happenedAt),
+    }));
+
   return {
     id: data.id,
     category: category?.name ?? "Nao classificado",
@@ -193,6 +253,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       createdAt: formatRelativeTime(item.created_at),
     })),
     attachments,
+    timeline,
   } satisfies DiagnosticDetail;
 }
 
@@ -234,4 +295,48 @@ export async function getDiagnosticFormOptions(diagnosticId: string) {
       unit: item.default_unit,
     })) as TestOption[],
   };
+}
+
+export async function getTechnicalDocuments() {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("technical_documents")
+    .select(
+      `
+        id,
+        title,
+        document_type,
+        created_at,
+        storage_path,
+        manufacturers(name),
+        equipment_models(model_name),
+        boards(board_code)
+      `,
+    )
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const items = await Promise.all(
+    (data ?? []).map(async (row) => {
+      const manufacturer = pickRelation(row.manufacturers);
+      const model = pickRelation(row.equipment_models);
+      const board = pickRelation(row.boards);
+      const { data: signed } = await supabase.storage
+        .from("technical-documents")
+        .createSignedUrl(row.storage_path, 3600);
+
+      return {
+        id: row.id,
+        title: row.title,
+        documentType: prettifyStatus(row.document_type),
+        manufacturer: manufacturer?.name ?? "Nao informado",
+        relation: model?.model_name ?? board?.board_code ?? "Referencia geral",
+        uploadedAt: formatRelativeTime(row.created_at),
+        signedUrl: signed?.signedUrl ?? null,
+      } satisfies TechnicalDocumentListItem;
+    }),
+  );
+
+  return items;
 }

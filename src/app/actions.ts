@@ -411,3 +411,52 @@ export async function closeDiagnosticAction(formData: FormData) {
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Diagnostico encerrado com sucesso.`);
 }
+
+export async function uploadTechnicalDocumentAction(formData: FormData) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+
+  const title = String(formData.get("title") ?? "").trim();
+  const documentType = String(formData.get("document_type") ?? "").trim();
+  const manufacturerId =
+    String(formData.get("manufacturer_id") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const file = formData.get("file");
+
+  if (!title || !documentType || !(file instanceof File) || file.size === 0) {
+    redirect("/biblioteca?error=Documento invalido.");
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `${Date.now()}-${safeName}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  const { error: uploadError } = await supabase.storage
+    .from("technical-documents")
+    .upload(storagePath, bytes, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    redirect(`/biblioteca?error=${encodeURIComponent(uploadError.message)}`);
+  }
+
+  const { error } = await supabase.from("technical_documents").insert({
+    title,
+    document_type: documentType,
+    manufacturer_id: manufacturerId,
+    storage_path: storagePath,
+    mime_type: file.type || "application/octet-stream",
+    file_size_bytes: file.size,
+    notes,
+  });
+
+  if (error) {
+    redirect(`/biblioteca?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/biblioteca");
+  revalidatePath("/");
+  redirect("/biblioteca?message=Documento tecnico enviado.");
+}

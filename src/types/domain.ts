@@ -143,4 +143,21 @@ export type DiagnosticDetail = {
     uploadedAt: string;
     signedUrl: string | null;
   }>;
+  timeline: Array<{
+    id: string;
+    kind: string;
+    title: string;
+    description: string;
+    happenedAt: string;
+  }>;
+};
+
+export type TechnicalDocumentListItem = {
+  id: string;
+  title: string;
+  documentType: string;
+  manufacturer: string;
+  relation: string;
+  uploadedAt: string;
+  signedUrl: string | null;
 };

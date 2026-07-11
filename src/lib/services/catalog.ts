@@ -22,3 +22,7 @@ export async function getDiagnosticCatalog() {
     manufacturers: (manufacturersResult.data ?? []) as CatalogOption[],
   };
 }
+
+export async function getLibraryCatalog() {
+  return getDiagnosticCatalog();
+}
