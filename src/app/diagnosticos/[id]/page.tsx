@@ -81,7 +81,7 @@ export default async function DiagnosticDetailPage({
         ) : null}
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -170,7 +170,7 @@ export default async function DiagnosticDetailPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -221,7 +221,7 @@ export default async function DiagnosticDetailPage({
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-[22px] border border-[rgba(184,109,60,0.18)] bg-white/70 p-4">
+                  <div className="mt-4 rounded-[22px] border border-[rgba(184,109,60,0.18)] bg-[var(--card-surface-soft)] p-4">
                     <p className="text-sm font-semibold text-[var(--foreground)]">Proximo teste recomendado</p>
                     <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                       {detail.assistantSnapshot.latestResponse.structured?.nextTest ?? detail.assistantSnapshot.latestResponse.recommendedNextStep}
@@ -237,7 +237,7 @@ export default async function DiagnosticDetailPage({
                     {detail.assistantSnapshot.latestResponse.structured?.recommendedTestId ? (
                       <Link
                         href={`/diagnosticos/${detail.id}?ai_response_id=${detail.assistantSnapshot.latestResponse.id}&suggested_test_id=${detail.assistantSnapshot.latestResponse.structured.recommendedTestId}#registrar-teste`}
-                        className="mt-4 inline-flex rounded-full border border-[rgba(184,109,60,0.24)] bg-white px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
+                        className="mt-4 inline-flex rounded-full border border-[rgba(184,109,60,0.24)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
                       >
                         Usar sugestao no formulario
                       </Link>
@@ -252,7 +252,7 @@ export default async function DiagnosticDetailPage({
                           (detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).map((item) => (
                             <p
                               key={item}
-                              className="rounded-[18px] border border-[var(--panel-border)] bg-white/70 px-3 py-2 text-sm text-[var(--muted)]"
+                              className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-3 py-2 text-sm text-[var(--muted)]"
                             >
                               {item}
                             </p>
@@ -276,7 +276,7 @@ export default async function DiagnosticDetailPage({
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-[22px] border border-[var(--panel-border)] bg-white/70 p-4">
+                  <div className="mt-4 rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -368,7 +368,7 @@ export default async function DiagnosticDetailPage({
           </article>
 
           <aside className="grid gap-4">
-            <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+            <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -407,7 +407,7 @@ export default async function DiagnosticDetailPage({
               </div>
             </article>
 
-            <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+            <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -451,7 +451,7 @@ export default async function DiagnosticDetailPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -526,7 +526,7 @@ export default async function DiagnosticDetailPage({
 
           <article
             id="registrar-teste"
-            className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6"
+            className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6"
           >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Testes
@@ -643,7 +643,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Hipoteses
             </p>
@@ -718,7 +718,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Medicoes
             </p>
@@ -815,7 +815,7 @@ export default async function DiagnosticDetailPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Linha do tempo
             </p>
@@ -852,7 +852,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Evidencias
             </p>
@@ -926,7 +926,7 @@ export default async function DiagnosticDetailPage({
 
                     {item.mimeType.startsWith("image/") ? (
                       item.imageAnalysis ? (
-                        <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-white/70 p-4">
+                        <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
                           <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
                             Analise de imagem por IA • confianca {item.imageAnalysis.confidence} • {item.imageAnalysis.analyzedAt}
                           </p>
@@ -964,7 +964,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Encerramento
             </p>
@@ -993,7 +993,7 @@ export default async function DiagnosticDetailPage({
         <section>
           <Link
             href="/diagnosticos/novo"
-            className="inline-flex rounded-full border border-[var(--panel-border)] bg-white/80 px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
+            className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
           >
             Abrir outro diagnostico
           </Link>

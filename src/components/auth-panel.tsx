@@ -8,7 +8,7 @@ type AuthPanelProps = {
 export function AuthPanel({ error, message }: AuthPanelProps) {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+      <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
         <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
           Entrar
         </p>

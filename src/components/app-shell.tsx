@@ -108,7 +108,7 @@ export function AppShell({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 href="/busca"
-                className="flex min-w-[240px] items-center rounded-full border border-[var(--panel-border)] bg-white/80 px-4 py-3 text-sm text-[var(--muted)] hover:border-[rgba(184,109,60,0.3)]"
+                className="flex min-w-[240px] items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--muted)] hover:border-[rgba(184,109,60,0.3)]"
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
@@ -118,7 +118,7 @@ export function AppShell({
               >
                 {actionLabel}
               </Link>
-              <div className="rounded-full border border-[var(--panel-border)] bg-white/70 px-4 py-3 text-sm font-medium text-[var(--foreground)]">
+              <div className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-3 text-sm font-medium text-[var(--foreground)]">
                 {user.fullName}
               </div>
               <LogoutButton />

@@ -11,7 +11,7 @@ export function LogoutButton() {
     <button
       type="button"
       onClick={() => startTransition(async () => signOutAction())}
-      className="rounded-full border border-[var(--panel-border)] bg-white/70 px-4 py-3 text-sm font-medium text-[var(--foreground)]"
+      className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-3 text-sm font-medium text-[var(--foreground)]"
       disabled={isPending}
     >
       {isPending ? "Saindo..." : "Sair"}

@@ -30,7 +30,7 @@ export default async function EstatisticasPage() {
     >
       <div className="grid gap-4">
         <section className="grid gap-4 md:grid-cols-2">
-          <article className="rounded-[26px] border border-[var(--panel-border)] bg-white/85 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
               Casos resolvidos
             </p>
@@ -38,7 +38,7 @@ export default async function EstatisticasPage() {
               {stats.totalResolvedCases}
             </p>
           </article>
-          <article className="rounded-[26px] border border-[var(--panel-border)] bg-white/85 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
               Tempo medio de resolucao
             </p>
@@ -48,7 +48,7 @@ export default async function EstatisticasPage() {
           </article>
         </section>
 
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Distribuicao de resultado
           </p>
@@ -83,7 +83,7 @@ export default async function EstatisticasPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Por fabricante
             </p>
@@ -106,7 +106,7 @@ export default async function EstatisticasPage() {
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Frequencia de causas
             </p>
@@ -130,7 +130,7 @@ export default async function EstatisticasPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Por modelo
             </p>
@@ -153,7 +153,7 @@ export default async function EstatisticasPage() {
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Componentes recorrentes
             </p>

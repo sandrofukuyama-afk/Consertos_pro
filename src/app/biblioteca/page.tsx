@@ -41,7 +41,7 @@ export default async function BibliotecaPage({
         ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_420px]">
-          <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+          <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Documentos tecnicos
             </p>
@@ -74,7 +74,7 @@ export default async function BibliotecaPage({
                       Relacao: {item.relation}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-white px-3 py-1 text-[var(--foreground)]">
+                      <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
                         {item.chunksCount} chunks
                       </span>
                       <span

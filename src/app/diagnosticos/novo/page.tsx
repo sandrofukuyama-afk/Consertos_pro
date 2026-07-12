@@ -27,7 +27,7 @@ export default async function NewDiagnosticPage({
       actionHref="/"
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_360px]">
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Abertura de caso
           </p>

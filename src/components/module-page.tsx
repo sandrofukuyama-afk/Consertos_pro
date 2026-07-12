@@ -18,7 +18,7 @@ export function ModulePage({
   return (
     <AppShell title={title} description={description} user={user}>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/80 p-6">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Direcao inicial
           </p>

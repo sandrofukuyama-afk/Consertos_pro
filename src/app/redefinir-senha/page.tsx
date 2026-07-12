@@ -58,7 +58,7 @@ export default function RedefinirSenhaPage() {
   return (
     <main className="min-h-screen px-4 py-4 md:px-5">
       <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[560px] items-center">
-        <section className="w-full rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+        <section className="w-full rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Redefinir senha
           </p>

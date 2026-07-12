@@ -136,6 +136,17 @@ E no navegador:
 - abrir `/conhecimento`
 - clicar em `Sincronizar agora`
 
+## Tema escuro (2026-07-12)
+
+A pedido do usuario, o app deixou de ter tema claro e passou a ser inteiramente escuro (sem alternador claro/escuro, um unico visual).
+
+- `src/app/globals.css`: tokens de `:root` invertidos — `--background`/`--background-strong` agora escuros (`#1a1613`/`#120f0d`), `--foreground` virou o creme claro (`#f3efe7`), `--panel` (usado nos heros/sidebar) ganhou tom solido levemente elevado (`#221c17`), `--panel-border` e novos tokens `--card-surface`/`--card-surface-soft` (translucidos claros sobre fundo escuro) substituem o antigo `bg-white/70..85` usado em ~50 lugares.
+- Substituicao em massa de `bg-white/70`, `/80`, `/82`, `/85` e `bg-white` solido por `bg-[var(--card-surface)]`/`bg-[var(--card-surface-soft)]` em 15+ arquivos (paginas e componentes). Os `bg-white/5..20` que ficam dentro dos paineis ja escuros (sidebar, hero de login) foram deixados como estavam — continuam corretos.
+- Cores de acento (`--accent-teal`, `--accent-amber`) foram reajustadas e validadas com o script `validate_palette.js` da skill de dataviz especificamente contra o novo fundo escuro (`--mode dark`): `--accent-teal` ganhou mais chroma (nao passava no floor de saturacao), `--accent-amber` ficou mais escuro/ocre (a versao clara passava do teto de lightness do modo escuro). `--accent-copper`, `--success` e `--danger` ja passavam sem alteracao.
+- Corrigido um texto fixo `#966a1f` (escuro, pensado para fundo claro) em `status-pill.tsx` e `page.tsx` que ficaria ilegivel no fundo escuro — trocado por `var(--accent-amber)`.
+- Grid overlay de fundo (linhas sutis) invertido de escuro-sobre-claro para claro-sobre-escuro.
+- Nao foi possivel tirar screenshot real (sem navegador neste ambiente) — validar visualmente no proximo teste manual.
+
 ## Fluxo de recuperacao de senha (2026-07-12)
 
 Diagnosticado via `get_logs` (service auth) que o "Invalid login credentials" reportado pelo usuario NAO era problema de confirmacao de email (o evento `user_signedup` ja tinha acontecido com sucesso antes das tentativas de login) — era senha divergente entre cadastro e login. Como o app nao tinha fluxo de recuperacao, isso travava o usuario sem saida.

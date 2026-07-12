@@ -25,7 +25,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
       user={user}
     >
       <div className="grid gap-4">
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
           <form className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_220px_220px_220px_auto]">
             <input
               type="text"
@@ -74,7 +74,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
           </form>
         </section>
 
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -142,7 +142,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -192,7 +192,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">

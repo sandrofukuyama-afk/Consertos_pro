@@ -72,7 +72,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           {dashboard.kpis.map((item) => (
             <article
               key={item.label}
-              className="rounded-[26px] border border-[var(--panel-border)] bg-white/82 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]"
+              className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]"
             >
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 {item.label}
@@ -87,7 +87,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                       ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
                       : item.tone === "copper"
                         ? "bg-[rgba(184,109,60,0.14)] text-[var(--accent-copper)]"
-                        : "bg-[rgba(216,166,84,0.18)] text-[#966a1f]"
+                        : "bg-[rgba(216,166,84,0.18)] text-[var(--accent-amber)]"
                   }`}
                 >
                   {item.change}
@@ -98,7 +98,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.95fr)]">
-          <article className="self-start rounded-[30px] border border-[var(--panel-border)] bg-white/85 p-5 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+          <article className="self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <div className="flex flex-col gap-2 border-b border-[var(--panel-border)] pb-4 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -182,7 +182,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               </div>
             </article>
 
-            <article className="rounded-[30px] border border-[var(--panel-border)] bg-white/82 p-5">
+            <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Linha do tempo do caso
               </p>
@@ -208,7 +208,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               </div>
             </article>
 
-            <article className="rounded-[30px] border border-[var(--panel-border)] bg-white/82 p-5">
+            <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Hipoteses em aberto
               </p>
@@ -242,7 +242,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <article className="rounded-[30px] border border-[var(--panel-border)] bg-white/82 p-5">
+          <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">

@@ -37,7 +37,7 @@ export default async function ConhecimentoPage({
         ) : null}
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_420px]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Infraestrutura semantica
             </p>
@@ -111,7 +111,7 @@ export default async function ConhecimentoPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Aprendizado da IA
             </p>
@@ -181,7 +181,7 @@ export default async function ConhecimentoPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Feedback recente
             </p>
@@ -229,7 +229,7 @@ export default async function ConhecimentoPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Desempenho por categoria
             </p>
@@ -266,7 +266,7 @@ export default async function ConhecimentoPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Testes mais seguidos
             </p>
@@ -300,7 +300,7 @@ export default async function ConhecimentoPage({
           </article>
         </section>
 
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Tendencia temporal
           </p>
@@ -335,7 +335,7 @@ export default async function ConhecimentoPage({
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Casos resolvidos recentes
           </p>
