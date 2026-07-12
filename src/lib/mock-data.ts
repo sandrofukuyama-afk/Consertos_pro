@@ -18,7 +18,7 @@ export const navItems: NavItem[] = [
   {
     href: "/catalogo-tecnico",
     label: "Catálogo Técnico",
-    description: "Modelos, placas e componentes",
+    description: "Marcas, modelos, placas e componentes",
   },
   {
     href: "/biblioteca",
@@ -33,17 +33,17 @@ export const navItems: NavItem[] = [
   {
     href: "/busca",
     label: "Busca",
-    description: "Consulta estruturada e busca inteligente",
+    description: "Pesquisar casos e documentos",
   },
   {
     href: "/estatisticas",
     label: "Estatísticas",
-    description: "Defeitos recorrentes e tempo de resolução",
+    description: "Problemas que mais aparecem e tempo medio",
   },
   {
     href: "/configuracoes",
     label: "Configurações",
-    description: "Usuários, revisão e controle de acesso",
+    description: "Usuarios e permissoes",
   },
 ];
 
@@ -177,7 +177,7 @@ export const knowledgeItems: KnowledgeItem[] = [
   {
     cause: "EEPROM corrompida após queda de energia",
     incidence: "7 casos",
-    note: "Regravação validada em 5 ocorrências deste trimestre.",
+    note: "Regravacao resolveu 5 casos neste trimestre.",
   },
   {
     cause: "MOSFET aquecendo na linha de carga",
@@ -189,52 +189,52 @@ export const knowledgeItems: KnowledgeItem[] = [
 export const moduleTasks: Record<string, ModuleTask[]> = {
   catalogo: [
     {
-      title: "Estruturar cadastro mestre",
-      description: "Fabricantes, categorias, modelos, placas e componentes com relacionamentos claros.",
+      title: "Organizar cadastros",
+      description: "Marcas, categorias, modelos, placas e componentes bem separados.",
     },
     {
-      title: "Preparar consistência futura",
-      description: "Campos normalizados para evitar duplicidade e melhorar busca por bancada.",
+      title: "Evitar repeticao",
+      description: "Campos padronizados para nao cadastrar a mesma coisa mais de uma vez.",
     },
   ],
   biblioteca: [
     {
-      title: "Receber documentos técnicos",
-      description: "Metadados, associações por modelo ou placa e caminho pronto para storage.",
+      title: "Guardar documentos",
+      description: "Salvar arquivos com informacoes da placa, modelo ou equipamento.",
     },
     {
-      title: "Abrir trilha para indexação",
-      description: "Separar arquivo, divisão em blocos e preparo para indexação sem acoplar ao MVP.",
+      title: "Preparar para busca",
+      description: "Separar o texto do arquivo para facilitar a busca depois.",
     },
   ],
   conhecimento: [
     {
-      title: "Separar evidência de confirmação",
-      description: "Promover apenas causas revisadas como memória forte da oficina.",
+      title: "Separar suspeita de certeza",
+      description: "Guardar como confirmado so o que ja foi revisado e validado.",
     },
     {
-      title: "Conectar solução ao caso",
-      description: "Registrar o que foi aplicado, o que funcionou e o que deve perder peso futuro.",
+      title: "Salvar o que deu certo",
+      description: "Registrar o que foi feito, o que resolveu e o que nao ajudou.",
     },
   ],
   busca: [
     {
-      title: "Começar por busca textual",
-      description: "Casos, sintomas, placas, componentes e documentos com filtros objetivos.",
+      title: "Buscar por texto",
+      description: "Encontrar casos, sintomas, placas, componentes e documentos.",
     },
     {
-      title: "Reservar a camada de busca inteligente",
-      description: "Área pronta para ranqueamento e recuperação por contexto no futuro.",
+      title: "Busca mais parecida",
+      description: "Mostrar tambem casos e documentos parecidos com o que foi digitado.",
     },
   ],
   configuracoes: [
     {
-      title: "Mapear perfis técnicos",
-      description: "Controle básico de acesso, revisor técnico e rastreabilidade de autores.",
+      title: "Definir quem usa",
+      description: "Controlar quem entra no sistema e quem fez cada registro.",
     },
     {
-      title: "Definir regras de controle",
-      description: "Histórico de alterações, revisão humana e promoção controlada de conhecimento.",
+      title: "Guardar alteracoes",
+      description: "Mostrar o historico de mudancas e as revisoes feitas.",
     },
   ],
 };

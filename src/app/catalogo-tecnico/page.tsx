@@ -7,8 +7,8 @@ export default async function CatalogoTecnicoPage() {
 
   return (
     <ModulePage
-      title="Catálogo técnico mestre"
-      description="Base dedicada a categorias, fabricantes, modelos, placas e componentes. Esta etapa corresponde ao bloco estrutural que evita duplicidade e prepara o sistema para busca e diagnóstico consistente."
+      title="Catálogo técnico"
+      description="Aqui ficam categorias, fabricantes, modelos, placas e componentes. Essa parte ajuda a manter tudo organizado e evita cadastro repetido."
       highlights={moduleTasks.catalogo}
       user={user}
     />

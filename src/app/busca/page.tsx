@@ -21,8 +21,8 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
 
   return (
     <AppShell
-      title="Busca inteligente"
-      description="Consulta operacional em diagnósticos e documentos técnicos com filtros por texto, escopo, status e categoria."
+      title="Busca"
+      description="Pesquise em diagnosticos e documentos usando texto, status e categoria."
       user={user}
     >
       <div className="grid gap-4">
@@ -79,16 +79,16 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Busca inteligente
+                Busca parecida
               </p>
               <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                Contextos mais próximos do que você digitou
+                Resultados parecidos com sua busca
               </h3>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 Motor atual: {formatProviderLabel(data.semanticProvider)}
                 {data.externalProviderConfigured
-                  ? " com IA externa ativa para resultados mais precisos."
-                  : " em modo local, pronto para evoluir sem depender de configuração extra."}
+                  ? " com IA externa ligada para melhorar os resultados."
+                  : " em modo local, funcionando sem configuracao extra."}
               </p>
             </div>
             <p className="text-sm text-[var(--muted)]">
@@ -136,7 +136,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
               )
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] lg:col-span-3">
-                Digite pelo menos 3 caracteres para ativar a busca inteligente e comparar com a memória técnica indexada.
+                Digite pelo menos 3 letras para procurar casos e documentos parecidos.
               </div>
             )}
           </div>

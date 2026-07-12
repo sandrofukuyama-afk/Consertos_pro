@@ -21,7 +21,7 @@ export default async function NewDiagnosticPage({
   return (
     <AppShell
       title="Novo diagnóstico"
-      description="Primeiro fluxo real do backend: abrir um caso no banco, com autor autenticado, categoria e relato inicial."
+      description="Abra um novo caso informando categoria, aparelho e o problema inicial."
       user={user}
       actionLabel="Voltar para dashboard"
       actionHref="/"
@@ -132,7 +132,7 @@ export default async function NewDiagnosticPage({
             {user.fullName}
           </h3>
           <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.78)]">
-            O caso será criado com rastreabilidade completa no campo `opened_by_user_id` e já nasce pronto para evoluir com sintomas, testes, medições e anexos.
+            O caso sera criado com seu usuario e depois voce podera adicionar sintomas, testes, medicoes e anexos.
           </p>
         </aside>
       </div>

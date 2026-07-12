@@ -6,10 +6,10 @@ export function DashboardEmptyState() {
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
         Sem diagnósticos ainda
       </p>
-      <h4 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+      <h4 className="mt-3 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
         O banco já está pronto para receber o primeiro caso
       </h4>
-      <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+      <p className="mx-auto mt-3 max-w-2xl break-words text-sm leading-6 text-[var(--muted)]">
         Agora que a Fase 1 foi aplicada no Supabase, esta tela passa a refletir os dados reais assim que um diagnóstico for criado.
       </p>
       <Link

@@ -47,7 +47,7 @@ export default async function DiagnosticDetailPage({
   return (
     <AppShell
       title={`Diagnóstico ${detail.label}`}
-      description="Detalhe operacional do caso com sintomas, testes e medições registrados em banco."
+      description="Veja os detalhes do caso com sintomas, testes, medicoes e anexos."
       user={user}
       actionLabel="Voltar para dashboard"
       actionHref="/"
@@ -81,17 +81,17 @@ export default async function DiagnosticDetailPage({
           </section>
         ) : null}
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Contexto atual
                 </p>
-                <h3 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-[var(--foreground)]">
                   {detail.summary}
                 </h3>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
+                <p className="mt-3 break-words text-sm leading-7 text-[var(--muted)]">
                   Relato inicial: {detail.initialReport}
                 </p>
               </div>
@@ -137,7 +137,7 @@ export default async function DiagnosticDetailPage({
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
               Fluxo guiado · {detail.category}
             </p>
-            <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
+            <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
               Sequência sugerida de bancada
             </h3>
             <ol className="mt-4 space-y-3">
@@ -177,10 +177,10 @@ export default async function DiagnosticDetailPage({
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Assistente técnico
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Próximo passo guiado por contexto
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
                   Usa o histórico do caso, memória inteligente e documentos relacionados para sugerir um único passo objetivo por vez.
                 </p>
               </div>
@@ -278,7 +278,7 @@ export default async function DiagnosticDetailPage({
                   </div>
 
                   <div className="mt-4 rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
                           Feedback do técnico
@@ -453,12 +453,12 @@ export default async function DiagnosticDetailPage({
 
         <section className="grid gap-4 xl:grid-cols-3">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Sintomas
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Registro funcional
                 </h3>
               </div>
@@ -532,7 +532,7 @@ export default async function DiagnosticDetailPage({
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Testes
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Fluxo da investigação
             </h3>
             {requestedByAiResponseId && detail.assistantSnapshot.latestResponse ? (
@@ -648,7 +648,7 @@ export default async function DiagnosticDetailPage({
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Hipóteses
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Linhas de investigação
             </h3>
 
@@ -723,7 +723,7 @@ export default async function DiagnosticDetailPage({
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Medições
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Leituras da bancada
             </h3>
 
@@ -815,12 +815,12 @@ export default async function DiagnosticDetailPage({
           </article>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Linha do tempo
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Histórico unificado do caso
             </h3>
 
@@ -831,7 +831,7 @@ export default async function DiagnosticDetailPage({
                     key={item.id}
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-copper)]">
                           {item.kind}
@@ -857,7 +857,7 @@ export default async function DiagnosticDetailPage({
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Evidências
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Anexos do caso
             </h3>
 
@@ -969,7 +969,7 @@ export default async function DiagnosticDetailPage({
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Encerramento
             </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Consolidar causa e solução
             </h3>
 

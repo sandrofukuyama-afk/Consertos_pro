@@ -24,7 +24,7 @@ export default async function BibliotecaPage({
   return (
     <AppShell
       title="Biblioteca técnica"
-      description="Upload real de documentos técnicos no Supabase Storage, com metadados e listagem consultável para a oficina."
+      description="Aqui voce guarda documentos tecnicos, PDFs, esquemas e arquivos de apoio."
       user={user}
     >
       <div className="grid gap-4">
@@ -46,7 +46,7 @@ export default async function BibliotecaPage({
               Documentos técnicos
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Biblioteca operacional
+              Arquivos salvos
             </h3>
 
             <div className="mt-5 grid gap-3">
@@ -112,10 +112,10 @@ export default async function BibliotecaPage({
               Novo upload
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Adicionar referência técnica
+              Adicionar arquivo
             </h3>
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-              Use esta área para subir esquemas, boardviews, BIOS e materiais de apoio que vão alimentar a memória consultável da oficina.
+              Use esta area para subir esquemas, boardviews, BIOS e outros arquivos que ajudam no reparo.
             </p>
             <div className="mt-5">
               <TechnicalDocumentUploadForm manufacturers={catalog.manufacturers} />

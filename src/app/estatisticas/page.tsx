@@ -24,8 +24,8 @@ export default async function EstatisticasPage() {
 
   return (
     <AppShell
-      title="Estatísticas técnicas"
-      description="Inteligência operacional da oficina: defeitos recorrentes, componentes mais falhos, tempo médio de resolução e frequência por fabricante e modelo."
+      title="Estatísticas da oficina"
+      description="Veja os problemas que mais aparecem, os componentes que mais falham e o tempo medio para resolver."
       user={user}
     >
       <div className="grid gap-4">

@@ -7,8 +7,8 @@ export default async function ConfiguracoesPage() {
 
   return (
     <ModulePage
-      title="Configurações e controle de acesso"
-      description="Espaço reservado para usuários técnicos, revisores, histórico de alterações e controle básico de acesso. Isso sustenta rastreabilidade e promove conhecimento com mais confiança."
+      title="Configurações e acessos"
+      description="Aqui ficam os usuarios, quem pode acessar o sistema e o historico do que foi alterado."
       highlights={moduleTasks.configuracoes}
       user={user}
     />

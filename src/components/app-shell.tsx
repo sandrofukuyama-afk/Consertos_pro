@@ -91,24 +91,24 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(26,22,19,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
+        <main className="min-w-0 overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(26,22,19,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
           <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-5 py-5 md:flex-row md:items-center md:justify-between md:px-8">
-            <div>
+            <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Oficina interna
               </p>
-              <h2 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+              <h2 className="mt-2 break-words font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-[var(--foreground)]">
                 {title}
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+              <p className="mt-2 max-w-3xl break-words text-sm leading-6 text-[var(--muted)]">
                 {description}
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
               <Link
                 href="/busca"
-                className="flex min-w-[240px] items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--muted)] hover:border-[rgba(184,109,60,0.3)]"
+                className="flex w-full min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--muted)] sm:w-auto sm:min-w-[240px] hover:border-[rgba(184,109,60,0.3)]"
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
@@ -118,7 +118,7 @@ export function AppShell({
               >
                 {actionLabel}
               </Link>
-              <div className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-3 text-sm font-medium text-[var(--foreground)]">
+              <div className="max-w-full break-words rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-3 text-center text-sm font-medium text-[var(--foreground)]">
                 {user.fullName}
               </div>
               <LogoutButton />

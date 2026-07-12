@@ -20,8 +20,8 @@ export default async function ConhecimentoPage({
 
   return (
     <AppShell
-      title="Conhecimento consolidado"
-      description="Centro da memória técnica reutilizável da oficina, agora com busca inteligente para casos semelhantes e documentos mais próximos do contexto buscado."
+      title="Base de conhecimento"
+      description="Aqui ficam os casos resolvidos, os aprendizados da oficina e os dados usados na busca."
       user={user}
     >
       <div className="grid gap-4">
@@ -40,13 +40,13 @@ export default async function ConhecimentoPage({
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_420px]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Infraestrutura de busca inteligente
+              Busca do sistema
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Fontes e registros indexados da memória
+              Dados usados na busca
             </h3>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-              O app agora já consegue indexar resumos de diagnósticos, casos resolvidos e documentos técnicos para recuperar contexto semelhante na busca.
+              O app ja consegue ler resumos de diagnosticos, casos resolvidos e documentos tecnicos para achar itens parecidos.
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -86,9 +86,9 @@ export default async function ConhecimentoPage({
                 {formatProviderLabel(overview.provider)}
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                {overview.externalProviderConfigured
-                  ? "IA externa ativa para melhorar a precisão da busca inteligente."
-                  : "Modo local ativo para manter tudo funcionando agora, com caminho aberto para ativar IA externa depois."}
+                    {overview.externalProviderConfigured
+                  ? "IA externa ligada para deixar a busca mais precisa."
+                  : "Modo local ativo. Tudo continua funcionando mesmo sem IA externa."}
               </p>
             </div>
           </article>
@@ -98,10 +98,10 @@ export default async function ConhecimentoPage({
               Sincronização
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight">
-              Atualizar memória inteligente
+              Atualizar dados da busca
             </h3>
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-              Reprocessa documentos, diagnósticos e casos resolvidos para manter a busca inteligente alinhada com o estado atual da base.
+              Atualiza documentos, diagnosticos e casos resolvidos para a busca usar os dados mais recentes.
             </p>
             <form action={syncSemanticMemoryAction} className="mt-5">
               <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
@@ -361,7 +361,7 @@ export default async function ConhecimentoPage({
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2 xl:col-span-3">
-                Ainda não há casos resolvidos suficientes para alimentar a memória consolidada.
+                Ainda nao ha casos resolvidos suficientes para encher esta base.
               </div>
             )}
           </div>

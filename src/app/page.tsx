@@ -23,7 +23,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <AppShell
       title="Diagnósticos em andamento"
-      description="Primeira central operacional do ConsertosPro. Esta base já organiza casos ativos, próximo passo sugerido, timeline técnica, hipóteses e memória confirmada seguindo o escopo do MVP."
+      description="Aqui voce acompanha os casos abertos, o proximo teste e o historico do que ja foi feito."
       user={user}
     >
       <div className="grid gap-4">
@@ -41,16 +41,16 @@ export default async function Home({ searchParams }: HomePageProps) {
           }`}
         >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Integração Supabase
               </p>
-              <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+              <h3 className="mt-2 break-words text-xl font-semibold tracking-tight text-[var(--foreground)]">
                 {supabaseReady
                   ? "Projeto conectado ao ambiente do Supabase"
                   : "Base conectada ao projeto, aguardando chave publishable"}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
                 URL configurada: {url ?? "não definida"}.
                 {!supabaseReady &&
                   " Falta preencher NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY para ativar auth, queries e storage no app."}
@@ -77,7 +77,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 {item.label}
               </p>
-              <div className="mt-4 flex items-end justify-between gap-4">
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <span className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-tight text-[var(--foreground)]">
                   {item.value}
                 </span>
@@ -100,16 +100,16 @@ export default async function Home({ searchParams }: HomePageProps) {
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.95fr)]">
           <article className="self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <div className="flex flex-col gap-2 border-b border-[var(--panel-border)] pb-4 md:flex-row md:items-end md:justify-between">
-              <div>
+              <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Central de casos
                 </p>
-                <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Lista ativa da bancada
                 </h3>
               </div>
-              <p className="max-w-md text-sm leading-6 text-[var(--muted)]">
-                Estrutura pensada para depois receber busca, filtros, responsável e persistência real.
+              <p className="max-w-md break-words text-sm leading-6 text-[var(--muted)]">
+                Lista pronta para receber filtros, busca e mais detalhes dos casos.
               </p>
             </div>
 
@@ -166,18 +166,18 @@ export default async function Home({ searchParams }: HomePageProps) {
             )}
           </article>
 
-          <div className="grid gap-4">
+          <div className="grid min-w-0 gap-4">
             <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-white shadow-[0_20px_52px_rgba(29,36,36,0.18)]">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
                 Próximo passo sugerido
               </p>
-              <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
+              <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
                 Isolar a linha LCD_VDD antes de regravar BIOS
               </h3>
-              <p className="mt-3 text-sm leading-7 text-[rgba(255,245,236,0.76)]">
-                O plano do produto pede um teste por vez e resposta baseada em evidência. Esta área já simula o lugar onde a IA vai justificar o melhor próximo teste quando a camada de contexto estiver pronta.
+              <p className="mt-3 break-words text-sm leading-7 text-[rgba(255,245,236,0.76)]">
+                A ideia aqui e mostrar um teste por vez. Esta area exibe a sugestao da IA com um motivo simples para ajudar na decisao.
               </p>
-              <div className="mt-5 rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(255,245,236,0.84)]">
+              <div className="mt-5 break-words rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(255,245,236,0.84)]">
                 Justificativa: há medição estável de 19V, consumo inicial coerente e histórico recente de casos semelhantes com falha no circuito de imagem. A regravação agora teria custo maior e menor poder de isolamento.
               </div>
             </article>
@@ -190,9 +190,9 @@ export default async function Home({ searchParams }: HomePageProps) {
                 {timeline.map((item) => (
                   <div
                     key={`${item.time}-${item.title}`}
-                    className="grid grid-cols-[56px_1fr] gap-3"
+                    className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)]"
                   >
-                    <div className="rounded-2xl bg-[var(--background-strong)] px-3 py-2 text-center font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-copper)]">
+                    <div className="inline-flex w-fit min-w-[72px] items-center justify-center rounded-2xl bg-[var(--background-strong)] px-3 py-3 text-center font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-copper)]">
                       {item.time}
                     </div>
                     <div className="min-w-0">
@@ -219,15 +219,15 @@ export default async function Home({ searchParams }: HomePageProps) {
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-semibold text-[var(--foreground)]">
                           {item.title}
                         </p>
-                        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
                           Evidência: {item.evidence}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
                           Confiança {item.confidence}
                         </span>
@@ -243,16 +243,16 @@ export default async function Home({ searchParams }: HomePageProps) {
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
-            <div className="flex items-end justify-between gap-4">
-              <div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Biblioteca técnica
                 </p>
-                <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Documentos recentes
                 </h3>
               </div>
-              <p className="text-sm text-[var(--muted)]">PDFs, esquemas, mapas e firmwares</p>
+              <p className="break-words text-sm text-[var(--muted)]">PDFs, esquemas, mapas e firmwares</p>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -264,10 +264,10 @@ export default async function Home({ searchParams }: HomePageProps) {
                   <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
                     {item.type}
                   </p>
-                  <h4 className="mt-3 text-lg font-semibold tracking-tight text-[var(--foreground)]">
+                  <h4 className="mt-3 break-words text-lg font-semibold tracking-tight text-[var(--foreground)]">
                     {item.title}
                   </h4>
-                  <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
                     Vinculado a {item.relation}
                   </p>
                 </article>
@@ -279,8 +279,8 @@ export default async function Home({ searchParams }: HomePageProps) {
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
               Causas confirmadas
             </p>
-            <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Memória forte da bancada
+            <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
+              Casos que viraram referencia
             </h3>
             <div className="mt-4 space-y-3">
               {dashboard.knowledgeItems.map((item) => (
