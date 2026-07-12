@@ -31,3 +31,15 @@ export function extractFirstSentence(value: string | null | undefined) {
 
   return value.split(".")[0]?.trim() || value;
 }
+
+const PROVIDER_LABELS: Record<string, string> = {
+  "text-embedding-3-small": "IA externa (OpenAI)",
+  "hashing-v1": "Modo local (sem IA externa)",
+  "gpt-4o-mini": "IA externa (OpenAI)",
+  "heuristic-v1": "Modo local (sem IA externa)",
+  "assistant-v1": "Padrão",
+};
+
+export function formatProviderLabel(value: string) {
+  return PROVIDER_LABELS[value] ?? value;
+}

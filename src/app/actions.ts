@@ -671,12 +671,12 @@ export async function syncSemanticMemoryAction() {
     revalidatePath("/biblioteca");
     redirect(
       `/conhecimento?message=${encodeURIComponent(
-        `Memória semântica sincronizada com ${result.processed} registros usando ${result.provider}.`,
+        `Memória inteligente sincronizada com ${result.processed} registros usando ${result.provider}.`,
       )}`,
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Falha ao sincronizar memória semântica.";
+      error instanceof Error ? error.message : "Falha ao sincronizar memória inteligente.";
     redirect(`/conhecimento?error=${encodeURIComponent(message)}`);
   }
 }

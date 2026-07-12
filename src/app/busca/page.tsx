@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/auth";
 import { getSearchPageData } from "@/lib/services/search";
+import { formatProviderLabel } from "@/lib/utils";
 
 type BuscaPageProps = {
   searchParams: Promise<{
@@ -78,15 +79,15 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Busca semântica
+                Busca inteligente
               </p>
               <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                 Contextos mais próximos do que você digitou
               </h3>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                Motor atual: {data.semanticProvider}
+                Motor atual: {formatProviderLabel(data.semanticProvider)}
                 {data.externalProviderConfigured
-                  ? " com embeddings externos ativos."
+                  ? " com IA externa ativa para resultados mais precisos."
                   : " em modo local, pronto para evoluir sem depender de configuração extra."}
               </p>
             </div>
@@ -135,7 +136,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
               )
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] lg:col-span-3">
-                Digite pelo menos 3 caracteres para ativar a busca semântica e comparar com a memória técnica indexada.
+                Digite pelo menos 3 caracteres para ativar a busca inteligente e comparar com a memória técnica indexada.
               </div>
             )}
           </div>

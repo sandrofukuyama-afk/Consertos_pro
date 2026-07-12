@@ -129,7 +129,7 @@ async function upsertEmbeddingSource(
       .single();
 
     if (error || !data) {
-      throw error ?? new Error("Não foi possível inserir a fonte semântica.");
+      throw error ?? new Error("Não foi possível inserir a fonte de busca inteligente.");
     }
 
     embeddingSourceId = data.id;

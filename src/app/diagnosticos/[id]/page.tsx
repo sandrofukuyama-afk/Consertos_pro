@@ -18,6 +18,7 @@ import {
   getDiagnosticDetail,
   getDiagnosticFormOptions,
 } from "@/lib/services/diagnostics";
+import { formatProviderLabel } from "@/lib/utils";
 
 type DiagnosticDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -180,7 +181,7 @@ export default async function DiagnosticDetailPage({
                   Próximo passo guiado por contexto
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                  Usa o histórico do caso, memória semântica e documentos relacionados para sugerir um único passo objetivo por vez.
+                  Usa o histórico do caso, memória inteligente e documentos relacionados para sugerir um único passo objetivo por vez.
                 </p>
               </div>
               <form action={generateDiagnosticAssistantAction}>
@@ -200,7 +201,7 @@ export default async function DiagnosticDetailPage({
                         Última leitura registrada
                       </p>
                       <p className="mt-2 text-sm text-[var(--muted)]">
-                        Motor {detail.assistantSnapshot.provider} - {detail.assistantSnapshot.latestResponse.createdAt}
+                        Motor {formatProviderLabel(detail.assistantSnapshot.provider)} - {detail.assistantSnapshot.latestResponse.createdAt}
                       </p>
                     </div>
                     <StatusPill label={`Confiança ${detail.assistantSnapshot.latestResponse.confidenceScore}`} />
@@ -270,7 +271,7 @@ export default async function DiagnosticDetailPage({
                       <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">Modo atual</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                         {detail.assistantSnapshot.externalProviderConfigured
-                          ? "Embeddings externos ativos para recuperar memória com maior fidelidade semântica."
+                          ? "IA externa ativa para recuperar memória com mais precisão."
                           : "Modo local ativo para manter a recomendação auditável mesmo sem provedor externo configurado."}
                       </p>
                     </div>
@@ -401,7 +402,7 @@ export default async function DiagnosticDetailPage({
                   ))
                 ) : (
                   <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
-                    A memória semântica ainda não encontrou casos próximos o bastante para este contexto.
+                    A busca inteligente ainda não encontrou casos próximos o bastante para este contexto.
                   </div>
                 )}
               </div>

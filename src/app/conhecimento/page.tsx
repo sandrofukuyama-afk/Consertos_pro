@@ -2,6 +2,7 @@ import { syncSemanticMemoryAction } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/auth";
 import { getKnowledgeOverviewData } from "@/lib/services/semantic";
+import { formatProviderLabel } from "@/lib/utils";
 
 type ConhecimentoPageProps = {
   searchParams: Promise<{
@@ -20,7 +21,7 @@ export default async function ConhecimentoPage({
   return (
     <AppShell
       title="Conhecimento consolidado"
-      description="Centro da memória técnica reutilizável da oficina, agora com base vetorial para casos semelhantes e documentos mais próximos do contexto buscado."
+      description="Centro da memória técnica reutilizável da oficina, agora com busca inteligente para casos semelhantes e documentos mais próximos do contexto buscado."
       user={user}
     >
       <div className="grid gap-4">
@@ -39,10 +40,10 @@ export default async function ConhecimentoPage({
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_420px]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Infraestrutura semântica
+              Infraestrutura de busca inteligente
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Vetores e fontes da memória
+              Fontes e registros indexados da memória
             </h3>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
               O app agora já consegue indexar resumos de diagnósticos, casos resolvidos e documentos técnicos para recuperar contexto semelhante na busca.
@@ -51,11 +52,11 @@ export default async function ConhecimentoPage({
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               {[
                 {
-                  label: "Fontes semânticas",
+                  label: "Fontes indexadas",
                   value: String(overview.sourceCount),
                 },
                 {
-                  label: "Embeddings salvos",
+                  label: "Registros indexados",
                   value: String(overview.embeddingCount),
                 },
                 {
@@ -82,12 +83,12 @@ export default async function ConhecimentoPage({
                 Provedor atual
               </p>
               <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">
-                {overview.provider}
+                {formatProviderLabel(overview.provider)}
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {overview.externalProviderConfigured
-                  ? "Embeddings externos ativos para melhorar similaridade semântica."
-                  : "Modo local ativo para manter a fase funcionando agora, com caminho aberto para trocar por embeddings externos depois."}
+                  ? "IA externa ativa para melhorar a precisão da busca inteligente."
+                  : "Modo local ativo para manter tudo funcionando agora, com caminho aberto para ativar IA externa depois."}
               </p>
             </div>
           </article>
@@ -97,10 +98,10 @@ export default async function ConhecimentoPage({
               Sincronização
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight">
-              Atualizar memória vetorial
+              Atualizar memória inteligente
             </h3>
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-              Reprocessa documentos, diagnósticos e casos resolvidos para manter a busca semântica alinhada com o estado atual da base.
+              Reprocessa documentos, diagnósticos e casos resolvidos para manter a busca inteligente alinhada com o estado atual da base.
             </p>
             <form action={syncSemanticMemoryAction} className="mt-5">
               <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">

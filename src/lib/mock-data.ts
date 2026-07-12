@@ -33,7 +33,7 @@ export const navItems: NavItem[] = [
   {
     href: "/busca",
     label: "Busca",
-    description: "Consulta estruturada e semântica",
+    description: "Consulta estruturada e busca inteligente",
   },
   {
     href: "/estatisticas",
@@ -43,7 +43,7 @@ export const navItems: NavItem[] = [
   {
     href: "/configuracoes",
     label: "Configurações",
-    description: "Usuários, revisão e governança",
+    description: "Usuários, revisão e controle de acesso",
   },
 ];
 
@@ -204,7 +204,7 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
     },
     {
       title: "Abrir trilha para indexação",
-      description: "Separar arquivo, chunking e preparo para embeddings sem acoplar ao MVP.",
+      description: "Separar arquivo, divisão em blocos e preparo para indexação sem acoplar ao MVP.",
     },
   ],
   conhecimento: [
@@ -223,8 +223,8 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
       description: "Casos, sintomas, placas, componentes e documentos com filtros objetivos.",
     },
     {
-      title: "Reservar a camada semântica",
-      description: "Área pronta para pgvector, ranking e recuperação contextual posterior.",
+      title: "Reservar a camada de busca inteligente",
+      description: "Área pronta para ranqueamento e recuperação por contexto no futuro.",
     },
   ],
   configuracoes: [
@@ -233,8 +233,8 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
       description: "Controle básico de acesso, revisor técnico e rastreabilidade de autores.",
     },
     {
-      title: "Definir governança",
-      description: "Auditoria, revisão humana e promoção controlada de conhecimento.",
+      title: "Definir regras de controle",
+      description: "Histórico de alterações, revisão humana e promoção controlada de conhecimento.",
     },
   ],
 };
