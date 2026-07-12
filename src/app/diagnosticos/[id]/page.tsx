@@ -134,14 +134,38 @@ export default async function DiagnosticDetailPage({
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-              Proximo passo
+              Fluxo guiado · {detail.category}
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Continue alimentando o caso
+              Sequencia sugerida de bancada
             </h3>
-            <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.78)]">
-              Este detalhe ja aceita sintomas, testes e medicoes. O proximo degrau e adicionar anexos e historico cronologico unificado.
-            </p>
+            <ol className="mt-4 space-y-3">
+              {detail.guidedFlow.map((step) => (
+                <li key={step.order} className="flex items-start gap-3">
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+                      step.done
+                        ? "bg-[var(--accent-teal)] text-white"
+                        : "border border-[rgba(255,245,236,0.4)] text-[rgba(255,245,236,0.7)]"
+                    }`}
+                  >
+                    {step.done ? "✓" : step.order}
+                  </span>
+                  <div>
+                    <p
+                      className={`text-sm font-semibold ${
+                        step.done ? "text-[rgba(255,245,236,0.6)] line-through" : "text-white"
+                      }`}
+                    >
+                      {step.label}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[rgba(255,245,236,0.7)]">
+                      {step.description}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </aside>
         </section>
 

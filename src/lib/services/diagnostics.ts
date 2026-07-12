@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { getGuidedFlowForCategory } from "@/lib/domain/guided-flows";
 import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
@@ -63,7 +64,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           procedure_notes,
           actual_result,
           performed_at,
-          tests(name),
+          tests(name, test_group),
           users!diagnostic_test_runs_performed_by_user_id_fkey(full_name)
         ),
         ai_responses(
@@ -116,6 +117,22 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const manufacturer = pickRelation(data.manufacturers);
   const openedBy = pickRelation(data.users);
   const resolvedCase = pickRelation(data.resolved_cases);
+
+  const completedTestGroups = new Set(
+    (data.diagnostic_test_runs ?? [])
+      .filter((item: { result_status: string }) => item.result_status !== "pending")
+      .map((item: { tests: { test_group: string | null } | Array<{ test_group: string | null }> | null }) =>
+        pickRelation(item.tests)?.test_group,
+      )
+      .filter((group: string | null | undefined): group is string => Boolean(group)),
+  );
+
+  const guidedFlow = getGuidedFlowForCategory(category?.name ?? "desktop").map((step) => ({
+    order: step.order,
+    label: step.label,
+    description: step.description,
+    done: completedTestGroups.has(step.testGroup),
+  }));
 
   const [attachments, assistantSnapshot, preventiveInsight] = await Promise.all([
     Promise.all(
@@ -238,6 +255,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     openedBy: openedBy?.full_name ?? "Usuario interno",
     createdAt: formatRelativeTime(data.created_at),
     preventiveInsight,
+    guidedFlow,
     resolvedCase: resolvedCase
       ? {
           caseStatus: prettifyStatus(resolvedCase.case_status),

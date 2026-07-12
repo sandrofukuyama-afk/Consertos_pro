@@ -209,7 +209,14 @@ Build e lint validados. Nao foi possivel testar com uma foto real de placa neste
 - `getDiagnosticDetail` em `diagnostics.ts` agora seleciona `equipment_model_id` e busca o insight em paralelo com o resto do detalhe.
 - Novo banner amarelo "Recomendacao preventiva" no topo de `/diagnosticos/[id]` quando ha um padrao historico relevante para o modelo do equipamento atual.
 
-Itens restantes do roadmap "Evolucoes avancadas" (nao iniciados, sao possibilidades abertas, nao escopo fechado): agentes especializados, anotacao visual de componentes na propria imagem, fluxos guiados por tipo de equipamento, arvore dinamica de investigacao.
+### Atualizacao: fluxos guiados por tipo de equipamento
+
+- `src/lib/domain/guided-flows.ts`: checklist estatico (sem IA, deterministico) de 4-5 passos ordenados por categoria (desktop, notebook, television, smartphone), cada passo com `testGroup` associado.
+- `getDiagnosticDetail` agora calcula quais grupos de teste ja tem pelo menos um teste nao-pendente executado no caso, e marca cada passo do fluxo como concluido ou pendente.
+- Substituido o aside estatico ("Continue alimentando o caso", texto de preenchimento generico) por uma lista numerada com check visual (✓ verde quando concluido, riscado) no detalhe do diagnostico.
+- Deliberadamente sem IA: e um guia de bancada fixo por categoria, nao uma recomendacao gerada — util como checklist inicial mesmo sem chamar o assistente.
+
+Itens restantes do roadmap "Evolucoes avancadas" (nao iniciados, sao possibilidades abertas, nao escopo fechado): agentes especializados, anotacao visual de componentes na propria imagem, arvore dinamica de investigacao.
 
 ## Incidente 2026-07-12: producao na Vercel fora do ar
 

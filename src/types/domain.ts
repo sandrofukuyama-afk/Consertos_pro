@@ -112,6 +112,12 @@ export type DiagnosticDetail = {
   openedBy: string;
   createdAt: string;
   preventiveInsight: PreventiveInsight | null;
+  guidedFlow: Array<{
+    order: number;
+    label: string;
+    description: string;
+    done: boolean;
+  }>;
   resolvedCase: {
     caseStatus: string;
     resolutionSummary: string;
