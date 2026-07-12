@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { LogoutButton } from "@/components/logout-button";
 import { navItems } from "@/lib/mock-data";
