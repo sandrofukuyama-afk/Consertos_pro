@@ -91,7 +91,7 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(255,251,247,0.76)] shadow-[0_24px_64px_rgba(43,40,35,0.14)] backdrop-blur">
+        <main className="overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(26,22,19,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
           <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-5 py-5 md:flex-row md:items-center md:justify-between md:px-8">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
