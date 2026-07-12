@@ -128,29 +128,29 @@ export default async function Home({ searchParams }: HomePageProps) {
                     href={`/diagnosticos/${diagnostic.recordId}`}
                     className="grid grid-cols-1 gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
                   >
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--foreground)] break-words">
                         {diagnostic.category}
                       </p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">
+                      <p className="mt-1 text-sm text-[var(--muted)] break-words">
                         {diagnostic.equipment}
                       </p>
                       <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
                         {diagnostic.id}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-[var(--foreground)]">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--foreground)] break-words">
                         {diagnostic.symptom}
                       </p>
                       <p className="mt-2 text-xs text-[var(--muted)]">
                         Atualizado {diagnostic.updatedAt}
                       </p>
                     </div>
-                    <p className="text-sm leading-6 text-[var(--foreground)]">
+                    <p className="min-w-0 text-sm leading-6 text-[var(--foreground)] break-words">
                       {diagnostic.board}
                     </p>
-                    <p className="text-sm leading-6 text-[var(--foreground)]">
+                    <p className="min-w-0 text-sm leading-6 text-[var(--foreground)] break-words">
                       {diagnostic.technician}
                     </p>
                     <div className="flex items-start">
@@ -195,11 +195,11 @@ export default async function Home({ searchParams }: HomePageProps) {
                     <div className="rounded-2xl bg-[var(--background-strong)] px-3 py-2 text-center font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-copper)]">
                       {item.time}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--foreground)] break-words">
                         {item.title}
                       </p>
-                      <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+                      <p className="mt-1 text-sm leading-6 text-[var(--muted)] break-words">
                         {item.description}
                       </p>
                     </div>
@@ -289,10 +289,10 @@ export default async function Home({ searchParams }: HomePageProps) {
                   className="rounded-[22px] border border-white/10 bg-white/6 p-4"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm font-semibold leading-6 text-white">
+                    <p className="min-w-0 break-words text-sm font-semibold leading-6 text-white">
                       {item.cause}
                     </p>
-                    <span className="rounded-full bg-[rgba(216,166,84,0.16)] px-3 py-1 text-xs font-semibold text-[var(--accent-amber)]">
+                    <span className="shrink-0 rounded-full bg-[rgba(216,166,84,0.16)] px-3 py-1 text-xs font-semibold text-[var(--accent-amber)]">
                       {item.incidence}
                     </span>
                   </div>

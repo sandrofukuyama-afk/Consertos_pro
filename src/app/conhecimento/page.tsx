@@ -198,15 +198,15 @@ export default async function ConhecimentoPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
                           {item.rating.replaceAll("_", " ")}
                         </p>
-                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)] break-words">
                           {item.submittedBy}
                         </p>
                       </div>
-                      <p className="text-xs text-[var(--muted)]">{item.createdAt}</p>
+                      <p className="shrink-0 text-xs text-[var(--muted)]">{item.createdAt}</p>
                     </div>
                     <p className="mt-3 text-sm text-[var(--foreground)]">
                       {item.wasFollowed === true
@@ -283,10 +283,10 @@ export default async function ConhecimentoPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <p className="min-w-0 break-words text-sm font-semibold text-[var(--foreground)]">
                         {item.testName}
                       </p>
-                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
+                      <p className="shrink-0 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
                         {item.count} usos
                       </p>
                     </div>

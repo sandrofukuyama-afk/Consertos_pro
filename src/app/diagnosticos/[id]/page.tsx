@@ -279,7 +279,7 @@ export default async function DiagnosticDetailPage({
 
                   <div className="mt-4 rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
                           Feedback do técnico
                         </p>
@@ -504,7 +504,7 @@ export default async function DiagnosticDetailPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <p className="min-w-0 break-words text-sm font-semibold text-[var(--foreground)]">
                         {item.name}
                       </p>
                       {item.isPrimary ? <StatusPill label="Ativo" /> : null}
@@ -603,11 +603,11 @@ export default async function DiagnosticDetailPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--foreground)] break-words">
                           Etapa {item.stepOrder} • {item.testName}
                         </p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
+                        <p className="mt-1 text-xs text-[var(--muted)] break-words">
                           {item.technician} • {item.performedAt}
                         </p>
                         {item.requestedByAi ? (
@@ -695,7 +695,7 @@ export default async function DiagnosticDetailPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <p className="min-w-0 break-words text-sm font-semibold text-[var(--foreground)]">
                         {item.title}
                       </p>
                       <StatusPill label="Ativo" />
@@ -832,17 +832,17 @@ export default async function DiagnosticDetailPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-copper)]">
                           {item.kind}
                         </p>
-                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                        <p className="mt-2 text-sm font-semibold text-[var(--foreground)] break-words">
                           {item.title}
                         </p>
                       </div>
-                      <span className="text-xs text-[var(--muted)]">{item.happenedAt}</span>
+                      <span className="shrink-0 text-xs text-[var(--muted)]">{item.happenedAt}</span>
                     </div>
-                    <p className="mt-3 text-sm text-[var(--muted)]">{item.description}</p>
+                    <p className="mt-3 text-sm text-[var(--muted)] break-words">{item.description}</p>
                   </div>
                 ))
               ) : (

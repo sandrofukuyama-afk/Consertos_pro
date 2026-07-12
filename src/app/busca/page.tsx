@@ -167,15 +167,15 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                     className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(184,109,60,0.3)]"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--foreground)] break-words">
                           {item.label}
                         </p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
+                        <p className="mt-1 text-xs text-[var(--muted)] break-words">
                           {item.category} / {item.manufacturer}
                         </p>
                       </div>
-                      <span className="text-xs text-[var(--muted)]">
+                      <span className="shrink-0 text-xs text-[var(--muted)]">
                         {item.updatedAt}
                       </span>
                     </div>
@@ -216,15 +216,15 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--foreground)] break-words">
                           {item.title}
                         </p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
+                        <p className="mt-1 text-xs text-[var(--muted)] break-words">
                           {item.documentType} / {item.manufacturer}
                         </p>
                       </div>
-                      <span className="text-xs text-[var(--muted)]">
+                      <span className="shrink-0 text-xs text-[var(--muted)]">
                         {item.uploadedAt}
                       </span>
                     </div>

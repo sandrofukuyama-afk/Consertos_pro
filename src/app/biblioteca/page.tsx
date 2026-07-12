@@ -57,15 +57,15 @@ export default async function BibliotecaPage({
                     className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
                           {item.documentType}
                         </p>
-                        <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
+                        <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)] break-words">
                           {item.title}
                         </h4>
                       </div>
-                      <span className="text-xs text-[var(--muted)]">{item.uploadedAt}</span>
+                      <span className="shrink-0 text-xs text-[var(--muted)]">{item.uploadedAt}</span>
                     </div>
                     <p className="mt-3 text-sm text-[var(--foreground)]">
                       Fabricante: {item.manufacturer}

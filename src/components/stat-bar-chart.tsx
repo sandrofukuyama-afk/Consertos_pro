@@ -29,10 +29,10 @@ export function StatBarChart({ items, accent = "teal", emptyLabel }: StatBarChar
       {items.map((item) => (
         <div key={item.key}>
           <div className="flex items-baseline justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">{item.label}</p>
+            <div className="min-w-0">
+              <p className="break-words text-sm font-semibold text-[var(--foreground)]">{item.label}</p>
               {item.sublabel ? (
-                <p className="text-xs text-[var(--muted)]">{item.sublabel}</p>
+                <p className="break-words text-xs text-[var(--muted)]">{item.sublabel}</p>
               ) : null}
             </div>
             <p className="shrink-0 font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
