@@ -37,6 +37,7 @@ export async function getDashboardData(): Promise<DashboardData> {
           id,
           status,
           equipment_label,
+          equipment_serial_number,
           current_summary,
           initial_problem_report,
           updated_at,
@@ -80,6 +81,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     const modelName =
       model?.model_name ??
       row.equipment_label ??
+      row.equipment_serial_number ??
       manufacturer?.name ??
       "Equipamento sem modelo";
 

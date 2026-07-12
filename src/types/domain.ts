@@ -73,6 +73,13 @@ export type CatalogOption = {
   name: string;
 };
 
+export type EquipmentModelCatalogOption = {
+  id: string;
+  name: string;
+  manufacturerId: string;
+  categoryId: string;
+};
+
 export type SymptomOption = CatalogOption & {
   group?: string | null;
 };
@@ -103,12 +110,18 @@ export type DiagnosticDetail = {
   id: string;
   category: string;
   manufacturer: string;
+  model: string;
+  serialNumber: string;
   label: string;
   status: string;
   priority: string;
   summary: string;
   initialReport: string;
   physicalNotes: string;
+  equipmentDetails: Array<{
+    label: string;
+    value: string;
+  }>;
   openedBy: string;
   createdAt: string;
   preventiveInsight: PreventiveInsight | null;

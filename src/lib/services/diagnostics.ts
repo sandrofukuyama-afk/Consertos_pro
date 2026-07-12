@@ -24,6 +24,54 @@ function prettifyStatus(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function formatEquipmentDetailValue(value: string | number | boolean) {
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Nao";
+  }
+
+  return String(value);
+}
+
+function buildEquipmentDetailItems(details: Record<string, unknown> | null | undefined) {
+  if (!details) {
+    return [];
+  }
+
+  const labels: Record<string, string> = {
+    manufacturingYear: "Ano de fabricacao",
+    accessoriesIncluded: "Acessorios",
+    tvScreenSizeInches: "Tela (pol)",
+    tvScreenType: "Tipo de tela",
+    tvKind: "Tipo de TV",
+    tvResolution: "Resolucao",
+    tvPanelCode: "Codigo do painel",
+    notebookProcessor: "Processador",
+    notebookRamGb: "RAM (GB)",
+    notebookStorageType: "Armazenamento",
+    notebookStorageCapacityGb: "Capacidade (GB)",
+    notebookScreenSizeInches: "Tela (pol)",
+    notebookChargerIncluded: "Carregador",
+    smartphoneStorageGb: "Armazenamento (GB)",
+    smartphoneColor: "Cor",
+    smartphoneDualSim: "Dual SIM",
+    smartphoneBiometric: "Biometria",
+    smartphoneNetworkType: "Rede",
+    desktopProcessor: "Processador",
+    desktopRamGb: "RAM (GB)",
+    desktopStorageType: "Armazenamento",
+    desktopStorageCapacityGb: "Capacidade (GB)",
+    desktopDedicatedGpu: "Placa de video",
+    desktopPsuWatts: "Fonte (W)",
+  };
+
+  return Object.entries(details)
+    .filter(([, value]) => typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+    .map(([key, value]) => ({
+      label: labels[key] ?? key,
+      value: formatEquipmentDetailValue(value as string | number | boolean),
+    }));
+}
+
 export async function getDiagnosticDetail(diagnosticId: string) {
   const supabase = await createClient();
 
@@ -35,6 +83,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         status,
         priority,
         equipment_label,
+        equipment_serial_number,
+        equipment_details,
         current_summary,
         initial_problem_report,
         physical_condition_notes,
@@ -42,6 +92,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         equipment_model_id,
         equipment_categories(name),
         manufacturers(name),
+        equipment_models(model_name),
         users!diagnostics_opened_by_user_id_fkey(full_name),
         resolved_cases(
           case_status,
@@ -115,8 +166,15 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   const category = pickRelation(data.equipment_categories);
   const manufacturer = pickRelation(data.manufacturers);
+  const model = pickRelation(data.equipment_models);
   const openedBy = pickRelation(data.users);
   const resolvedCase = pickRelation(data.resolved_cases);
+  const equipmentDetails = buildEquipmentDetailItems(
+    (data.equipment_details as Record<string, unknown> | null | undefined) ?? null,
+  );
+  const fallbackLabel =
+    [manufacturer?.name, category?.name].filter(Boolean).join(" ") || "Equipamento sem nome";
+  const label = model?.model_name ?? data.equipment_label ?? fallbackLabel;
 
   const completedTestGroups = new Set(
     (data.diagnostic_test_runs ?? [])
@@ -246,12 +304,15 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     id: data.id,
     category: category?.name ?? "Não classificado",
     manufacturer: manufacturer?.name ?? "Não identificado",
-    label: data.equipment_label ?? "Sem etiqueta",
+    model: model?.model_name ?? "Nao informado",
+    serialNumber: data.equipment_serial_number ?? "Nao informado",
+    label,
     status: prettifyStatus(data.status),
     priority: prettifyStatus(data.priority),
     summary: data.current_summary ?? "Resumo ainda não definido.",
     initialReport: data.initial_problem_report,
     physicalNotes: data.physical_condition_notes ?? "Sem observações físicas.",
+    equipmentDetails,
     openedBy: openedBy?.full_name ?? "Usuário interno",
     createdAt: formatRelativeTime(data.created_at),
     preventiveInsight,

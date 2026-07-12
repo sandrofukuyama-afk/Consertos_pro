@@ -15,6 +15,55 @@ import {
 } from "@/lib/services/semantic";
 import { createClient } from "@/lib/supabase/server";
 
+function normalizeText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function readOptionalText(formData: FormData, field: string) {
+  const value = String(formData.get(field) ?? "").trim();
+  return value || null;
+}
+
+function readOptionalNumber(formData: FormData, field: string) {
+  const raw = String(formData.get(field) ?? "").trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function readOptionalBoolean(formData: FormData, field: string) {
+  const raw = String(formData.get(field) ?? "").trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  if (raw === "yes") {
+    return true;
+  }
+
+  if (raw === "no") {
+    return false;
+  }
+
+  return null;
+}
+
+function compactDetails(value: Record<string, string | number | boolean | null>) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== null && entry !== ""),
+  );
+}
+
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -85,32 +134,176 @@ export async function createDiagnosticAction(formData: FormData) {
   const user = await requireCurrentUser();
   const supabase = await createClient();
 
-  const categoryId = String(formData.get("equipment_category_id") ?? "");
-  const manufacturerId =
+  const categoryId = String(formData.get("equipment_category_id") ?? "").trim();
+  const selectedManufacturerId =
     String(formData.get("manufacturer_id") ?? "").trim() || null;
-  const equipmentLabel = String(formData.get("equipment_label") ?? "").trim();
+  const selectedModelId =
+    String(formData.get("equipment_model_id") ?? "").trim() || null;
+  const newManufacturerName = readOptionalText(formData, "new_manufacturer_name");
+  const newModelName = readOptionalText(formData, "new_model_name");
   const problemReport = String(formData.get("initial_problem_report") ?? "").trim();
-  const physicalNotes =
-    String(formData.get("physical_condition_notes") ?? "").trim() || null;
+  const physicalNotes = readOptionalText(formData, "physical_condition_notes");
+  const serialNumber = readOptionalText(formData, "equipment_serial_number");
+  const accessoriesIncluded = readOptionalText(formData, "accessories_included");
+  const manufacturingYear = readOptionalNumber(formData, "manufacturing_year");
+  const photoFiles = formData
+    .getAll("equipment_photos")
+    .filter((item): item is File => item instanceof File && item.size > 0);
 
   if (!categoryId || !problemReport) {
-    redirect(
-      "/diagnosticos/novo?error=Categoria e relato inicial sao obrigatorios.",
-    );
+    redirect("/diagnosticos/novo?error=Categoria e relato inicial sao obrigatorios.");
   }
+
+  let manufacturerId = selectedManufacturerId;
+  let manufacturerName: string | null = null;
+
+  if (selectedManufacturerId === "__new__") {
+    if (!newManufacturerName) {
+      redirect("/diagnosticos/novo?error=Informe o nome do novo fabricante.");
+    }
+
+    const normalizedManufacturerName = normalizeText(newManufacturerName);
+    const { data: existingManufacturer } = await supabase
+      .from("manufacturers")
+      .select("id, name")
+      .eq("normalized_name", normalizedManufacturerName)
+      .maybeSingle();
+
+    if (existingManufacturer) {
+      manufacturerId = existingManufacturer.id;
+      manufacturerName = existingManufacturer.name;
+    } else {
+      const { data: createdManufacturer, error: manufacturerError } = await supabase
+        .from("manufacturers")
+        .insert({
+          name: newManufacturerName,
+          normalized_name: normalizedManufacturerName,
+        })
+        .select("id, name")
+        .single();
+
+      if (manufacturerError || !createdManufacturer) {
+        redirect(
+          `/diagnosticos/novo?error=${encodeURIComponent(manufacturerError?.message ?? "Falha ao criar fabricante.")}`,
+        );
+      }
+
+      manufacturerId = createdManufacturer.id;
+      manufacturerName = createdManufacturer.name;
+    }
+  } else if (manufacturerId) {
+    const { data: manufacturer } = await supabase
+      .from("manufacturers")
+      .select("name")
+      .eq("id", manufacturerId)
+      .maybeSingle();
+
+    manufacturerName = manufacturer?.name ?? null;
+  }
+
+  let equipmentModelId = selectedModelId;
+  let modelName: string | null = null;
+
+  if (selectedModelId === "__new__" || (!selectedModelId && newModelName)) {
+    if (!newModelName) {
+      redirect("/diagnosticos/novo?error=Informe o nome do novo modelo.");
+    }
+
+    if (!manufacturerId) {
+      redirect("/diagnosticos/novo?error=Escolha ou crie um fabricante antes do modelo.");
+    }
+
+    const normalizedModelName = normalizeText(newModelName);
+    const { data: existingModel } = await supabase
+      .from("equipment_models")
+      .select("id, model_name")
+      .eq("manufacturer_id", manufacturerId)
+      .eq("normalized_model_name", normalizedModelName)
+      .maybeSingle();
+
+    if (existingModel) {
+      equipmentModelId = existingModel.id;
+      modelName = existingModel.model_name;
+    } else {
+      const { data: createdModel, error: modelError } = await supabase
+        .from("equipment_models")
+        .insert({
+          manufacturer_id: manufacturerId,
+          equipment_category_id: categoryId,
+          model_name: newModelName,
+          normalized_model_name: normalizedModelName,
+        })
+        .select("id, model_name")
+        .single();
+
+      if (modelError || !createdModel) {
+        redirect(
+          `/diagnosticos/novo?error=${encodeURIComponent(modelError?.message ?? "Falha ao criar modelo.")}`,
+        );
+      }
+
+      equipmentModelId = createdModel.id;
+      modelName = createdModel.model_name;
+    }
+  } else if (equipmentModelId) {
+    const { data: model } = await supabase
+      .from("equipment_models")
+      .select("model_name")
+      .eq("id", equipmentModelId)
+      .maybeSingle();
+
+    modelName = model?.model_name ?? null;
+  }
+
+  const equipmentDetails = compactDetails({
+    manufacturingYear,
+    accessoriesIncluded,
+    tvScreenSizeInches: readOptionalNumber(formData, "tv_screen_size_inches"),
+    tvScreenType: readOptionalText(formData, "tv_screen_type"),
+    tvKind: readOptionalText(formData, "tv_kind"),
+    tvResolution: readOptionalText(formData, "tv_resolution"),
+    tvPanelCode: readOptionalText(formData, "tv_panel_code"),
+    notebookProcessor: readOptionalText(formData, "notebook_processor"),
+    notebookRamGb: readOptionalNumber(formData, "notebook_ram_gb"),
+    notebookStorageType: readOptionalText(formData, "notebook_storage_type"),
+    notebookStorageCapacityGb: readOptionalNumber(formData, "notebook_storage_capacity_gb"),
+    notebookScreenSizeInches: readOptionalNumber(formData, "notebook_screen_size_inches"),
+    notebookChargerIncluded: readOptionalBoolean(formData, "notebook_charger_included"),
+    smartphoneStorageGb: readOptionalNumber(formData, "smartphone_storage_gb"),
+    smartphoneColor: readOptionalText(formData, "smartphone_color"),
+    smartphoneDualSim: readOptionalBoolean(formData, "smartphone_dual_sim"),
+    smartphoneBiometric: readOptionalText(formData, "smartphone_biometric"),
+    smartphoneNetworkType: readOptionalText(formData, "smartphone_network_type"),
+    desktopProcessor: readOptionalText(formData, "desktop_processor"),
+    desktopRamGb: readOptionalNumber(formData, "desktop_ram_gb"),
+    desktopStorageType: readOptionalText(formData, "desktop_storage_type"),
+    desktopStorageCapacityGb: readOptionalNumber(formData, "desktop_storage_capacity_gb"),
+    desktopDedicatedGpu: readOptionalBoolean(formData, "desktop_dedicated_gpu"),
+    desktopPsuWatts: readOptionalNumber(formData, "desktop_psu_watts"),
+  });
+
+  const labelParts = [manufacturerName, modelName].filter(Boolean);
+  const computedLabel = labelParts.length
+    ? labelParts.join(" ")
+    : serialNumber
+      ? `Equipamento ${serialNumber}`
+      : null;
 
   const { data, error } = await supabase
     .from("diagnostics")
     .insert({
       equipment_category_id: categoryId,
       manufacturer_id: manufacturerId,
+      equipment_model_id: equipmentModelId,
       opened_by_user_id: user.id,
       status: "active",
       priority: "normal",
-      equipment_label: equipmentLabel || null,
+      equipment_serial_number: serialNumber,
+      equipment_label: computedLabel,
       initial_problem_report: problemReport,
       physical_condition_notes: physicalNotes,
       current_summary: problemReport,
+      equipment_details: equipmentDetails,
     })
     .select("id")
     .single();
@@ -119,9 +312,50 @@ export async function createDiagnosticAction(formData: FormData) {
     redirect(`/diagnosticos/novo?error=${encodeURIComponent(error.message)}`);
   }
 
+  let uploadedPhotos = 0;
+
+  for (const [index, file] of photoFiles.entries()) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${data.id}/${Date.now()}-${index + 1}-${safeName}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    const { error: uploadError } = await supabase.storage
+      .from("diagnostic-attachments")
+      .upload(storagePath, bytes, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      continue;
+    }
+
+    const { error: attachmentError } = await supabase.from("attachments").insert({
+      diagnostic_id: data.id,
+      attachment_type: "photo",
+      title: `Foto do equipamento ${index + 1}`,
+      description: "Imagem enviada no cadastro inicial do equipamento.",
+      storage_path: storagePath,
+      mime_type: file.type || "application/octet-stream",
+      file_size_bytes: file.size,
+      uploaded_by_user_id: user.id,
+    });
+
+    if (!attachmentError) {
+      uploadedPhotos += 1;
+    }
+  }
+
   await syncDiagnosticEmbeddingSource(data.id, supabase);
   revalidatePath("/");
-  redirect(`/diagnosticos/${data.id}?message=Diagnóstico criado com sucesso.`);
+  revalidatePath(`/diagnosticos/${data.id}`);
+
+  const message =
+    uploadedPhotos > 0
+      ? `Equipamento cadastrado com ${uploadedPhotos} foto(s).`
+      : "Equipamento cadastrado com sucesso.";
+
+  redirect(`/diagnosticos/${data.id}?message=${encodeURIComponent(message)}`);
 }
 
 export async function addDiagnosticSymptomAction(formData: FormData) {

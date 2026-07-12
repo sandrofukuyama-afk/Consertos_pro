@@ -116,6 +116,8 @@ export default async function DiagnosticDetailPage({
                 <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--foreground)]">
                   <p>Categoria: {detail.category}</p>
                   <p>Fabricante: {detail.manufacturer}</p>
+                  <p>Modelo: {detail.model}</p>
+                  <p>Serie: {detail.serialNumber}</p>
                   <p>Prioridade: {detail.priority}</p>
                   <p>Aberto por: {detail.openedBy}</p>
                   <p>Criado: {detail.createdAt}</p>
@@ -129,6 +131,15 @@ export default async function DiagnosticDetailPage({
                 <p className="mt-3 text-sm leading-7 text-[var(--foreground)]">
                   {detail.physicalNotes}
                 </p>
+                {detail.equipmentDetails.length ? (
+                  <div className="mt-4 grid gap-2">
+                    {detail.equipmentDetails.map((item) => (
+                      <p key={item.label} className="text-sm leading-6 text-[var(--muted)]">
+                        {item.label}: {item.value}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
           </article>

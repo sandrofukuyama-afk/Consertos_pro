@@ -54,6 +54,8 @@ export async function getSearchPageData(
           id,
           status,
           equipment_label,
+          equipment_serial_number,
+          equipment_models(model_name),
           current_summary,
           initial_problem_report,
           updated_at,
@@ -77,7 +79,7 @@ export async function getSearchPageData(
 
     if (queryText) {
       diagnosticsQuery = diagnosticsQuery.or(
-        `equipment_label.ilike.${queryText},current_summary.ilike.${queryText},initial_problem_report.ilike.${queryText}`,
+        `equipment_label.ilike.${queryText},equipment_serial_number.ilike.${queryText},current_summary.ilike.${queryText},initial_problem_report.ilike.${queryText}`,
       );
     }
 
@@ -86,10 +88,15 @@ export async function getSearchPageData(
     diagnostics = (diagnosticsRows ?? []).map((row) => {
       const category = pickRelation(row.equipment_categories);
       const manufacturer = pickRelation(row.manufacturers);
+      const model = pickRelation(row.equipment_models);
 
       return {
         id: row.id,
-        label: row.equipment_label ?? row.id.slice(0, 8).toUpperCase(),
+        label:
+          model?.model_name ??
+          row.equipment_label ??
+          row.equipment_serial_number ??
+          row.id.slice(0, 8).toUpperCase(),
         category: category?.name ?? "Não classificado",
         manufacturer: manufacturer?.name ?? "Não identificado",
         status: prettifyStatus(row.status),
