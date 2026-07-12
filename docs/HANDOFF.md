@@ -181,7 +181,14 @@ Conforme `PROJECT_PLAN.md` (Modulo 10 / Fase 7 do roadmap), apos concluir a Fase
 - Nova pagina `/estatisticas` (`src/app/estatisticas/page.tsx`), com item de navegacao adicionado em `src/lib/mock-data.ts`.
 - Build e lint validados; pagina nova aparece nas rotas geradas.
 
-Ainda faltam da Fase 7 (Modulo 10): dashboards mais visuais (graficos), e cruzar isso com a qualidade das recomendacoes da IA ao longo do tempo (parcialmente coberto pela tendencia semanal em `/conhecimento`).
+Ainda faltam da Fase 7 (Modulo 10): cruzar isso com a qualidade das recomendacoes da IA ao longo do tempo (parcialmente coberto pela tendencia semanal em `/conhecimento`).
+
+### Atualizacao: graficos em `/estatisticas`
+
+- Novo componente `src/components/stat-bar-chart.tsx`: `StatBarChart` (barras horizontais ranqueadas, hue unico) e `StatusDistributionBar` (barra empilhada + legenda para confirmado/provavel/nao resolvido).
+- Paleta reaproveitada dos tokens ja existentes em `globals.css` (`--accent-teal`, `--accent-copper`, `--success`, `--accent-amber`, `--danger`) — validada com o script `validate_palette.js` da skill de dataviz (o trio success/amber/danger usado junto passa em todos os checks; o WARN de contraste do amber e mitigado porque cada segmento sempre tem rotulo de texto visivel, nunca so cor).
+- Cada barra e sempre acompanhada de rotulo e valor em texto (o proprio card list ja funciona como "tabela" equivalente).
+- Nao foi possivel tirar screenshot real (sem navegador neste ambiente) — validar visualmente no proximo teste manual.
 
 ## Incidente 2026-07-12: producao na Vercel fora do ar
 

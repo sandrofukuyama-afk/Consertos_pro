@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { StatBarChart, StatusDistributionBar } from "@/components/stat-bar-chart";
 import { requireCurrentUser } from "@/lib/auth";
 import { getWorkshopStatistics } from "@/lib/services/statistics";
 
@@ -39,25 +40,57 @@ export default async function EstatisticasPage() {
       user={user}
     >
       <div className="grid gap-4">
-        <section className="grid gap-4 md:grid-cols-4">
-          {[
-            { label: "Casos resolvidos", value: String(stats.totalResolvedCases) },
-            { label: "Tempo medio", value: formatMinutes(stats.averageResolutionMinutes) },
-            { label: "Confirmados", value: String(stats.resolutionRate.confirmed) },
-            { label: "Nao resolvidos", value: String(stats.resolutionRate.unresolved) },
-          ].map((item) => (
-            <article
-              key={item.label}
-              className="rounded-[26px] border border-[var(--panel-border)] bg-white/85 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]"
-            >
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                {item.label}
-              </p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
-                {item.value}
-              </p>
-            </article>
-          ))}
+        <section className="grid gap-4 md:grid-cols-2">
+          <article className="rounded-[26px] border border-[var(--panel-border)] bg-white/85 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              Casos resolvidos
+            </p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+              {stats.totalResolvedCases}
+            </p>
+          </article>
+          <article className="rounded-[26px] border border-[var(--panel-border)] bg-white/85 p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              Tempo medio de resolucao
+            </p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+              {formatMinutes(stats.averageResolutionMinutes)}
+            </p>
+          </article>
+        </section>
+
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+            Distribuicao de resultado
+          </p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            Confirmado, provavel e nao resolvido
+          </h3>
+
+          <div className="mt-5">
+            <StatusDistributionBar
+              segments={[
+                {
+                  key: "confirmed",
+                  label: "Confirmado",
+                  value: stats.resolutionRate.confirmed,
+                  color: "var(--success)",
+                },
+                {
+                  key: "probable",
+                  label: "Provavel",
+                  value: stats.resolutionRate.probable,
+                  color: "var(--accent-amber)",
+                },
+                {
+                  key: "unresolved",
+                  label: "Nao resolvido",
+                  value: stats.resolutionRate.unresolved,
+                  color: "var(--danger)",
+                },
+              ]}
+            />
+          </div>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
@@ -69,31 +102,18 @@ export default async function EstatisticasPage() {
               Casos e tempo medio
             </h3>
 
-            <div className="mt-5 space-y-3">
-              {stats.byManufacturer.length ? (
-                stats.byManufacturer.map((item) => (
-                  <article
-                    key={item.manufacturer}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {item.manufacturer}
-                      </p>
-                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                        {item.caseCount} caso(s)
-                      </p>
-                    </div>
-                    <p className="mt-2 text-sm text-[var(--muted)]">
-                      Tempo medio: {formatMinutes(item.averageResolutionMinutes)}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda nao ha casos resolvidos suficientes.
-                </div>
-              )}
+            <div className="mt-5">
+              <StatBarChart
+                accent="teal"
+                emptyLabel="Ainda nao ha casos resolvidos suficientes."
+                items={stats.byManufacturer.map((item) => ({
+                  key: item.manufacturer,
+                  label: item.manufacturer,
+                  sublabel: `Tempo medio: ${formatMinutes(item.averageResolutionMinutes)}`,
+                  value: item.caseCount,
+                  valueLabel: `${item.caseCount} caso(s)`,
+                }))}
+              />
             </div>
           </article>
 
@@ -105,28 +125,17 @@ export default async function EstatisticasPage() {
               Padroes confirmados na bancada
             </h3>
 
-            <div className="mt-5 space-y-3">
-              {stats.causeFrequency.length ? (
-                stats.causeFrequency.map((item) => (
-                  <article
-                    key={item.causeType}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {CAUSE_TYPE_LABELS[item.causeType] ?? item.causeType}
-                      </p>
-                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                        {item.count} caso(s)
-                      </p>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda nao ha causas confirmadas registradas.
-                </div>
-              )}
+            <div className="mt-5">
+              <StatBarChart
+                accent="copper"
+                emptyLabel="Ainda nao ha causas confirmadas registradas."
+                items={stats.causeFrequency.map((item) => ({
+                  key: item.causeType,
+                  label: CAUSE_TYPE_LABELS[item.causeType] ?? item.causeType,
+                  value: item.count,
+                  valueLabel: `${item.count} caso(s)`,
+                }))}
+              />
             </div>
           </article>
         </section>
@@ -140,34 +149,18 @@ export default async function EstatisticasPage() {
               Modelos com mais casos
             </h3>
 
-            <div className="mt-5 space-y-3">
-              {stats.byModel.length ? (
-                stats.byModel.map((item) => (
-                  <article
-                    key={`${item.manufacturer}-${item.model}`}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          {item.model}
-                        </p>
-                        <p className="text-xs text-[var(--muted)]">{item.manufacturer}</p>
-                      </div>
-                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                        {item.caseCount} caso(s)
-                      </p>
-                    </div>
-                    <p className="mt-2 text-sm text-[var(--muted)]">
-                      Tempo medio: {formatMinutes(item.averageResolutionMinutes)}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda nao ha modelos com casos resolvidos suficientes.
-                </div>
-              )}
+            <div className="mt-5">
+              <StatBarChart
+                accent="teal"
+                emptyLabel="Ainda nao ha modelos com casos resolvidos suficientes."
+                items={stats.byModel.map((item) => ({
+                  key: `${item.manufacturer}-${item.model}`,
+                  label: item.model,
+                  sublabel: `${item.manufacturer} · Tempo medio: ${formatMinutes(item.averageResolutionMinutes)}`,
+                  value: item.caseCount,
+                  valueLabel: `${item.caseCount} caso(s)`,
+                }))}
+              />
             </div>
           </article>
 
@@ -179,31 +172,18 @@ export default async function EstatisticasPage() {
               Componentes mais falhos
             </h3>
 
-            <div className="mt-5 space-y-3">
-              {stats.recurringComponents.length ? (
-                stats.recurringComponents.map((item) => (
-                  <article
-                    key={item.componentRef}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          {item.componentRef}
-                        </p>
-                        <p className="text-xs text-[var(--muted)]">{item.componentType}</p>
-                      </div>
-                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                        {item.occurrences}x
-                      </p>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda nao ha componentes vinculados a causas confirmadas.
-                </div>
-              )}
+            <div className="mt-5">
+              <StatBarChart
+                accent="copper"
+                emptyLabel="Ainda nao ha componentes vinculados a causas confirmadas."
+                items={stats.recurringComponents.map((item) => ({
+                  key: item.componentRef,
+                  label: item.componentRef,
+                  sublabel: item.componentType,
+                  value: item.occurrences,
+                  valueLabel: `${item.occurrences}x`,
+                }))}
+              />
             </div>
           </article>
         </section>
