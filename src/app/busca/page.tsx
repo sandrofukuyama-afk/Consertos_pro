@@ -15,9 +15,10 @@ type BuscaPageProps = {
 };
 
 export default async function BuscaPage({ searchParams }: BuscaPageProps) {
-  const user = await requireCurrentUser();
   const params = await searchParams;
-  const data = await getSearchPageData(params);
+  const userPromise = requireCurrentUser();
+  const dataPromise = getSearchPageData(params);
+  const [user, data] = await Promise.all([userPromise, dataPromise]);
 
   return (
     <AppShell

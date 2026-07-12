@@ -35,15 +35,17 @@ export default async function DiagnosticDetailPage({
   params,
   searchParams,
 }: DiagnosticDetailPageProps) {
-  const user = await requireCurrentUser();
+  const userPromise = requireCurrentUser();
   const { id } = await params;
-  const query = await searchParams;
-  const suggestedTestId = query.suggested_test_id?.trim() ?? "";
-  const requestedByAiResponseId = query.ai_response_id?.trim() ?? "";
-  const [detail, options] = await Promise.all([
+  const [user, detail, options] = await Promise.all([
+    userPromise,
     getDiagnosticDetail(id),
     getDiagnosticFormOptions(id),
   ]);
+
+  const query = await searchParams;
+  const suggestedTestId = query.suggested_test_id?.trim() ?? "";
+  const requestedByAiResponseId = query.ai_response_id?.trim() ?? "";
 
   return (
     <AppShell

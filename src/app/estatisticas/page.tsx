@@ -19,8 +19,9 @@ function formatMinutes(value: number | null) {
 }
 
 export default async function EstatisticasPage() {
-  const user = await requireCurrentUser();
-  const stats = await getWorkshopStatistics();
+  const userPromise = requireCurrentUser();
+  const statsPromise = getWorkshopStatistics();
+  const [user, stats] = await Promise.all([userPromise, statsPromise]);
 
   return (
     <AppShell

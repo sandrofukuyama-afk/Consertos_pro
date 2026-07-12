@@ -15,9 +15,11 @@ type ConhecimentoPageProps = {
 export default async function ConhecimentoPage({
   searchParams,
 }: ConhecimentoPageProps) {
-  const user = await requireCurrentUser();
+  const userPromise = requireCurrentUser();
+  const overviewPromise = getKnowledgeOverviewData();
+  const [user, overview] = await Promise.all([userPromise, overviewPromise]);
+
   const params = await searchParams;
-  const overview = await getKnowledgeOverviewData();
 
   return (
     <AppShell

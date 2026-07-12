@@ -14,11 +14,13 @@ type HomePageProps = {
 };
 
 export default async function Home({ searchParams }: HomePageProps) {
-  const user = await requireCurrentUser();
+  const userPromise = requireCurrentUser();
+  const dashboardPromise = getDashboardData();
+  const [user, dashboard] = await Promise.all([userPromise, dashboardPromise]);
+
   const params = await searchParams;
   const supabaseReady = isSupabaseConfigured();
   const { url } = getSupabaseEnv();
-  const dashboard = await getDashboardData();
 
   return (
     <AppShell

@@ -14,12 +14,16 @@ type BibliotecaPageProps = {
 export default async function BibliotecaPage({
   searchParams,
 }: BibliotecaPageProps) {
-  const user = await requireCurrentUser();
-  const params = await searchParams;
-  const [catalog, documents] = await Promise.all([
-    getLibraryCatalog(),
-    getTechnicalDocuments(),
+  const userPromise = requireCurrentUser();
+  const catalogPromise = getLibraryCatalog();
+  const documentsPromise = getTechnicalDocuments();
+  const [user, catalog, documents] = await Promise.all([
+    userPromise,
+    catalogPromise,
+    documentsPromise,
   ]);
+
+  const params = await searchParams;
 
   return (
     <AppShell
