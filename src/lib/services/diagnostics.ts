@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getGuidedFlowForCategory } from "@/lib/domain/guided-flows";
+import { getGuidedTreeForCategory } from "@/lib/domain/guided-tree";
 import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
@@ -115,7 +116,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           procedure_notes,
           actual_result,
           performed_at,
-          tests(name, test_group),
+          tests(slug, name, test_group),
           users!diagnostic_test_runs_performed_by_user_id_fkey(full_name)
         ),
         ai_responses(
@@ -176,21 +177,92 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     [manufacturer?.name, category?.name].filter(Boolean).join(" ") || "Equipamento sem nome";
   const label = model?.model_name ?? data.equipment_label ?? fallbackLabel;
 
-  const completedTestGroups = new Set(
-    (data.diagnostic_test_runs ?? [])
-      .filter((item: { result_status: string }) => item.result_status !== "pending")
-      .map((item: { tests: { test_group: string | null } | Array<{ test_group: string | null }> | null }) =>
-        pickRelation(item.tests)?.test_group,
-      )
-      .filter((group: string | null | undefined): group is string => Boolean(group)),
+  const categorySlug = category?.slug ?? category?.name ?? "desktop";
+  const tree = getGuidedTreeForCategory(categorySlug);
+
+  const testRuns = [...(data.diagnostic_test_runs ?? [])].sort(
+    (a, b) => new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime()
   );
 
-  const guidedFlow = getGuidedFlowForCategory(category?.name ?? "desktop").map((step) => ({
-    order: step.order,
-    label: step.label,
-    description: step.description,
-    done: completedTestGroups.has(step.testGroup),
-  }));
+  const path: Array<{
+    id: string;
+    label: string;
+    description: string;
+    done: boolean;
+    status: "success" | "failed" | "inconclusive" | "current" | "pending";
+    order: number;
+  }> = [];
+
+  let currentNodeId: string | null = "root";
+  const visited = new Set<string>();
+  let order = 1;
+
+  while (currentNodeId && tree[currentNodeId]) {
+    if (visited.has(currentNodeId)) {
+      break;
+    }
+    visited.add(currentNodeId);
+
+    const node = tree[currentNodeId];
+    
+    const matchingRun = testRuns.find((run) => {
+      const test = pickRelation(run.tests);
+      return test?.slug === node.testSlug && run.result_status !== "pending";
+    });
+
+    if (matchingRun) {
+      let branch: "success" | "failed" | "inconclusive";
+      if (matchingRun.result_status === "passed" || matchingRun.result_status === "success") {
+        branch = "success";
+      } else if (matchingRun.result_status === "failed") {
+        branch = "failed";
+      } else {
+        branch = "inconclusive";
+      }
+
+      path.push({
+        id: node.id,
+        label: `${node.label} (${branch === "success" ? "Passou" : branch === "failed" ? "Falhou" : "Inconclusivo"})`,
+        description: node.description,
+        done: true,
+        status: branch,
+        order: order++,
+      });
+
+      currentNodeId = node.branches[branch];
+    } else {
+      path.push({
+        id: node.id,
+        label: node.label,
+        description: node.description,
+        done: false,
+        status: "current",
+        order: order++,
+      });
+
+      if (!node.branches.success && !node.branches.failed && !node.branches.inconclusive) {
+        currentNodeId = null;
+      } else {
+        let nextPreviewId = node.branches.success ?? node.branches.inconclusive ?? node.branches.failed;
+        while (nextPreviewId && tree[nextPreviewId] && !visited.has(nextPreviewId)) {
+          visited.add(nextPreviewId);
+          const nextNode = tree[nextPreviewId];
+          path.push({
+            id: nextNode.id,
+            label: nextNode.label,
+            description: nextNode.description,
+            done: false,
+            status: "pending",
+            order: order++,
+          });
+          nextPreviewId = nextNode.branches.success ?? nextNode.branches.inconclusive ?? nextNode.branches.failed;
+        }
+        currentNodeId = null;
+      }
+    }
+  }
+
+  const guidedFlow = path;
 
   const [attachments, assistantSnapshot, preventiveInsight] = await Promise.all([
     Promise.all(

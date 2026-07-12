@@ -146,37 +146,70 @@ export default async function DiagnosticDetailPage({
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-              Fluxo guiado · {detail.category}
+              Árvore de investigação · {detail.category}
             </p>
             <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Sequência sugerida de bancada
+              Fluxo dinâmico de bancada
             </h3>
-            <ol className="mt-4 space-y-3">
-              {detail.guidedFlow.map((step) => (
-                <li key={step.order} className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
-                      step.done
-                        ? "bg-[var(--accent-teal)] text-white"
-                        : "border border-[rgba(255,245,236,0.4)] text-[rgba(255,245,236,0.7)]"
-                    }`}
-                  >
-                    {step.done ? "✓" : step.order}
-                  </span>
-                  <div>
-                    <p
-                      className={`text-sm font-semibold ${
-                        step.done ? "text-[rgba(255,245,236,0.6)] line-through" : "text-white"
-                      }`}
+            <ol className="mt-4 space-y-2">
+              {detail.guidedFlow.map((step) => {
+                const isSuccess = step.status === "success";
+                const isFailed = step.status === "failed";
+                const isInconclusive = step.status === "inconclusive";
+                const isCurrent = step.status === "current";
+                const isPending = step.status === "pending";
+
+                let bulletClass = "border border-[rgba(255,245,236,0.2)] text-[rgba(255,245,236,0.4)]";
+                let bulletContent = String(step.order);
+                let titleClass = "text-white/40 font-medium";
+
+                if (isSuccess) {
+                  bulletClass = "bg-[var(--accent-teal)] text-white";
+                  bulletContent = "✓";
+                  titleClass = "text-[rgba(255,245,236,0.6)] line-through";
+                } else if (isFailed) {
+                  bulletClass = "bg-[var(--danger)] text-white";
+                  bulletContent = "✗";
+                  titleClass = "text-[rgba(255,245,236,0.6)] line-through font-medium";
+                } else if (isInconclusive) {
+                  bulletClass = "bg-[var(--accent-amber)] text-white";
+                  bulletContent = "-";
+                  titleClass = "text-[rgba(255,245,236,0.6)] line-through";
+                } else if (isCurrent) {
+                  bulletClass = "bg-[var(--accent-copper)] text-white animate-pulse shadow-[0_0_12px_rgba(184,109,60,0.5)]";
+                  bulletContent = "➔";
+                  titleClass = "text-white font-bold text-[15px]";
+                } else if (isPending) {
+                  bulletClass = "border border-[rgba(255,245,236,0.2)] text-[rgba(255,245,236,0.4)]";
+                  bulletContent = String(step.order);
+                  titleClass = "text-white/60";
+                }
+
+                return (
+                  <li key={step.order} className={`flex items-start gap-3 p-2.5 rounded-2xl transition ${isCurrent ? "bg-white/5 border border-white/5 shadow-inner" : ""}`}>
+                    <span
+                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${bulletClass}`}
                     >
-                      {step.label}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-[rgba(255,245,236,0.7)]">
-                      {step.description}
-                    </p>
-                  </div>
-                </li>
-              ))}
+                      {bulletContent}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className={`text-sm tracking-tight ${titleClass}`}>
+                          {step.label}
+                        </p>
+                        {isCurrent && (
+                          <span className="shrink-0 rounded-md bg-[rgba(184,109,60,0.14)] px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[var(--accent-copper)] border border-[rgba(184,109,60,0.25)]">
+                            Recomendado
+                          </span>
+                        )}
+                      </div>
+                      <p className={`mt-1 text-xs leading-5 ${isCurrent ? "text-[rgba(255,245,236,0.85)]" : "text-[rgba(255,245,236,0.58)]"}`}>
+                        {step.description}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           </aside>
         </section>

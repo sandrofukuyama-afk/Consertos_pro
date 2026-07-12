@@ -130,6 +130,7 @@ export type DiagnosticDetail = {
     label: string;
     description: string;
     done: boolean;
+    status: "success" | "failed" | "inconclusive" | "current" | "pending";
   }>;
   resolvedCase: {
     caseStatus: string;
