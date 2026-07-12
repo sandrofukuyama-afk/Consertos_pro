@@ -165,7 +165,7 @@ export function EquipmentIntakeForm({
           value={manufacturerId}
           onChange={(value) => {
             setManufacturerId(value);
-            setModelId("");
+            setModelId(value === NEW_OPTION ? NEW_OPTION : "");
           }}
         >
           <option value="">Não sei ainda</option>
@@ -187,21 +187,30 @@ export function EquipmentIntakeForm({
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SelectField
-          label="Modelo"
-          name="equipment_model_id"
-          value={modelId}
-          onChange={setModelId}
-          disabled={!showModelSelect || showNewManufacturer}
-        >
-          <option value="">Não sei ainda</option>
-          {filteredModels.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
-          <option value={NEW_OPTION}>Cadastrar novo modelo</option>
-        </SelectField>
+        {showNewManufacturer ? (
+          <div className="grid gap-2 text-sm text-[var(--foreground)]">
+            <span className="font-medium">Modelo</span>
+            <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-[var(--muted)]">
+              Como você está cadastrando um fabricante novo, informe o modelo logo abaixo.
+            </div>
+          </div>
+        ) : (
+          <SelectField
+            label="Modelo"
+            name="equipment_model_id"
+            value={modelId}
+            onChange={setModelId}
+            disabled={!showModelSelect}
+          >
+            <option value="">Não sei ainda</option>
+            {filteredModels.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+            <option value={NEW_OPTION}>Cadastrar novo modelo</option>
+          </SelectField>
+        )}
 
         <Field
           label="Número de série"
