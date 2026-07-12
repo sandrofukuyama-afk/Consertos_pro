@@ -65,7 +65,7 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
         <div>
           <h3 className="font-bold text-gray-800 mb-2 uppercase text-xs tracking-wider">Informações do Caso</h3>
           <p><strong className="text-gray-600">Status atual:</strong> {detail.status.toUpperCase()}</p>
-          <p><strong className="text-gray-600">Abertura:</strong> {detail.openedAt}</p>
+          <p><strong className="text-gray-600">Abertura:</strong> {detail.createdAt}</p>
           <p><strong className="text-gray-600">Técnico responsável:</strong> {detail.openedBy}</p>
         </div>
       </section>
@@ -97,15 +97,15 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
       {/* Testes e Procedimentos Executados */}
       <section className="mt-6 border-b border-gray-200 pb-6 text-sm">
         <h3 className="font-bold text-gray-800 mb-3 uppercase text-xs tracking-wider">Testes e Medições Realizadas</h3>
-        {detail.testRuns.length > 0 || detail.measurements.length > 0 ? (
+        {detail.tests.length > 0 || detail.measurements.length > 0 ? (
           <div className="space-y-4">
-            {detail.testRuns.map((run: any) => (
+            {detail.tests.map((run: any) => (
               <div key={run.id} className="border-l-4 border-orange-500 pl-4 py-1">
                 <p className="font-semibold text-gray-800">
-                  Teste: {run.name} ({run.group})
+                  Teste: {run.testName}
                 </p>
                 <p className="text-gray-600 text-xs">
-                  <strong>Resultado:</strong> {run.status === "pass" ? "Aprovado" : "Falho / Problema detectado"} • <strong>Detalhes:</strong> {run.notes || "Sem anotações"}
+                  <strong>Resultado:</strong> {run.resultStatus === "passed" || run.resultStatus === "Passed" || run.resultStatus === "Passou" ? "Aprovado" : "Falho / Problema detectado"} • <strong>Detalhes:</strong> {run.procedureNotes || "Sem anotações"}
                 </p>
               </div>
             ))}
@@ -116,7 +116,7 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
                   Medição no ponto: {measure.pointLabel}
                 </p>
                 <p className="text-gray-600 text-xs">
-                  <strong>Valor encontrado:</strong> {measure.valueText || measure.valueNumeric} {measure.unit} • <strong>Esperado:</strong> {measure.expectedValue || "Não informado"}
+                  <strong>Valor encontrado:</strong> {measure.measuredValue} • <strong>Esperado:</strong> {measure.expectedValue || "Não informado"}
                 </p>
               </div>
             ))}
