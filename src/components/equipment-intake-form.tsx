@@ -44,7 +44,7 @@ function Field({
         name={name}
         placeholder={placeholder}
         step={step}
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
       />
     </label>
   );
@@ -73,7 +73,7 @@ function SelectField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none disabled:opacity-60"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none disabled:opacity-60"
       >
         {children}
       </select>
@@ -96,7 +96,7 @@ function StaticSelectField({
       <select
         name={name}
         defaultValue=""
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
       >
         {children}
       </select>
@@ -242,7 +242,7 @@ export function EquipmentIntakeForm({
       </div>
 
       {categorySlug.includes("television") ? (
-        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5 md:grid-cols-2">
+        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5 md:grid-cols-2">
           <Field
             label="Tamanho da tela"
             name="tv_screen_size_inches"
@@ -281,7 +281,7 @@ export function EquipmentIntakeForm({
       ) : null}
 
       {categorySlug.includes("notebook") ? (
-        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5 md:grid-cols-2">
+        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5 md:grid-cols-2">
           <Field
             label="Processador"
             name="notebook_processor"
@@ -322,7 +322,7 @@ export function EquipmentIntakeForm({
       ) : null}
 
       {categorySlug.includes("smartphone") ? (
-        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5 md:grid-cols-2">
+        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5 md:grid-cols-2">
           <Field
             label="Armazenamento (GB)"
             name="smartphone_storage_gb"
@@ -357,7 +357,7 @@ export function EquipmentIntakeForm({
       ) : null}
 
       {categorySlug.includes("desktop") ? (
-        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5 md:grid-cols-2">
+        <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5 md:grid-cols-2">
           <Field
             label="Processador"
             name="desktop_processor"
@@ -402,7 +402,7 @@ export function EquipmentIntakeForm({
           name="initial_problem_report"
           rows={5}
           placeholder="Descreva sintomas, comportamento e o que já foi visto na entrada."
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+          className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
         />
       </label>
 
@@ -412,7 +412,7 @@ export function EquipmentIntakeForm({
           name="physical_condition_notes"
           rows={4}
           placeholder="Oxidacao, marcas, trincas, sinais de reparo, faltando pecas, etc."
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+          className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
         />
       </label>
 
@@ -423,7 +423,7 @@ export function EquipmentIntakeForm({
           name="equipment_photos"
           accept="image/*"
           multiple
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+          className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
         />
         <span className="text-xs text-[var(--muted)]">
           Pode enviar uma ou mais fotos já na entrada do equipamento.
