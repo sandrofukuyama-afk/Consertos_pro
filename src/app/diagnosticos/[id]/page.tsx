@@ -972,7 +972,7 @@ export default async function DiagnosticDetailPage({
                     name="board_id"
                     className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
                   >
-                    {detail.boards.map((b) => (
+                    {detail.boards.map((b: any) => (
                       <option key={b.id} value={b.boardId ?? ""}>
                         Placa: {b.boardCode || b.name || "Principal"}
                       </option>

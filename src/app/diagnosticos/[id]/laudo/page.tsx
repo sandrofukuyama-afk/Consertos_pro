@@ -19,7 +19,7 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
     notFound();
   }
 
-  const resolved = detail.resolvedCases?.[0] || null;
+  const resolved = detail.resolvedCase;
 
   return (
     <main className="min-h-screen bg-white p-8 text-black font-sans leading-relaxed">
@@ -131,9 +131,9 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
         <h3 className="font-bold text-gray-800 mb-2 uppercase text-xs tracking-wider">Parecer Técnico e Resolução</h3>
         {resolved ? (
           <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-            <p className="mb-2"><strong>Resultado do reparo:</strong> {resolved.repair_outcome}</p>
-            <p className="mb-2"><strong>Status de solução:</strong> {resolved.case_status === "confirmed" ? "Causa Confirmada" : "Causa Provável"}</p>
-            <p><strong>Resumo da solução:</strong> {resolved.resolution_summary}</p>
+            <p className="mb-2"><strong>Resultado do reparo:</strong> {resolved.repairOutcome}</p>
+            <p className="mb-2"><strong>Status de solução:</strong> {resolved.caseStatus === "confirmed" || resolved.caseStatus === "Confirmado" ? "Causa Confirmada" : "Causa Provável"}</p>
+            <p><strong>Resumo da solução:</strong> {resolved.resolutionSummary}</p>
           </div>
         ) : (
           <p className="text-gray-500">Este diagnóstico ainda não foi encerrado com uma solução oficial.</p>
