@@ -537,6 +537,7 @@ export async function getTechnicalDocuments() {
         manufacturers(name),
         equipment_models(model_name),
         boards(board_code),
+        components(component_ref),
         document_chunks(id)
       `,
     )
@@ -548,6 +549,7 @@ export async function getTechnicalDocuments() {
       const manufacturer = pickRelation(row.manufacturers);
       const model = pickRelation(row.equipment_models);
       const board = pickRelation(row.boards);
+      const component = pickRelation((row as any).components);
       const chunks = Array.isArray(row.document_chunks) ? row.document_chunks : [];
       const { data: signed } = await supabase.storage
         .from("technical-documents")
@@ -558,7 +560,7 @@ export async function getTechnicalDocuments() {
         title: row.title,
         documentType: prettifyStatus(row.document_type),
         manufacturer: manufacturer?.name ?? "Não informado",
-        relation: model?.model_name ?? board?.board_code ?? "Referência geral",
+        relation: model?.model_name ?? board?.board_code ?? component?.component_ref ?? "Referência geral",
         uploadedAt: formatRelativeTime(row.created_at),
         chunksCount: chunks.length,
         isIndexed: row.is_indexed || chunks.length > 0,

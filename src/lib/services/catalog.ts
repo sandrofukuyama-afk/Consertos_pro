@@ -35,7 +35,19 @@ export async function getDiagnosticCatalog() {
 }
 
 export async function getLibraryCatalog() {
-  return getDiagnosticCatalog();
+  const supabase = await createClient();
+
+  const [diagnosticCatalog, boardsResult, componentsResult] = await Promise.all([
+    getDiagnosticCatalog(),
+    supabase.from("boards").select("id, board_code").eq("is_active", true).order("board_code"),
+    supabase.from("components").select("id, component_ref").eq("is_active", true).order("component_ref"),
+  ]);
+
+  return {
+    ...diagnosticCatalog,
+    boards: (boardsResult.data ?? []).map((item) => ({ id: item.id, name: item.board_code })),
+    components: (componentsResult.data ?? []).map((item) => ({ id: item.id, name: item.component_ref })),
+  };
 }
 
 export async function getCatalogDashboardData() {

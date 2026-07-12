@@ -122,7 +122,12 @@ export default async function BibliotecaPage({
               Use esta area para subir esquemas, boardviews, BIOS e outros arquivos que ajudam no reparo.
             </p>
             <div className="mt-5">
-              <TechnicalDocumentUploadForm manufacturers={catalog.manufacturers} />
+              <TechnicalDocumentUploadForm
+                manufacturers={catalog.manufacturers}
+                models={catalog.models}
+                boards={catalog.boards}
+                components={catalog.components}
+              />
             </div>
           </aside>
         </div>

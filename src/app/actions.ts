@@ -831,17 +831,23 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
   const documentType = String(formData.get("document_type") ?? "").trim();
   const manufacturerId =
     String(formData.get("manufacturer_id") ?? "").trim() || null;
+  const equipmentModelId =
+    String(formData.get("equipment_model_id") ?? "").trim() || null;
+  const boardId =
+    String(formData.get("board_id") ?? "").trim() || null;
+  const componentId =
+    String(formData.get("component_id") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const file = formData.get("file");
 
   if (
     !title ||
     !documentType ||
-    !manufacturerId ||
+    (!manufacturerId && !equipmentModelId && !boardId && !componentId) ||
     !(file instanceof File) ||
     file.size === 0
   ) {
-    redirect("/biblioteca?error=Documento inválido.");
+    redirect("/biblioteca?error=Documento inválido. Forneça o título, tipo, arquivo e pelo menos uma relação (fabricante, modelo, placa ou componente).");
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -865,6 +871,9 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
       title,
       document_type: documentType,
       manufacturer_id: manufacturerId,
+      equipment_model_id: equipmentModelId,
+      board_id: boardId,
+      component_id: componentId,
       storage_path: storagePath,
       mime_type: file.type || "application/octet-stream",
       file_size_bytes: file.size,
