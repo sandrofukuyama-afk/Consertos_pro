@@ -177,7 +177,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     [manufacturer?.name, category?.name].filter(Boolean).join(" ") || "Equipamento sem nome";
   const label = model?.model_name ?? data.equipment_label ?? fallbackLabel;
 
-  const categorySlug = category?.slug ?? category?.name ?? "desktop";
+  const categorySlug = (category as any)?.slug ?? category?.name ?? "desktop";
   const tree = getGuidedTreeForCategory(categorySlug);
 
   const testRuns = [...(data.diagnostic_test_runs ?? [])].sort(
@@ -203,7 +203,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     }
     visited.add(currentNodeId);
 
-    const node = tree[currentNodeId];
+    const node = tree[currentNodeId] as any;
     
     const matchingRun = testRuns.find((run) => {
       const test = pickRelation(run.tests);
