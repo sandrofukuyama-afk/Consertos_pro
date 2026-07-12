@@ -52,7 +52,7 @@ export function ModulePage({
           </p>
           <div className="mt-5 space-y-4">
             {[
-              "Fluxo rapido para a bancada",
+              "Fluxo rápido para a bancada",
               "Rastreabilidade por técnico",
               "Separação entre histórico e conhecimento consolidado",
               "Base preparada para Supabase Auth, Storage e schema SQL",

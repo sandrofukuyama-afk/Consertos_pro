@@ -2,8 +2,8 @@ insert into public.equipment_categories (name, slug, description)
 values
   ('Desktop', 'desktop', 'Equipamentos desktop de bancada.'),
   ('Notebook', 'notebook', 'Notebooks e ultrabooks.'),
-  ('Television', 'television', 'TVs, monitores integrados e smart TVs.'),
-  ('Smartphone', 'smartphone', 'Celulares e dispositivos moveis.')
+  ('Televisão', 'television', 'TVs, monitores integrados e smart TVs.'),
+  ('Smartphone', 'smartphone', 'Celulares e dispositivos móveis.')
 on conflict (slug) do update
 set name = excluded.name,
     description = excluded.description,
@@ -12,10 +12,10 @@ set name = excluded.name,
 insert into public.board_types (name, slug, description)
 values
   ('Mainboard', 'mainboard', 'Placa principal do equipamento.'),
-  ('Power Supply', 'power_supply', 'Fonte primaria ou fonte secundaria.'),
+  ('Power Supply', 'power_supply', 'Fonte primária ou fonte secundária.'),
   ('T-Con', 'tcon', 'Controladora de painel e imagem.'),
-  ('Logic Board', 'logic_board', 'Placas logicas complementares.'),
-  ('Daughterboard', 'daughterboard', 'Sub-placa secundaria ou modular.')
+  ('Logic Board', 'logic_board', 'Placas lógicas complementares.'),
+  ('Daughterboard', 'daughterboard', 'Sub-placa secundária ou modular.')
 on conflict (slug) do update
 set name = excluded.name,
     description = excluded.description,
@@ -40,17 +40,17 @@ select c.id, v.name, v.slug, v.description, v.symptom_group
 from public.equipment_categories c
 join (
   values
-    ('desktop', 'Nao liga', 'nao_liga', 'Equipamento sem energizacao.', 'power'),
-    ('desktop', 'Desliga sozinho', 'desliga_sozinho', 'Perde alimentacao apos iniciar.', 'power'),
-    ('desktop', 'Sem video', 'sem_video', 'Liga sem apresentar imagem.', 'video'),
-    ('notebook', 'Nao liga', 'nao_liga', 'Sem resposta ao botao power.', 'power'),
-    ('notebook', 'Liga sem imagem', 'liga_sem_imagem', 'Atividade eletrica sem video.', 'video'),
-    ('notebook', 'Nao carrega', 'nao_carrega', 'Bateria sem carga ou sem reconhecimento.', 'charge'),
-    ('television', 'Liga com som sem imagem', 'liga_com_som_sem_imagem', 'Audio normal com painel apagado.', 'video'),
-    ('television', 'Reinicia', 'reinicia', 'Ciclo de reinicio durante uso.', 'system'),
-    ('television', 'Nao liga', 'nao_liga', 'Sem resposta ao comando de ligar.', 'power'),
-    ('smartphone', 'Nao liga', 'nao_liga', 'Sem energizacao aparente.', 'power'),
-    ('smartphone', 'Nao carrega', 'nao_carrega', 'Falha na linha ou circuito de carga.', 'charge'),
+    ('desktop', 'Não liga', 'nao_liga', 'Equipamento sem energização.', 'power'),
+    ('desktop', 'Desliga sozinho', 'desliga_sozinho', 'Perde alimentação após iniciar.', 'power'),
+    ('desktop', 'Sem vídeo', 'sem_video', 'Liga sem apresentar imagem.', 'video'),
+    ('notebook', 'Não liga', 'nao_liga', 'Sem resposta ao botão power.', 'power'),
+    ('notebook', 'Liga sem imagem', 'liga_sem_imagem', 'Atividade elétrica sem vídeo.', 'video'),
+    ('notebook', 'Não carrega', 'nao_carrega', 'Bateria sem carga ou sem reconhecimento.', 'charge'),
+    ('television', 'Liga com som sem imagem', 'liga_com_som_sem_imagem', 'Áudio normal com painel apagado.', 'video'),
+    ('television', 'Reinicia', 'reinicia', 'Ciclo de reinício durante uso.', 'system'),
+    ('television', 'Não liga', 'nao_liga', 'Sem resposta ao comando de ligar.', 'power'),
+    ('smartphone', 'Não liga', 'nao_liga', 'Sem energização aparente.', 'power'),
+    ('smartphone', 'Não carrega', 'nao_carrega', 'Falha na linha ou circuito de carga.', 'charge'),
     ('smartphone', 'Aquece excessivamente', 'aquece_excessivamente', 'Aquecimento anormal em repouso ou carga.', 'thermal')
 ) as v(category_slug, name, slug, description, symptom_group)
   on v.category_slug = c.slug
@@ -63,35 +63,35 @@ set name = excluded.name,
 insert into public.tests (name, slug, test_group, description, default_unit)
 values
   (
-    'Medicao de tensao',
+    'Medição de tensão',
     'medicao_tensao',
     'electrical',
-    'Leitura de tensao em ponto especifico da placa.',
+    'Leitura de tensão em ponto específico da placa.',
     'V'
   ),
   (
     'Teste de continuidade',
     'teste_continuidade',
     'electrical',
-    'Verifica continuidade eletrica entre dois pontos.',
+    'Verifica continuidade elétrica entre dois pontos.',
     'ohm'
   ),
   (
-    'Regravacao de BIOS',
+    'Regravação de BIOS',
     'regravacao_bios',
     'firmware',
-    'Regrava firmware ou BIOS para validar corrupcao.',
+    'Regrava firmware ou BIOS para validar corrupção.',
     null
   ),
   (
-    'Substituicao cruzada',
+    'Substituição cruzada',
     'substituicao_cruzada',
     'replacement',
-    'Troca temporaria por componente ou placa sabidamente funcional.',
+    'Troca temporária por componente ou placa sabidamente funcional.',
     null
   ),
   (
-    'Teste com fonte assimetrica',
+    'Teste com fonte assimétrica',
     'teste_fonte_assimetrica',
     'power',
     'Analisa consumo e comportamento de corrente em bancada.',
@@ -106,9 +106,9 @@ set name = excluded.name,
 
 insert into public.tags (name, slug, tag_group, description)
 values
-  ('Prioridade alta', 'prioridade_alta', 'diagnostic_priority', 'Casos com urgencia operacional.'),
-  ('Dano liquido', 'dano_liquido', 'failure_context', 'Presenca de oxidacao ou contato com liquido.'),
-  ('Sem imagem', 'sem_imagem', 'symptom_hint', 'Falha recorrente de video ou painel.')
+  ('Prioridade alta', 'prioridade_alta', 'diagnostic_priority', 'Casos com urgência operacional.'),
+  ('Dano líquido', 'dano_liquido', 'failure_context', 'Presença de oxidação ou contato com líquido.'),
+  ('Sem imagem', 'sem_imagem', 'symptom_hint', 'Falha recorrente de vídeo ou painel.')
 on conflict (slug, tag_group) do update
 set name = excluded.name,
     description = excluded.description,
