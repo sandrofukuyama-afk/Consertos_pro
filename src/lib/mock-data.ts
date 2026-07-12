@@ -36,6 +36,11 @@ export const navItems: NavItem[] = [
     description: "Consulta estruturada e semantica",
   },
   {
+    href: "/estatisticas",
+    label: "Estatisticas",
+    description: "Defeitos recorrentes e tempo de resolucao",
+  },
+  {
     href: "/configuracoes",
     label: "Configuracoes",
     description: "Usuarios, revisao e governanca",

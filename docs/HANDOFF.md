@@ -168,6 +168,21 @@ Fase 6 concluida. Chave `OPENAI_API_KEY` foi configurada e validada em 2026-07-1
 
 Pendente: apos configurar a chave, e necessario clicar em "Sincronizar agora" em `/conhecimento` (login manual no navegador) para reprocessar os embeddings existentes, que foram gerados no modo `hashing-v1` antes da chave estar disponivel — nao foi possivel automatizar esse clique neste ambiente por falta de navegador headless.
 
+## Fase 7 iniciada: estatisticas tecnicas (2026-07-12)
+
+Conforme `PROJECT_PLAN.md` (Modulo 10 / Fase 7 do roadmap), apos concluir a Fase 6 o proximo passo e transformar o historico em inteligencia operacional. Entregue:
+
+- `src/lib/services/statistics.ts`: `getWorkshopStatistics()` agrega `resolved_cases` + `confirmed_causes` para calcular:
+  - total de casos resolvidos e tempo medio de resolucao geral;
+  - distribuicao por `case_status` (confirmado, provavel, nao resolvido);
+  - casos e tempo medio por fabricante e por modelo;
+  - componentes recorrentes em causas confirmadas (via `confirmed_causes.board_component_id` -> `board_components` -> `components`);
+  - frequencia de `cause_type` (curto-circuito, solda fria, falha termica, etc.).
+- Nova pagina `/estatisticas` (`src/app/estatisticas/page.tsx`), com item de navegacao adicionado em `src/lib/mock-data.ts`.
+- Build e lint validados; pagina nova aparece nas rotas geradas.
+
+Ainda faltam da Fase 7 (Modulo 10): dashboards mais visuais (graficos), e cruzar isso com a qualidade das recomendacoes da IA ao longo do tempo (parcialmente coberto pela tendencia semanal em `/conhecimento`).
+
 ## Incidente 2026-07-12: producao na Vercel fora do ar
 
 Sintomas em `consertos-pro.vercel.app`:

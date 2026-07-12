@@ -305,3 +305,33 @@ export type KnowledgeOverviewData = {
     createdAt: string;
   }>;
 };
+
+export type WorkshopStatistics = {
+  totalResolvedCases: number;
+  averageResolutionMinutes: number | null;
+  resolutionRate: {
+    confirmed: number;
+    probable: number;
+    unresolved: number;
+  };
+  byManufacturer: Array<{
+    manufacturer: string;
+    caseCount: number;
+    averageResolutionMinutes: number | null;
+  }>;
+  byModel: Array<{
+    model: string;
+    manufacturer: string;
+    caseCount: number;
+    averageResolutionMinutes: number | null;
+  }>;
+  recurringComponents: Array<{
+    componentRef: string;
+    componentType: string;
+    occurrences: number;
+  }>;
+  causeFrequency: Array<{
+    causeType: string;
+    count: number;
+  }>;
+};
