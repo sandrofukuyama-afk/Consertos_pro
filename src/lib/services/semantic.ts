@@ -560,6 +560,9 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
             case_status,
             resolution_summary,
             created_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            knowledge_promoted_at,
             diagnostics(equipment_label)
           `,
         )
@@ -739,6 +742,9 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
         status: item.case_status,
         summary: item.resolution_summary,
         createdAt: formatRelativeTime(item.created_at),
+        reviewedByUserId: item.reviewed_by_user_id,
+        reviewedAt: item.reviewed_at ? formatRelativeTime(item.reviewed_at) : null,
+        knowledgePromotedAt: item.knowledge_promoted_at ? formatRelativeTime(item.knowledge_promoted_at) : null,
       };
     }),
     recentAiFeedback: (recentAiFeedbackResult.data ?? []).map((item) => {

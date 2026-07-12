@@ -1,8 +1,9 @@
-import { syncSemanticMemoryAction } from "@/app/actions";
+import { reviewResolvedCaseAction, syncSemanticMemoryAction } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
 import { SyncButton } from "@/components/sync-button";
 import { requireCurrentUser } from "@/lib/auth";
 import { getKnowledgeOverviewData } from "@/lib/services/semantic";
+import { createClient } from "@/lib/supabase/server";
 import { formatProviderLabel } from "@/lib/utils";
 
 type ConhecimentoPageProps = {
@@ -18,6 +19,14 @@ export default async function ConhecimentoPage({
   const userPromise = requireCurrentUser();
   const overviewPromise = getKnowledgeOverviewData();
   const [user, overview] = await Promise.all([userPromise, overviewPromise]);
+
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("technician_profiles")
+    .select("is_reviewer")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isReviewer = profile?.is_reviewer ?? false;
 
   const params = await searchParams;
 
@@ -343,23 +352,81 @@ export default async function ConhecimentoPage({
           </p>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {overview.recentResolvedCases.length ? (
-              overview.recentResolvedCases.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-                >
-                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                    {item.status}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
-                    {item.label}
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                    {item.summary}
-                  </p>
-                  <p className="mt-3 text-xs text-[var(--muted)]">{item.createdAt}</p>
-                </article>
-              ))
+              overview.recentResolvedCases.map((item) => {
+                const isPromoted = !!item.knowledgePromotedAt;
+                const isReviewed = !!item.reviewedAt;
+
+                return (
+                  <article
+                    key={item.id}
+                    className="flex flex-col justify-between rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-5 text-white"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
+                          {item.status}
+                        </span>
+                        {isPromoted ? (
+                          <span className="rounded-full bg-[rgba(62,158,114,0.14)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--success)] uppercase">
+                            ✓ Promovido
+                          </span>
+                        ) : isReviewed ? (
+                          <span className="rounded-full bg-[rgba(202,106,85,0.14)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--danger)] uppercase">
+                            Revisado
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-[rgba(255,245,236,0.5)] uppercase">
+                            Pendente
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="mt-3 text-base font-semibold text-white tracking-tight">
+                        {item.label}
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-[rgba(255,245,236,0.8)]">
+                        {item.summary}
+                      </p>
+                      <p className="mt-3 text-[10px] text-[var(--muted)]">{item.createdAt}</p>
+                    </div>
+
+                    {/* Formulário de Auditoria para Revisores Técnicos se o caso estiver pendente */}
+                    {!isReviewed && isReviewer && (
+                      <div className="mt-4 border-t border-white/5 pt-4">
+                        <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--accent-teal)]">
+                          Painel do Revisor Técnico
+                        </p>
+                        <form action={reviewResolvedCaseAction} className="mt-2.5 grid gap-2">
+                          <input type="hidden" name="resolved_case_id" value={item.id} />
+                          <textarea
+                            name="review_notes"
+                            rows={2}
+                            placeholder="Notas de auditoria do caso..."
+                            className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-1.5 text-xs text-white outline-none focus:border-[var(--accent-teal)]"
+                          />
+                          <div className="flex gap-2">
+                            <select
+                              required
+                              name="review_status"
+                              className="flex-1 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white outline-none"
+                              defaultValue="approved"
+                            >
+                              <option value="approved">Aprovar & Promover</option>
+                              <option value="rejected">Rejeitar Caso</option>
+                            </select>
+                            <button
+                              type="submit"
+                              className="rounded-full bg-[var(--accent-teal)] px-4 py-1.5 text-xs font-semibold text-white hover:brightness-110 active:scale-98 transition-all"
+                            >
+                              Salvar
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+                  </article>
+                );
+              })
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2 xl:col-span-3">
                 Ainda não há casos resolvidos suficientes para encher esta base.

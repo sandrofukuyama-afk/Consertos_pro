@@ -337,6 +337,9 @@ export type KnowledgeOverviewData = {
     status: string;
     summary: string;
     createdAt: string;
+    reviewedByUserId: string | null;
+    reviewedAt: string | null;
+    knowledgePromotedAt: string | null;
   }>;
   recentAiFeedback: Array<{
     id: string;

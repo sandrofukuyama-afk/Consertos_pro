@@ -979,3 +979,48 @@ export async function saveAttachmentAnnotationsAction(
 
   revalidatePath(`/diagnosticos/${diagnosticId}`);
 }
+
+export async function reviewResolvedCaseAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const resolvedCaseId = String(formData.get("resolved_case_id") ?? "").trim();
+  const reviewStatus = String(formData.get("review_status") ?? "").trim();
+  const reviewNotes = String(formData.get("review_notes") ?? "").trim() || null;
+
+  if (!resolvedCaseId || !reviewStatus) {
+    redirect("/conhecimento?error=Dados inválidos para revisão.");
+  }
+
+  const { error: reviewError } = await supabase
+    .from("entity_reviews")
+    .insert({
+      entity_type: "resolved_case",
+      entity_id: resolvedCaseId,
+      review_status: reviewStatus,
+      review_notes: reviewNotes,
+      reviewed_by_user_id: user.id,
+    });
+
+  if (reviewError) {
+    redirect(`/conhecimento?error=${encodeURIComponent(reviewError.message)}`);
+  }
+
+  const isApproved = reviewStatus === "approved";
+  const { error: resolvedError } = await supabase
+    .from("resolved_cases")
+    .update({
+      reviewed_by_user_id: user.id,
+      reviewed_at: new Date().toISOString(),
+      knowledge_promoted_at: isApproved ? new Date().toISOString() : null,
+    })
+    .eq("id", resolvedCaseId);
+
+  if (resolvedError) {
+    redirect(`/conhecimento?error=${encodeURIComponent(resolvedError.message)}`);
+  }
+
+  revalidatePath("/conhecimento");
+  revalidatePath("/configuracoes");
+  redirect("/conhecimento?message=Revisão registrada com sucesso.");
+}
