@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
 
-import { PDFParse } from "pdf-parse";
-
 const TEXT_MIME_TYPES = new Set([
   "application/json",
   "application/javascript",
@@ -90,6 +88,7 @@ function chunkText(value: string): DocumentIndexPayload["chunks"] {
 
 export async function extractTechnicalDocumentText(file: File) {
   if (file.type === "application/pdf") {
+    const { PDFParse } = await import("pdf-parse");
     const parser = new PDFParse({
       data: Buffer.from(await file.arrayBuffer()),
     });

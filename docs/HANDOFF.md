@@ -168,6 +168,20 @@ Fase 6 concluida. Chave `OPENAI_API_KEY` foi configurada e validada em 2026-07-1
 
 Pendente: apos configurar a chave, e necessario clicar em "Sincronizar agora" em `/conhecimento` (login manual no navegador) para reprocessar os embeddings existentes, que foram gerados no modo `hashing-v1` antes da chave estar disponivel — nao foi possivel automatizar esse clique neste ambiente por falta de navegador headless.
 
+## Incidente 2026-07-12: producao na Vercel fora do ar
+
+Sintomas em `consertos-pro.vercel.app`:
+
+1. `Error: Supabase environment variables are missing.` — a Vercel nunca teve `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configuradas (o `.env.local` e local por design, nunca vai para o Git). Resolvido pelo usuario direto no painel da Vercel (Settings > Environment Variables) + redeploy.
+2. Apos o redeploy, novo erro derrubou `/login` inteiro: `ReferenceError: DOMMatrix is not defined`. Causa raiz: `src/lib/services/document-indexing.ts` importava `pdf-parse` no topo do arquivo; como `src/components/auth-panel.tsx` (usado em `/login`) importa `signInAction`/`signUpAction` de `src/app/actions.ts`, e esse arquivo `"use server"` importa `semantic.ts` -> `document-indexing.ts` -> `pdf-parse`, o Next empacotava toda essa cadeia no mesmo chunk de servidor de `/login`. O `pdf-parse` tem `exports` ambiguo no `package.json` e o Turbopack resolvia a condicao `browser` (que referencia `DOMMatrix`, API que so existe em navegador) em vez de `node`/`require`.
+
+Correcao (commit a seguir):
+   - `pdf-parse` agora e importado via `await import("pdf-parse")` dentro de `extractTechnicalDocumentText`, so quando um PDF de fato precisa ser processado.
+   - `next.config.ts` ganhou `serverExternalPackages: ["pdf-parse"]`, forcando o Node a resolver o pacote nativamente em runtime (condicao `require`) em vez do Turbopack escolher a build errada.
+   - Confirmado apos o build: nenhum chunk SSR de producao referencia mais `DOMMatrix`.
+
+Licao para o futuro: dependencias pesadas usadas por uma unica feature (parsing de PDF, OCR, etc.) devem sempre ser importadas dinamicamente dentro da funcao que as usa, nunca no topo de um servico compartilhado — especialmente se esse servico e importado (direta ou indiretamente) por um arquivo `"use server"` referenciado por componentes usados em rotas nao relacionadas, como a de login.
+
 ## Observacao importante
 
 O repositório estava limpo no momento deste handoff. Tudo relevante ate aqui ja foi enviado para o GitHub.
