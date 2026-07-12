@@ -78,12 +78,17 @@ export function getAssistantModelName() {
 
 export async function generateAssistantNarrative(
   facts: AssistantNarrativeFacts,
+  specialistInstructions?: string,
 ): Promise<AssistantNarrativeResult | null> {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return null;
   }
+
+  const systemPrompt = specialistInstructions
+    ? `${SYSTEM_PROMPT} Além disso, siga as seguintes diretrizes de especialista: ${specialistInstructions}`
+    : SYSTEM_PROMPT;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -95,7 +100,7 @@ export async function generateAssistantNarrative(
       model: CHAT_MODEL,
       temperature: 0.2,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: JSON.stringify(facts) },
       ],
       response_format: {

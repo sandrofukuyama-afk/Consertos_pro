@@ -230,6 +230,19 @@ export default async function DiagnosticDetailPage({
                 <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
                   Usa o histórico do caso, memória inteligente e documentos relacionados para sugerir um único passo objetivo por vez.
                 </p>
+
+                {/* Agente de IA Especialista Ativo */}
+                <div className="mt-4 flex flex-col items-start gap-1.5 rounded-[18px] border border-[var(--accent-teal)]/20 bg-[rgba(45,139,130,0.06)] p-3.5 text-white">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 shrink-0 rounded-full bg-[var(--accent-teal)] animate-pulse" />
+                    <span className="font-mono text-xs uppercase tracking-wider text-[var(--accent-teal)] font-bold">
+                      Agente Ativo: {detail.assistantSnapshot.activeAgent.name}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[rgba(255,245,236,0.7)] leading-relaxed">
+                    {detail.assistantSnapshot.activeAgent.specialty}
+                  </p>
+                </div>
               </div>
               <form action={generateDiagnosticAssistantAction}>
                 <input type="hidden" name="diagnostic_id" value={detail.id} />

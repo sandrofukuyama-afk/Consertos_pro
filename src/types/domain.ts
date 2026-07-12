@@ -230,6 +230,11 @@ export type DiagnosticDetail = {
     relatedDocuments: SemanticMatchResult[];
     provider: string;
     externalProviderConfigured: boolean;
+    activeAgent: {
+      id: string;
+      name: string;
+      specialty: string;
+    };
   };
 };
 

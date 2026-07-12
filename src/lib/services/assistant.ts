@@ -10,6 +10,7 @@ import {
   getAssistantModelName,
   isLlmConfigured,
 } from "@/lib/ai/assistant-llm";
+import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
   AiFeedbackRating,
@@ -665,49 +666,53 @@ async function buildStructuredResponse(
 
   if (isLlmConfigured()) {
     try {
-      const llmNarrative = await generateAssistantNarrative({
-        equipmentLabel: context.label,
-        category: context.category,
-        manufacturer: context.manufacturer,
-        summary: context.summary,
-        categoryStrategyFocus: strategy.summaryFocus,
-        categoryFirstMove: strategy.firstMove,
-        categorySafety: strategy.safety,
-        symptoms: context.symptoms,
-        tests: context.tests.map((item) => ({
-          testName: item.testName,
-          testGroup: item.testGroup,
-          resultStatus: item.resultStatus,
-          actualResult: item.actualResult,
-        })),
-        measurements: context.measurements,
-        hypotheses: context.hypotheses.map((item) => ({
-          title: item.title,
-          confidenceScore: item.confidenceScore,
-          status: item.status,
-        })),
-        recommendedTestName: nextTestName,
-        heuristicMainHypothesis: mainHypothesis,
-        heuristicNextTest: nextTest,
-        heuristicValidationGoal: validationGoal,
-        similarCases: similarCases.map((item) => ({
-          title: item.title,
-          excerpt: item.excerpt,
-          similarityLabel: item.similarityLabel,
-        })),
-        relatedDocuments: relatedDocuments.map((item) => ({
-          title: item.title,
-          excerpt: item.excerpt,
-        })),
-        symptomGroupInsight:
-          primarySymptomInsight && primarySymptomEntry?.group
-            ? {
-                group: primarySymptomEntry.group,
-                topCause: primarySymptomInsight.topCause,
-                count: primarySymptomInsight.count,
-              }
-            : null,
-      });
+      const specialistAgent = getSpecialistAgent(context.category, context.manufacturer);
+      const llmNarrative = await generateAssistantNarrative(
+        {
+          equipmentLabel: context.label,
+          category: context.category,
+          manufacturer: context.manufacturer,
+          summary: context.summary,
+          categoryStrategyFocus: strategy.summaryFocus,
+          categoryFirstMove: strategy.firstMove,
+          categorySafety: strategy.safety,
+          symptoms: context.symptoms,
+          tests: context.tests.map((item) => ({
+            testName: item.testName,
+            testGroup: item.testGroup,
+            resultStatus: item.resultStatus,
+            actualResult: item.actualResult,
+          })),
+          measurements: context.measurements,
+          hypotheses: context.hypotheses.map((item) => ({
+            title: item.title,
+            confidenceScore: item.confidenceScore,
+            status: item.status,
+          })),
+          recommendedTestName: nextTestName,
+          heuristicMainHypothesis: mainHypothesis,
+          heuristicNextTest: nextTest,
+          heuristicValidationGoal: validationGoal,
+          similarCases: similarCases.map((item) => ({
+            title: item.title,
+            excerpt: item.excerpt,
+            similarityLabel: item.similarityLabel,
+          })),
+          relatedDocuments: relatedDocuments.map((item) => ({
+            title: item.title,
+            excerpt: item.excerpt,
+          })),
+          symptomGroupInsight:
+            primarySymptomInsight && primarySymptomEntry?.group
+              ? {
+                  group: primarySymptomEntry.group,
+                  topCause: primarySymptomInsight.topCause,
+                  count: primarySymptomInsight.count,
+                }
+              : null,
+        },
+        specialistAgent.systemInstructions,
+      );
 
       if (llmNarrative) {
         narrative = llmNarrative;
@@ -804,6 +809,11 @@ export async function getDiagnosticAssistantSnapshot(
       relatedDocuments: [],
       provider: getEmbeddingProviderName(),
       externalProviderConfigured: isExternalEmbeddingConfigured(),
+      activeAgent: {
+        id: "default",
+        name: "Assistente Geral",
+        specialty: "Suporte geral a diagnósticos rápidos e organização de etapas de investigação na bancada.",
+      },
     };
   }
 
@@ -838,6 +848,7 @@ export async function getDiagnosticAssistantSnapshot(
   ]);
 
   const latestResponse = latestResponseResult.data;
+  const activeAgent = getSpecialistAgent(context.category, context.manufacturer);
 
   return {
     latestResponse: latestResponse
@@ -880,5 +891,10 @@ export async function getDiagnosticAssistantSnapshot(
     relatedDocuments,
     provider: getEmbeddingProviderName(),
     externalProviderConfigured: isExternalEmbeddingConfigured(),
+    activeAgent: {
+      id: activeAgent.id,
+      name: activeAgent.name,
+      specialty: activeAgent.specialty,
+    },
   };
 }
