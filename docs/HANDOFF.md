@@ -136,6 +136,18 @@ E no navegador:
 - abrir `/conhecimento`
 - clicar em `Sincronizar agora`
 
+## Fluxo de recuperacao de senha (2026-07-12)
+
+Diagnosticado via `get_logs` (service auth) que o "Invalid login credentials" reportado pelo usuario NAO era problema de confirmacao de email (o evento `user_signedup` ja tinha acontecido com sucesso antes das tentativas de login) — era senha divergente entre cadastro e login. Como o app nao tinha fluxo de recuperacao, isso travava o usuario sem saida.
+
+Implementado:
+
+- `requestPasswordResetAction` em `src/app/actions.ts`: chama `supabase.auth.resetPasswordForEmail(email, { redirectTo })`, com `redirectTo` derivado dos headers da request (`host` + `x-forwarded-proto`) para funcionar tanto em localhost quanto em producao sem env var extra. Mensagem de retorno e sempre generica ("se o email existir...") para nao vazar quais emails tem conta.
+- Nova pagina `src/app/redefinir-senha/page.tsx` (client component): usa `src/lib/supabase/client.ts` (browser client, ja existia mas nao era usado em nenhum lugar). No mount, chama `getSession()` para deixar o SDK detectar a sessao de recuperacao vinda do hash da URL (mesmo mecanismo que ja funcionava na confirmacao de cadastro via GoTrue `/verify`). Formulario de nova senha chama `updateUser({ password })`.
+- Link "Esqueceu a senha?" (`<details>` expansivel) adicionado em `src/components/auth-panel.tsx`.
+
+**Acao manual pendente do usuario**: adicionar `https://consertos-pro.vercel.app/**` em Authentication > URL Configuration > Redirect URLs no painel do Supabase, senao o link do email nao redireciona certo em producao. Nao existe tool MCP para configurar isso automaticamente (e config de Auth, nao de banco).
+
 ## Problema encontrado no Auth
 
 Ao criar conta apareceu `email rate limit exceeded`.

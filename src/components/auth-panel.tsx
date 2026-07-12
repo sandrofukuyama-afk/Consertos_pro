@@ -1,4 +1,4 @@
-import { signInAction, signUpAction } from "@/app/actions";
+import { requestPasswordResetAction, signInAction, signUpAction } from "@/app/actions";
 
 type AuthPanelProps = {
   error?: string;
@@ -54,6 +54,26 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
             Entrar
           </button>
         </form>
+
+        <details className="mt-4 text-sm text-[var(--muted)]">
+          <summary className="cursor-pointer font-medium text-[var(--accent-copper)]">
+            Esqueceu a senha?
+          </summary>
+          <form action={requestPasswordResetAction} className="mt-3 grid gap-3">
+            <label className="grid gap-2 text-sm text-[var(--foreground)]">
+              <span className="font-medium">Email cadastrado</span>
+              <input
+                required
+                type="email"
+                name="email"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+              />
+            </label>
+            <button className="rounded-full border border-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-[var(--accent-copper)]">
+              Enviar link de recuperacao
+            </button>
+          </form>
+        </details>
       </section>
 
       <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">

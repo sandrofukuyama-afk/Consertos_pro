@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
@@ -50,6 +51,28 @@ export async function signUpAction(formData: FormData) {
   }
 
   redirect("/login?message=Conta criada. Agora faca login.");
+}
+
+export async function requestPasswordResetAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) {
+    redirect("/login?error=Informe um email valido para recuperar a senha.");
+  }
+
+  const headerList = await headers();
+  const host = headerList.get("host");
+  const protocol = headerList.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const origin = `${protocol}://${host}`;
+
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/redefinir-senha`,
+  });
+
+  redirect(
+    "/login?message=Se o email existir, enviamos um link para redefinir a senha.",
+  );
 }
 
 export async function signOutAction() {
