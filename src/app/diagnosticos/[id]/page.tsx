@@ -64,6 +64,22 @@ export default async function DiagnosticDetailPage({
           </section>
         ) : null}
 
+        {detail.preventiveInsight ? (
+          <section className="rounded-[26px] border border-[rgba(216,166,84,0.32)] bg-[rgba(216,166,84,0.1)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-amber)]">
+              Recomendacao preventiva
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+              {detail.preventiveInsight.occurrences} de {detail.preventiveInsight.totalCases} casos anteriores
+              deste modelo tiveram como causa confirmada &quot;{detail.preventiveInsight.causeLabel}&quot;
+              {detail.preventiveInsight.componentRef
+                ? `, com o componente ${detail.preventiveInsight.componentRef} mais associado`
+                : ""}
+              . Considere verificar isso preventivamente antes de aprofundar outros testes.
+            </p>
+          </section>
+        ) : null}
+
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_360px]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">

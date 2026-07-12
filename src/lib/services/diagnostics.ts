@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
+import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
@@ -37,6 +38,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         initial_problem_report,
         physical_condition_notes,
         created_at,
+        equipment_model_id,
         equipment_categories(name),
         manufacturers(name),
         users!diagnostics_opened_by_user_id_fkey(full_name),
@@ -115,7 +117,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const openedBy = pickRelation(data.users);
   const resolvedCase = pickRelation(data.resolved_cases);
 
-  const [attachments, assistantSnapshot] = await Promise.all([
+  const [attachments, assistantSnapshot, preventiveInsight] = await Promise.all([
     Promise.all(
       (data.attachments ?? []).map(async (item) => {
         const { data: signed } = await supabase.storage
@@ -151,6 +153,9 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       }),
     ),
     getDiagnosticAssistantSnapshot(diagnosticId, supabase),
+    data.equipment_model_id
+      ? getPreventiveInsightForModel(data.equipment_model_id, diagnosticId, supabase)
+      : Promise.resolve(null),
   ]);
 
   const timeline = [
@@ -232,6 +237,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     physicalNotes: data.physical_condition_notes ?? "Sem observacoes fisicas.",
     openedBy: openedBy?.full_name ?? "Usuario interno",
     createdAt: formatRelativeTime(data.created_at),
+    preventiveInsight,
     resolvedCase: resolvedCase
       ? {
           caseStatus: prettifyStatus(resolvedCase.case_status),

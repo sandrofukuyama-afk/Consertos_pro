@@ -202,7 +202,14 @@ Primeiro item do roadmap "Evolucoes avancadas" implementado: analise de imagem p
 
 Build e lint validados. Nao foi possivel testar com uma foto real de placa neste ambiente (sem navegador para fazer upload) — validar no proximo teste manual subindo uma foto real e clicando em "Analisar imagem com IA".
 
-Itens restantes do roadmap "Evolucoes avancadas" (nao iniciados, sao possibilidades abertas, nao escopo fechado): agentes especializados, anotacao visual de componentes na propria imagem, fluxos guiados por tipo de equipamento, recomendacoes preventivas, arvore dinamica de investigacao.
+### Atualizacao: recomendacoes preventivas
+
+- `getPreventiveInsightForModel(equipmentModelId, excludeDiagnosticId, client?)` em `src/lib/services/statistics.ts`: olha o historico de `confirmed_causes` de outros diagnosticos do mesmo `equipment_model_id`, agrupa por `cause_type` e, secundariamente, por componente mais associado. So retorna um insight se a causa mais frequente aparecer em pelo menos 2 casos anteriores (evita ruido com 1 caso isolado).
+- `CAUSE_TYPE_LABELS` foi extraido para `statistics.ts` (exportado) e reaproveitado em `/estatisticas`, removendo duplicacao.
+- `getDiagnosticDetail` em `diagnostics.ts` agora seleciona `equipment_model_id` e busca o insight em paralelo com o resto do detalhe.
+- Novo banner amarelo "Recomendacao preventiva" no topo de `/diagnosticos/[id]` quando ha um padrao historico relevante para o modelo do equipamento atual.
+
+Itens restantes do roadmap "Evolucoes avancadas" (nao iniciados, sao possibilidades abertas, nao escopo fechado): agentes especializados, anotacao visual de componentes na propria imagem, fluxos guiados por tipo de equipamento, arvore dinamica de investigacao.
 
 ## Incidente 2026-07-12: producao na Vercel fora do ar
 

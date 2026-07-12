@@ -1,5 +1,111 @@
 import { createClient } from "@/lib/supabase/server";
-import type { WorkshopStatistics } from "@/types/domain";
+import type { PreventiveInsight, WorkshopStatistics } from "@/types/domain";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+export const CAUSE_TYPE_LABELS: Record<string, string> = {
+  component_failure: "Falha de componente",
+  short_circuit: "Curto-circuito",
+  bad_solder: "Solda fria",
+  firmware_corruption: "Corrupcao de firmware",
+  line_missing: "Linha ausente",
+  liquid_damage: "Dano por liquido",
+  thermal_failure: "Falha termica",
+  other: "Outro",
+};
+
+const PREVENTIVE_THRESHOLD = 2;
+
+export async function getPreventiveInsightForModel(
+  equipmentModelId: string,
+  excludeDiagnosticId: string,
+  client?: SupabaseServerClient,
+): Promise<PreventiveInsight | null> {
+  const supabase = client ?? (await createClient());
+
+  const { data: diagnosticRows } = await supabase
+    .from("diagnostics")
+    .select("id")
+    .eq("equipment_model_id", equipmentModelId)
+    .neq("id", excludeDiagnosticId);
+
+  const diagnosticIds = (diagnosticRows ?? []).map((row) => row.id);
+
+  if (!diagnosticIds.length) {
+    return null;
+  }
+
+  const { data: resolvedRows } = await supabase
+    .from("resolved_cases")
+    .select("id")
+    .in("diagnostic_id", diagnosticIds);
+
+  const resolvedCaseIds = (resolvedRows ?? []).map((row) => row.id);
+
+  if (!resolvedCaseIds.length) {
+    return null;
+  }
+
+  const { data: causeRows } = await supabase
+    .from("confirmed_causes")
+    .select(
+      `
+        cause_type,
+        board_components(
+          components(component_ref)
+        )
+      `,
+    )
+    .in("resolved_case_id", resolvedCaseIds);
+
+  const rows =
+    (causeRows as Array<{
+      cause_type: string;
+      board_components:
+        | { components: { component_ref: string } | Array<{ component_ref: string }> | null }
+        | Array<{ components: { component_ref: string } | Array<{ component_ref: string }> | null }>
+        | null;
+    }> | null) ?? [];
+
+  if (!rows.length) {
+    return null;
+  }
+
+  const causeCounts = new Map<string, number>();
+  const componentCounts = new Map<string, Map<string, number>>();
+
+  for (const row of rows) {
+    causeCounts.set(row.cause_type, (causeCounts.get(row.cause_type) ?? 0) + 1);
+
+    const boardComponent = pickRelation(row.board_components);
+    const component = boardComponent ? pickRelation(boardComponent.components) : null;
+
+    if (component) {
+      const tally = componentCounts.get(row.cause_type) ?? new Map<string, number>();
+      tally.set(component.component_ref, (tally.get(component.component_ref) ?? 0) + 1);
+      componentCounts.set(row.cause_type, tally);
+    }
+  }
+
+  const [topCauseType, occurrences] = [...causeCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+
+  if (occurrences < PREVENTIVE_THRESHOLD) {
+    return null;
+  }
+
+  const componentTally = componentCounts.get(topCauseType);
+  const topComponent = componentTally
+    ? [...componentTally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+    : null;
+
+  return {
+    causeType: topCauseType,
+    causeLabel: CAUSE_TYPE_LABELS[topCauseType] ?? topCauseType,
+    occurrences,
+    totalCases: resolvedCaseIds.length,
+    componentRef: topComponent,
+  };
+}
 
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {

@@ -1,18 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { StatBarChart, StatusDistributionBar } from "@/components/stat-bar-chart";
 import { requireCurrentUser } from "@/lib/auth";
-import { getWorkshopStatistics } from "@/lib/services/statistics";
-
-const CAUSE_TYPE_LABELS: Record<string, string> = {
-  component_failure: "Falha de componente",
-  short_circuit: "Curto-circuito",
-  bad_solder: "Solda fria",
-  firmware_corruption: "Corrupcao de firmware",
-  line_missing: "Linha ausente",
-  liquid_damage: "Dano por liquido",
-  thermal_failure: "Falha termica",
-  other: "Outro",
-};
+import { CAUSE_TYPE_LABELS, getWorkshopStatistics } from "@/lib/services/statistics";
 
 function formatMinutes(value: number | null) {
   if (value === null) {

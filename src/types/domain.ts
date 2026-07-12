@@ -111,6 +111,7 @@ export type DiagnosticDetail = {
   physicalNotes: string;
   openedBy: string;
   createdAt: string;
+  preventiveInsight: PreventiveInsight | null;
   resolvedCase: {
     caseStatus: string;
     resolutionSummary: string;
@@ -342,4 +343,12 @@ export type WorkshopStatistics = {
     causeType: string;
     count: number;
   }>;
+};
+
+export type PreventiveInsight = {
+  causeType: string;
+  causeLabel: string;
+  occurrences: number;
+  totalCases: number;
+  componentRef: string | null;
 };
