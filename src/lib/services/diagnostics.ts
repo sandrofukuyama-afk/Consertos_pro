@@ -265,12 +265,28 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   const guidedFlow = path;
 
-  const [attachments, assistantSnapshot, preventiveInsight] = await Promise.all([
-    Promise.all(
-      (data.attachments ?? []).map(async (item) => {
-        const { data: signed } = await supabase.storage
-          .from("diagnostic-attachments")
-          .createSignedUrl(item.storage_path, 3600);
+  const attachmentItems = data.attachments ?? [];
+  const attachmentPaths = attachmentItems.map((item) => item.storage_path);
+
+  let signedUrlsMap: Record<string, string> = {};
+  if (attachmentPaths.length > 0) {
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from("diagnostic-attachments")
+      .createSignedUrls(attachmentPaths, 3600);
+
+    if (signedData && !signedError) {
+      signedData.forEach((urlItem) => {
+        if (urlItem.signedUrl && urlItem.path) {
+          signedUrlsMap[urlItem.path] = urlItem.signedUrl;
+        }
+      });
+    }
+  }
+
+  const [attachmentsList, assistantSnapshot, preventiveInsight] = await Promise.all([
+    Promise.resolve(
+      attachmentItems.map((item) => {
+        const signedUrl = signedUrlsMap[item.storage_path] ?? null;
 
         const analysis = item.ai_image_analysis as {
           observations?: string[];
@@ -286,7 +302,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           attachmentType: prettifyStatus(item.attachment_type),
           mimeType: item.mime_type,
           uploadedAt: formatRelativeTime(item.created_at),
-          signedUrl: signed?.signedUrl ?? null,
+          signedUrl,
           imageAnalysis:
             analysis && item.ai_image_analyzed_at
               ? {
@@ -299,13 +315,15 @@ export async function getDiagnosticDetail(diagnosticId: string) {
               : null,
           annotations: (item as any).annotations ?? [],
         };
-      }),
+      })
     ),
     getDiagnosticAssistantSnapshot(diagnosticId, supabase),
     data.equipment_model_id
       ? getPreventiveInsightForModel(data.equipment_model_id, diagnosticId, supabase)
       : Promise.resolve(null),
   ]);
+
+  const attachments = attachmentsList;
 
   const timeline = [
     ...(data.diagnostic_symptoms ?? []).map((item) => {
