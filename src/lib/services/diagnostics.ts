@@ -156,6 +156,13 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           ai_image_analysis,
           ai_image_analyzed_at,
           annotations
+        ),
+        diagnostic_boards(
+          id,
+          board_id,
+          role_label,
+          is_primary,
+          boards(board_code, name)
         )
       `,
     )
@@ -283,7 +290,23 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     }
   }
 
-  const [attachmentsList, assistantSnapshot, preventiveInsight] = await Promise.all([
+  const diagnosticBoards = ((data as any).diagnostic_boards ?? []).map((item: any) => {
+    const board = pickRelation(item.boards);
+    return {
+      id: item.id,
+      boardId: item.board_id,
+      roleLabel: item.role_label,
+      isPrimary: item.is_primary,
+      boardCode: board?.board_code ?? null,
+      name: board?.name ?? null,
+    };
+  });
+
+  const boardIds = diagnosticBoards
+    .map((b: any) => b.boardId)
+    .filter((id: any): id is string => Boolean(id));
+
+  const [attachmentsList, assistantSnapshot, preventiveInsight, referenceMeasurements] = await Promise.all([
     Promise.resolve(
       attachmentItems.map((item) => {
         const signedUrl = signedUrlsMap[item.storage_path] ?? null;
@@ -321,6 +344,39 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     data.equipment_model_id
       ? getPreventiveInsightForModel(data.equipment_model_id, diagnosticId, supabase)
       : Promise.resolve(null),
+    boardIds.length > 0
+      ? supabase
+          .from("board_measurements")
+          .select(`
+            id,
+            board_id,
+            component_ref,
+            measurement_point,
+            expected_value,
+            condition,
+            notes,
+            created_at,
+            users(full_name)
+          `)
+          .in("board_id", boardIds)
+          .order("component_ref")
+          .then((res) => {
+            return (res.data ?? []).map((item: any) => {
+              const user = pickRelation(item.users);
+              return {
+                id: item.id,
+                boardId: item.board_id,
+                componentRef: item.component_ref,
+                measurementPoint: item.measurement_point,
+                expectedValue: item.expected_value,
+                condition: item.condition,
+                notes: item.notes,
+                createdAt: formatRelativeTime(item.created_at),
+                userName: user?.full_name ?? "Técnico interno",
+              };
+            });
+          })
+      : Promise.resolve([]),
   ]);
 
   const attachments = attachmentsList;
@@ -478,6 +534,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     attachments,
     timeline,
     assistantSnapshot,
+    boards: diagnosticBoards,
+    referenceMeasurements: referenceMeasurements,
   } satisfies DiagnosticDetail;
 }
 

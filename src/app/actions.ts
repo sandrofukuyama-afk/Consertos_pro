@@ -1024,3 +1024,40 @@ export async function reviewResolvedCaseAction(formData: FormData) {
   revalidatePath("/configuracoes");
   redirect("/conhecimento?message=Revisão registrada com sucesso.");
 }
+
+export async function addBoardMeasurementAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const boardId = String(formData.get("board_id") ?? "").trim();
+  const componentRef = String(formData.get("component_ref") ?? "").trim();
+  const measurementPoint = String(formData.get("measurement_point") ?? "").trim();
+  const expectedValue = String(formData.get("expected_value") ?? "").trim();
+  const condition = String(formData.get("condition") ?? "").trim() || "power_off";
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+
+  if (!boardId || !componentRef || !measurementPoint || !expectedValue) {
+    throw new Error("Preencha todos os campos obrigatórios para salvar a medição.");
+  }
+
+  const { error } = await supabase
+    .from("board_measurements")
+    .insert({
+      board_id: boardId,
+      component_ref: componentRef,
+      measurement_point: measurementPoint,
+      expected_value: expectedValue,
+      condition,
+      notes,
+      created_by_user_id: user.id,
+    });
+
+  if (error) {
+    throw new Error(`Falha ao registrar medição de referência: ${error.message}`);
+  }
+
+  if (diagnosticId) {
+    revalidatePath(`/diagnosticos/${diagnosticId}`);
+  }
+}

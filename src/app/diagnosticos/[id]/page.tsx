@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import {
+  addBoardMeasurementAction,
   addDiagnosticSymptomAction,
   addDiagnosticTestAction,
   addHypothesisAction,
@@ -112,18 +113,47 @@ export default async function DiagnosticDetailPage({
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Metadados
-                </p>
-                <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--foreground)]">
-                  <p>Categoria: {detail.category}</p>
-                  <p>Fabricante: {detail.manufacturer}</p>
-                  <p>Modelo: {detail.model}</p>
-                  <p>Serie: {detail.serialNumber}</p>
-                  <p>Prioridade: {detail.priority}</p>
-                  <p>Aberto por: {detail.openedBy}</p>
-                  <p>Criado: {detail.createdAt}</p>
+              <div className="flex flex-col justify-between rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                      Metadados
+                    </p>
+                    <Link
+                      href={`/diagnosticos/${detail.id}/laudo`}
+                      target="_blank"
+                      className="rounded-full bg-[rgba(202,106,85,0.15)] hover:bg-[rgba(202,106,85,0.25)] border border-[var(--accent-copper)]/30 px-3 py-1 text-[11px] font-semibold text-[var(--accent-copper)] tracking-tight transition-all"
+                    >
+                      🖨️ Imprimir Laudo
+                    </Link>
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--foreground)]">
+                    <p>Categoria: {detail.category}</p>
+                    <p>Fabricante: {detail.manufacturer}</p>
+                    <p>Modelo: {detail.model}</p>
+                    <p>Serie: {detail.serialNumber}</p>
+                    <p>Prioridade: {detail.priority}</p>
+                    <p>Aberto por: {detail.openedBy}</p>
+                    <p>Criado: {detail.createdAt}</p>
+                  </div>
+                </div>
+
+                {/* QR Code de Bancada */}
+                <div className="mt-4 border-t border-[var(--panel-border)] pt-4 flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=${encodeURIComponent(`https://consertospro.vercel.app/diagnosticos/${detail.id}`)}`}
+                    alt="QR Code"
+                    width={72}
+                    height={72}
+                    className="rounded-xl border border-white/10 bg-white p-1"
+                  />
+                  <div>
+                    <p className="text-xs font-semibold text-white">QR Code de Bancada</p>
+                    <p className="text-[10px] text-[var(--muted)] mt-0.5 leading-relaxed">
+                      Escaneie para acompanhar ou anexar fotos pelo celular.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -874,6 +904,128 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
         </section>
+
+        {/* Medições de Referência de Bancada */}
+        {detail.boards.length > 0 && (
+          <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+              Valores de Referência
+            </p>
+            <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+              Banco de Medições de Placa
+            </h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Valores esperados (tensão, resistência, impedância) para comparação rápida.
+            </p>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+              {/* Tabela de Medições existentes */}
+              <div>
+                {detail.referenceMeasurements.length > 0 ? (
+                  <div className="overflow-x-auto animate-fadeIn">
+                    <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
+                      <thead>
+                        <tr className="border-b border-[var(--panel-border)] text-xs font-mono uppercase text-[var(--muted)]">
+                          <th className="py-3 px-2">Componente</th>
+                          <th className="py-3 px-2">Ponto</th>
+                          <th className="py-3 px-2">Valor Esperado</th>
+                          <th className="py-3 px-2">Estado da Placa</th>
+                          <th className="py-3 px-2">Nota / Autor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detail.referenceMeasurements.map((m) => (
+                          <tr key={m.id} className="border-b border-[var(--panel-border)]/40 hover:bg-white/5">
+                            <td className="py-3 px-2 font-semibold text-[var(--accent-copper)]">{m.componentRef}</td>
+                            <td className="py-3 px-2">{m.measurementPoint}</td>
+                            <td className="py-3 px-2 font-mono text-[var(--accent-teal)] font-semibold">{m.expectedValue}</td>
+                            <td className="py-3 px-2">
+                              <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] uppercase font-semibold text-[rgba(255,245,236,0.6)]">
+                                {m.condition === "power_off" ? "Sem Alimentação" : m.condition === "power_on" ? "Placa Ligada" : "Escala de Diodo"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-xs text-[var(--muted)]">
+                              {m.notes && <span className="block italic text-[var(--foreground)] mb-0.5">{m.notes}</span>}
+                              Por {m.userName} • {m.createdAt}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">
+                    Nenhuma medição de referência registrada para esta placa ainda. Seja o primeiro a registrar!
+                  </p>
+                )}
+              </div>
+
+              {/* Formulário para Adicionar Medição */}
+              <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+                <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
+                  Nova Medição de Referência
+                </p>
+                <form action={addBoardMeasurementAction} className="mt-3.5 grid gap-3">
+                  <input type="hidden" name="diagnostic_id" value={detail.id} />
+                  <select
+                    required
+                    name="board_id"
+                    className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
+                  >
+                    {detail.boards.map((b) => (
+                      <option key={b.id} value={b.boardId ?? ""}>
+                        Placa: {b.boardCode || b.name || "Principal"}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      required
+                      type="text"
+                      name="component_ref"
+                      placeholder="Ex: PL401, C2800"
+                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
+                    />
+                    <input
+                      required
+                      type="text"
+                      name="measurement_point"
+                      placeholder="Ex: Pin 1, Output"
+                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      required
+                      type="text"
+                      name="expected_value"
+                      placeholder="Ex: 3.3V, 450R"
+                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
+                    />
+                    <select
+                      name="condition"
+                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
+                      defaultValue="power_off"
+                    >
+                      <option value="power_off">Sem Alimentação</option>
+                      <option value="power_on">Placa Ligada</option>
+                      <option value="diode_mode">Escala de Diodo</option>
+                    </select>
+                  </div>
+                  <textarea
+                    name="notes"
+                    rows={2}
+                    placeholder="Macetes adicionais da medição (Opcional)"
+                    className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
+                  />
+                  <button className="rounded-full bg-[var(--accent-teal)] px-5 py-3 text-sm font-semibold text-white hover:brightness-110 active:scale-98 transition-all w-full">
+                    Registrar na Base
+                  </button>
+                </form>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">

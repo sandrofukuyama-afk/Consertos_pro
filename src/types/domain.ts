@@ -114,6 +114,18 @@ export type ComponentAnnotation = {
   color: "red" | "yellow" | "green";
 };
 
+export type BoardMeasurement = {
+  id: string;
+  boardId: string;
+  componentRef: string;
+  measurementPoint: string;
+  expectedValue: string;
+  condition: string;
+  notes: string | null;
+  createdAt: string;
+  userName: string;
+};
+
 export type DiagnosticDetail = {
   id: string;
   category: string;
@@ -236,6 +248,15 @@ export type DiagnosticDetail = {
       specialty: string;
     };
   };
+  boards: Array<{
+    id: string;
+    boardId: string | null;
+    roleLabel: string;
+    isPrimary: boolean;
+    boardCode: string | null;
+    name: string | null;
+  }>;
+  referenceMeasurements: BoardMeasurement[];
 };
 
 export type TechnicalDocumentListItem = {

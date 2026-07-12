@@ -22,6 +22,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "ConsertosPro",
   description: "Sistema da oficina para acompanhar casos e guardar o que foi aprendido.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -34,6 +35,12 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${sora.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="apple-touch-icon" href="/favicon.ico" />
+        <meta name="theme-color" content="#ca6a55" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
