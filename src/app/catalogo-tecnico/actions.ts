@@ -21,7 +21,7 @@ function readOptionalText(formData: FormData, field: string) {
 }
 
 export async function createCategoryAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const name = String(formData.get("name") ?? "").trim();
@@ -32,14 +32,30 @@ export async function createCategoryAction(formData: FormData) {
     redirect("/catalogo-tecnico?tab=categorias&error=Nome é obrigatório.");
   }
 
-  const { error } = await supabase.from("equipment_categories").insert({
-    name,
-    slug,
-    description,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("equipment_categories")
+    .insert({
+      name,
+      slug,
+      description,
+    })
+    .select("id, name")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=categorias&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "equipment_category",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.name,
+      change_reason: "Cadastro de nova categoria de equipamento",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
@@ -47,7 +63,7 @@ export async function createCategoryAction(formData: FormData) {
 }
 
 export async function createManufacturerAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const name = String(formData.get("name") ?? "").trim();
@@ -59,15 +75,31 @@ export async function createManufacturerAction(formData: FormData) {
     redirect("/catalogo-tecnico?tab=fabricantes&error=Nome é obrigatório.");
   }
 
-  const { error } = await supabase.from("manufacturers").insert({
-    name,
-    normalized_name,
-    country,
-    notes,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("manufacturers")
+    .insert({
+      name,
+      normalized_name,
+      country,
+      notes,
+    })
+    .select("id, name")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=fabricantes&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "manufacturer",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.name,
+      change_reason: "Cadastro de novo fabricante",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
@@ -75,7 +107,7 @@ export async function createManufacturerAction(formData: FormData) {
 }
 
 export async function createModelAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const manufacturer_id = String(formData.get("manufacturer_id") ?? "").trim();
@@ -91,18 +123,34 @@ export async function createModelAction(formData: FormData) {
 
   const normalized_model_name = normalizeText(model_name);
 
-  const { error } = await supabase.from("equipment_models").insert({
-    manufacturer_id,
-    equipment_category_id,
-    model_name,
-    normalized_model_name,
-    family_name,
-    revision_label,
-    release_notes,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("equipment_models")
+    .insert({
+      manufacturer_id,
+      equipment_category_id,
+      model_name,
+      normalized_model_name,
+      family_name,
+      revision_label,
+      release_notes,
+    })
+    .select("id, model_name")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=modelos&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "equipment_model",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.model_name,
+      change_reason: "Cadastro de novo modelo de equipamento",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
@@ -110,7 +158,7 @@ export async function createModelAction(formData: FormData) {
 }
 
 export async function createBoardAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const board_type_id = String(formData.get("board_type_id") ?? "").trim();
@@ -124,17 +172,33 @@ export async function createBoardAction(formData: FormData) {
     redirect("/catalogo-tecnico?tab=placas&error=Tipo de placa e Código da placa são obrigatórios.");
   }
 
-  const { error } = await supabase.from("boards").insert({
-    board_type_id,
-    manufacturer_id,
-    board_code,
-    board_revision,
-    description,
-    notes,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("boards")
+    .insert({
+      board_type_id,
+      manufacturer_id,
+      board_code,
+      board_revision,
+      description,
+      notes,
+    })
+    .select("id, board_code")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=placas&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "board",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.board_code,
+      change_reason: "Cadastro de nova placa técnica",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
@@ -142,7 +206,7 @@ export async function createBoardAction(formData: FormData) {
 }
 
 export async function createComponentAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const component_ref = String(formData.get("component_ref") ?? "").trim();
@@ -158,19 +222,35 @@ export async function createComponentAction(formData: FormData) {
     redirect("/catalogo-tecnico?tab=componentes&error=Referência e Tipo de componente são obrigatórios.");
   }
 
-  const { error } = await supabase.from("components").insert({
-    component_ref,
-    component_type,
-    manufacturer_part_number,
-    generic_part_number,
-    description,
-    package_type,
-    datasheet_summary,
-    notes,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("components")
+    .insert({
+      component_ref,
+      component_type,
+      manufacturer_part_number,
+      generic_part_number,
+      description,
+      package_type,
+      datasheet_summary,
+      notes,
+    })
+    .select("id, component_ref")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=componentes&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "component",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.component_ref,
+      change_reason: "Cadastro de novo componente mestre",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
@@ -178,7 +258,7 @@ export async function createComponentAction(formData: FormData) {
 }
 
 export async function createModelBoardAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const equipment_model_id = String(formData.get("equipment_model_id") ?? "").trim();
@@ -191,16 +271,32 @@ export async function createModelBoardAction(formData: FormData) {
     redirect("/catalogo-tecnico?tab=vinculos-modelo-placa&error=Modelo, Placa e Função são obrigatórios.");
   }
 
-  const { error } = await supabase.from("model_boards").insert({
-    equipment_model_id,
-    board_id,
-    role_label,
-    is_primary,
-    notes,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("model_boards")
+    .insert({
+      equipment_model_id,
+      board_id,
+      role_label,
+      is_primary,
+      notes,
+    })
+    .select("id, role_label")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=vinculos-modelo-placa&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "model_board",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.role_label,
+      change_reason: "Vínculo entre Modelo e Placa no catálogo",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
@@ -208,7 +304,7 @@ export async function createModelBoardAction(formData: FormData) {
 }
 
 export async function createBoardComponentAction(formData: FormData) {
-  await requireCurrentUser();
+  const currentUser = await requireCurrentUser();
   const supabase = await createClient();
 
   const board_id = String(formData.get("board_id") ?? "").trim();
@@ -224,19 +320,35 @@ export async function createBoardComponentAction(formData: FormData) {
     redirect("/catalogo-tecnico?tab=componentes-placa&error=Placa, Componente e Designador de referência (ex: U3201) são obrigatórios.");
   }
 
-  const { error } = await supabase.from("board_components").insert({
-    board_id,
-    component_id,
-    reference_designator,
-    circuit_function,
-    expected_behavior,
-    location_notes,
-    is_critical,
-    notes,
-  });
+  const { data: createdRow, error } = await supabase
+    .from("board_components")
+    .insert({
+      board_id,
+      component_id,
+      reference_designator,
+      circuit_function,
+      expected_behavior,
+      location_notes,
+      is_critical,
+      notes,
+    })
+    .select("id, reference_designator")
+    .single();
 
   if (error) {
     redirect(`/catalogo-tecnico?tab=componentes-placa&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "board_component",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.reference_designator,
+      change_reason: "Vínculo de Componente à Placa no catálogo",
+      changed_by_user_id: currentUser.id,
+    });
   }
 
   revalidatePath("/catalogo-tecnico");
