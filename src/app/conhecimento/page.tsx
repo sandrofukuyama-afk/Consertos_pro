@@ -1,5 +1,6 @@
 import { syncSemanticMemoryAction } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
+import { SyncButton } from "@/components/sync-button";
 import { requireCurrentUser } from "@/lib/auth";
 import { getKnowledgeOverviewData } from "@/lib/services/semantic";
 import { formatProviderLabel } from "@/lib/utils";
@@ -104,9 +105,7 @@ export default async function ConhecimentoPage({
               Atualiza documentos, diagnósticos e casos resolvidos para a busca usar os dados mais recentes.
             </p>
             <form action={syncSemanticMemoryAction} className="mt-5">
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Sincronizar agora
-              </button>
+              <SyncButton />
             </form>
           </aside>
         </section>

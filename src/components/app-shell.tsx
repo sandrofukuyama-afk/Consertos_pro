@@ -216,7 +216,7 @@ export function AppShell({
           <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-8 md:py-5">
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Oficina interna
+                Central de Diagnósticos
               </p>
               <h2 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)] md:text-3xl">
                 {title}
