@@ -95,8 +95,11 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           title,
           description,
           attachment_type,
+          mime_type,
           created_at,
-          storage_path
+          storage_path,
+          ai_image_analysis,
+          ai_image_analyzed_at
         )
       `,
     )
@@ -119,13 +122,31 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           .from("diagnostic-attachments")
           .createSignedUrl(item.storage_path, 3600);
 
+        const analysis = item.ai_image_analysis as {
+          observations?: string[];
+          suspectedIssues?: string[];
+          confidence?: string;
+          recommendation?: string;
+        } | null;
+
         return {
           id: item.id,
           title: item.title,
           description: item.description ?? "Sem descricao.",
           attachmentType: prettifyStatus(item.attachment_type),
+          mimeType: item.mime_type,
           uploadedAt: formatRelativeTime(item.created_at),
           signedUrl: signed?.signedUrl ?? null,
+          imageAnalysis:
+            analysis && item.ai_image_analyzed_at
+              ? {
+                  observations: analysis.observations ?? [],
+                  suspectedIssues: analysis.suspectedIssues ?? [],
+                  confidence: analysis.confidence ?? "low",
+                  recommendation: analysis.recommendation ?? "",
+                  analyzedAt: formatRelativeTime(item.ai_image_analyzed_at),
+                }
+              : null,
         };
       }),
     ),

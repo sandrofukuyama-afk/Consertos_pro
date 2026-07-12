@@ -5,6 +5,7 @@ import {
   addDiagnosticTestAction,
   addHypothesisAction,
   addMeasurementAction,
+  analyzeAttachmentImageAction,
   generateDiagnosticAssistantAction,
   saveAssistantFeedbackAction,
   uploadAttachmentAction,
@@ -881,6 +882,37 @@ export default async function DiagnosticDetailPage({
                       >
                         Abrir arquivo
                       </a>
+                    ) : null}
+
+                    {item.mimeType.startsWith("image/") ? (
+                      item.imageAnalysis ? (
+                        <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-white/70 p-4">
+                          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                            Analise de imagem por IA • confianca {item.imageAnalysis.confidence} • {item.imageAnalysis.analyzedAt}
+                          </p>
+                          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--foreground)]">
+                            {item.imageAnalysis.observations.map((observation) => (
+                              <li key={observation}>{observation}</li>
+                            ))}
+                          </ul>
+                          {item.imageAnalysis.suspectedIssues.length ? (
+                            <p className="mt-2 text-sm text-[var(--danger)]">
+                              Suspeitas: {item.imageAnalysis.suspectedIssues.join("; ")}
+                            </p>
+                          ) : null}
+                          <p className="mt-2 text-sm text-[var(--muted)]">
+                            Recomendacao: {item.imageAnalysis.recommendation}
+                          </p>
+                        </div>
+                      ) : (
+                        <form action={analyzeAttachmentImageAction} className="mt-3">
+                          <input type="hidden" name="diagnostic_id" value={detail.id} />
+                          <input type="hidden" name="attachment_id" value={item.id} />
+                          <button className="rounded-full border border-[var(--accent-teal)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-teal)]">
+                            Analisar imagem com IA
+                          </button>
+                        </form>
+                      )
                     ) : null}
                   </div>
                 ))

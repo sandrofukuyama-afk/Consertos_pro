@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
+import { analyzeBoardImage } from "@/lib/ai/image-analysis";
 import { generateDiagnosticAssistantResponse } from "@/lib/services/assistant";
 import {
   syncDiagnosticEmbeddingSource,
@@ -383,6 +384,59 @@ export async function uploadAttachmentAction(formData: FormData) {
 
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   redirect(`/diagnosticos/${diagnosticId}?message=Anexo enviado.`);
+}
+
+export async function analyzeAttachmentImageAction(formData: FormData) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "");
+  const attachmentId = String(formData.get("attachment_id") ?? "");
+
+  if (!diagnosticId || !attachmentId) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Anexo invalido para analise.`);
+  }
+
+  const { data: attachment } = await supabase
+    .from("attachments")
+    .select("id, storage_path, mime_type")
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (!attachment || !attachment.mime_type.startsWith("image/")) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Este anexo nao e uma imagem analisavel.`);
+  }
+
+  const { data: signed } = await supabase.storage
+    .from("diagnostic-attachments")
+    .createSignedUrl(attachment.storage_path, 300);
+
+  if (!signed?.signedUrl) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Nao foi possivel gerar acesso a imagem.`);
+  }
+
+  let analysis: Awaited<ReturnType<typeof analyzeBoardImage>> = null;
+
+  try {
+    analysis = await analyzeBoardImage(signed.signedUrl);
+  } catch {
+    redirect(`/diagnosticos/${diagnosticId}?error=Falha ao analisar a imagem. Tente novamente.`);
+  }
+
+  if (!analysis) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Analise de imagem nao esta configurada.`);
+  }
+
+  await supabase
+    .from("attachments")
+    .update({
+      ai_image_analysis: analysis,
+      ai_image_analyzed_at: new Date().toISOString(),
+    })
+    .eq("id", attachmentId);
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Analise de imagem concluida.`);
 }
 
 export async function closeDiagnosticAction(formData: FormData) {

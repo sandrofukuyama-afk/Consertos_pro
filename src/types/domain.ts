@@ -159,8 +159,16 @@ export type DiagnosticDetail = {
     title: string;
     description: string;
     attachmentType: string;
+    mimeType: string;
     uploadedAt: string;
     signedUrl: string | null;
+    imageAnalysis: {
+      observations: string[];
+      suspectedIssues: string[];
+      confidence: string;
+      recommendation: string;
+      analyzedAt: string;
+    } | null;
   }>;
   timeline: Array<{
     id: string;

@@ -190,6 +190,20 @@ Ainda faltam da Fase 7 (Modulo 10): cruzar isso com a qualidade das recomendacoe
 - Cada barra e sempre acompanhada de rotulo e valor em texto (o proprio card list ja funciona como "tabela" equivalente).
 - Nao foi possivel tirar screenshot real (sem navegador neste ambiente) — validar visualmente no proximo teste manual.
 
+## Fase 8 iniciada: analise de imagem de placa (2026-07-12)
+
+Primeiro item do roadmap "Evolucoes avancadas" implementado: analise de imagem por IA nos anexos do diagnostico.
+
+- Migration `20260712140000_attachment_image_analysis.sql` (aplicada no remoto com aprovacao explicita do usuario): adiciona `ai_image_analysis jsonb` e `ai_image_analyzed_at timestamptz` em `public.attachments`.
+- `src/lib/ai/image-analysis.ts`: `analyzeBoardImage(imageUrl)` chama `gpt-4o-mini` (multimodal) via Chat Completions com `response_format: json_schema`, retornando `observations`, `suspectedIssues`, `confidence` e `recommendation`. Testado com imagem sintetica antes de integrar — a IA corretamente recusou especular sobre uma imagem sem conteudo util, sem alucinar.
+- Nova action `analyzeAttachmentImageAction` em `src/app/actions.ts`: gera signed URL do storage, chama a analise, salva o resultado no anexo.
+- UI em `src/app/diagnosticos/[id]/page.tsx`: anexos do tipo imagem ganham botao "Analisar imagem com IA"; o resultado fica exibido permanentemente no card do anexo apos a primeira analise.
+- Prompt deliberadamente conservador: a IA descreve so o que e visivelmente observavel (queima, corrosao, capacitor estufado, solda fria, trilha rompida etc.) e nunca afirma um diagnostico definitivo — sempre "proximo passo objetivo".
+
+Build e lint validados. Nao foi possivel testar com uma foto real de placa neste ambiente (sem navegador para fazer upload) — validar no proximo teste manual subindo uma foto real e clicando em "Analisar imagem com IA".
+
+Itens restantes do roadmap "Evolucoes avancadas" (nao iniciados, sao possibilidades abertas, nao escopo fechado): agentes especializados, anotacao visual de componentes na propria imagem, fluxos guiados por tipo de equipamento, recomendacoes preventivas, arvore dinamica de investigacao.
+
 ## Incidente 2026-07-12: producao na Vercel fora do ar
 
 Sintomas em `consertos-pro.vercel.app`:
