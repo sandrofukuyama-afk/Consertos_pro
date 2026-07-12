@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { redirect, isRedirectError } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { analyzeBoardImage } from "@/lib/ai/image-analysis";
@@ -14,6 +14,16 @@ import {
   syncTechnicalDocumentSemanticSource,
 } from "@/lib/services/semantic";
 import { createClient } from "@/lib/supabase/server";
+
+function isRedirectError(error: unknown): error is Error & { digest: string } {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  return (
+    (error as any).message === "NEXT_REDIRECT" ||
+    (typeof (error as any).digest === "string" && (error as any).digest.startsWith("NEXT_REDIRECT"))
+  );
+}
 
 function normalizeText(value: string) {
   return value
