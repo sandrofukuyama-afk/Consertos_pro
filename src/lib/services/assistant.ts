@@ -478,6 +478,57 @@ async function getSimilarCasesAndDocuments(
   };
 }
 
+async function getHistoricalSymptomGroupInsights(supabase: SupabaseServerClient) {
+  const { data } = await supabase
+    .from("resolved_cases")
+    .select(
+      `
+        final_failure_mode,
+        diagnostics(
+          diagnostic_symptoms(symptoms(symptom_group))
+        )
+      `,
+    )
+    .not("final_failure_mode", "is", null);
+
+  const causeCounts = new Map<string, Map<string, number>>();
+
+  for (const row of
+    ((data ?? []) as Array<{
+      final_failure_mode: string | null;
+      diagnostics:
+        | { diagnostic_symptoms: Array<{ symptoms: { symptom_group: string | null } | Array<{ symptom_group: string | null }> | null }> | null }
+        | Array<{ diagnostic_symptoms: Array<{ symptoms: { symptom_group: string | null } | Array<{ symptom_group: string | null }> | null }> | null }>
+        | null;
+    }>)) {
+    if (!row.final_failure_mode) {
+      continue;
+    }
+
+    const diagnostic = pickRelation(row.diagnostics);
+    const groups = new Set(
+      (diagnostic?.diagnostic_symptoms ?? [])
+        .map((item) => pickRelation(item.symptoms)?.symptom_group)
+        .filter((item): item is string => Boolean(item)),
+    );
+
+    for (const group of groups) {
+      const tally = causeCounts.get(group) ?? new Map<string, number>();
+      tally.set(row.final_failure_mode, (tally.get(row.final_failure_mode) ?? 0) + 1);
+      causeCounts.set(group, tally);
+    }
+  }
+
+  const insightMap = new Map<string, { topCause: string; count: number }>();
+
+  for (const [group, tally] of causeCounts) {
+    const [topCause, count] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    insightMap.set(group, { topCause, count });
+  }
+
+  return insightMap;
+}
+
 async function getAvailableTests(
   supabase: SupabaseServerClient,
 ) {
@@ -501,12 +552,17 @@ function buildStructuredResponse(
   relatedDocuments: SemanticMatchResult[],
   availableTests: Array<{ id: string; name: string; group: string | null }>,
   groupSuccessRate: Map<string, number>,
+  symptomGroupInsights: Map<string, { topCause: string; count: number }>,
 ) {
   const strategy = resolveCategoryStrategy(context.category);
   const latestTest = [...context.tests].sort((a, b) => b.stepOrder - a.stepOrder)[0] ?? null;
   const latestMeasurement = context.measurements[0] ?? null;
-  const primarySymptom =
-    context.symptoms.find((item) => item.isPrimary)?.name ?? context.symptoms[0]?.name ?? null;
+  const primarySymptomEntry =
+    context.symptoms.find((item) => item.isPrimary) ?? context.symptoms[0] ?? null;
+  const primarySymptom = primarySymptomEntry?.name ?? null;
+  const primarySymptomInsight = primarySymptomEntry?.group
+    ? symptomGroupInsights.get(primarySymptomEntry.group) ?? null
+    : null;
   const strongestHypothesis = [...context.hypotheses]
     .sort((a, b) => (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0))[0] ?? null;
   const recommendedTest = pickUnperformedTest(
@@ -522,9 +578,11 @@ function buildStructuredResponse(
   let validationGoal = "Gerar evidencia suficiente para reduzir as hipoteses abertas.";
   const mainHypothesis =
     strongestHypothesis?.title ??
-    (primarySymptom
-      ? `A falha principal ainda precisa ser isolada a partir do sintoma ${primarySymptom}.`
-      : "Ainda nao ha hipotese dominante com evidencia suficiente.");
+    (primarySymptomInsight
+      ? `Historicamente, a causa mais recorrente para sintomas do grupo ${primarySymptomEntry?.group} foi ${primarySymptomInsight.topCause} (em ${primarySymptomInsight.count} caso(s) resolvido(s)).`
+      : primarySymptom
+        ? `A falha principal ainda precisa ser isolada a partir do sintoma ${primarySymptom}.`
+        : "Ainda nao ha hipotese dominante com evidencia suficiente.");
 
   if (!context.symptoms.length) {
     nextTest = "Registrar pelo menos um sintoma principal antes de pedir nova recomendacao.";
@@ -550,6 +608,9 @@ function buildStructuredResponse(
     `Resumo atual do caso: ${context.summary}`,
     `Estrategia da categoria: ${strategy.summaryFocus}`,
     primarySymptom ? `Sintoma dominante observado: ${primarySymptom}.` : null,
+    primarySymptomInsight
+      ? `Historico do grupo ${primarySymptomEntry?.group}: causa mais frequente foi ${primarySymptomInsight.topCause} (${primarySymptomInsight.count} caso(s)).`
+      : null,
     latestTest
       ? `Ultimo teste registrado: ${latestTest.testName} com status ${latestTest.resultStatus}.`
       : null,
@@ -590,7 +651,8 @@ function buildStructuredResponse(
       context.measurements.length * 0.05 +
       (strongestHypothesis ? 0.08 : 0) +
       (similarCases.length ? 0.1 : 0) +
-      (relatedDocuments.length ? 0.08 : 0),
+      (relatedDocuments.length ? 0.08 : 0) +
+      (primarySymptomInsight ? 0.05 : 0),
   );
 
   return {
@@ -625,11 +687,13 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
     throw new Error("Diagnostico nao encontrado para gerar recomendacao.");
   }
 
-  const [{ similarCases, relatedDocuments }, availableTests, groupSuccessRate] = await Promise.all([
-    getSimilarCasesAndDocuments(context, supabase),
-    getAvailableTests(supabase),
-    getHistoricalTestGroupSuccess(supabase),
-  ]);
+  const [{ similarCases, relatedDocuments }, availableTests, groupSuccessRate, symptomGroupInsights] =
+    await Promise.all([
+      getSimilarCasesAndDocuments(context, supabase),
+      getAvailableTests(supabase),
+      getHistoricalTestGroupSuccess(supabase),
+      getHistoricalSymptomGroupInsights(supabase),
+    ]);
 
   const payload = buildStructuredResponse(
     context,
@@ -637,6 +701,7 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
     relatedDocuments,
     availableTests,
     groupSuccessRate,
+    symptomGroupInsights,
   );
 
   const { error } = await supabase.from("ai_responses").insert({

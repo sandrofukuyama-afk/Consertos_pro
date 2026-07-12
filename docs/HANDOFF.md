@@ -153,10 +153,11 @@ Opcoes:
 Fase 6 continua:
 
 - ~~cruzar feedback com periodo e tendencia temporal~~ feito: painel `Feedback por semana` em `/conhecimento`
-- refinar recomendacao usando sintomas por grupo: feito parcialmente — `pickUnperformedTest` agora pondera pela taxa de sucesso historica (seguida ou helpful) de cada `test_group`, calculada em `getHistoricalTestGroupSuccess`
+- ~~refinar recomendacao usando sintomas por grupo e resultados anteriores~~ feito:
+  - `pickUnperformedTest` pondera pela taxa de sucesso historica (seguida ou helpful) de cada `test_group` (`getHistoricalTestGroupSuccess`)
+  - `mainHypothesis`/evidencia/confianca agora usam `getHistoricalSymptomGroupInsights`, que busca em `resolved_cases.final_failure_mode` a causa mais recorrente historicamente para o `symptom_group` do sintoma principal do caso
 - ~~mostrar taxa percentual de aceitacao e helpful por categoria~~ feito: `acceptanceRate`/`helpfulRate` em `aiCategoryBreakdown`
-- eventualmente trocar a heuristica atual por chamada LLM estruturada quando houver contexto suficiente
-- ainda falta: usar resultados anteriores por sintoma (nao so por grupo de teste) para refinar ainda mais a hipotese principal
+- eventualmente trocar a heuristica atual por chamada LLM estruturada quando houver contexto suficiente (unico item da fase 6 ainda nao iniciado)
 
 ## Observacao importante
 
