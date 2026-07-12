@@ -5,11 +5,11 @@
   --background-strong: #120f0d;
   --foreground: #f3efe7;
   --muted: #a79c8f;
-  --panel: #221c17;
+  --panel: #100d0b;
   --panel-soft: rgba(255, 248, 240, 0.06);
-  --panel-border: rgba(255, 248, 240, 0.14);
-  --card-surface: rgba(255, 248, 240, 0.05);
-  --card-surface-soft: rgba(255, 248, 240, 0.035);
+  --panel-border: rgba(255, 248, 240, 0.18);
+  --card-surface: #2c251d;
+  --card-surface-soft: #221c16;
   --accent-copper: #b86d3c;
   --accent-teal: #289b8d;
   --accent-amber: #b8853f;
