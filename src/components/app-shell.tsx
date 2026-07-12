@@ -62,7 +62,6 @@ export function AppShell({
             <Link
               key={item.href}
               href={item.href}
-              prefetch={false}
               className={`rounded-2xl border px-4 py-3 transition ${
                 isActive
                   ? "border-[rgba(184,109,60,0.55)] bg-[rgba(184,109,60,0.16)] text-white"
@@ -136,7 +135,6 @@ export function AppShell({
                   <Link
                     key={item.href}
                     href={item.href}
-                    prefetch={false}
                     onClick={onClose}
                     className={`rounded-2xl border px-4 py-3.5 transition flex items-center justify-between ${
                       isActive
@@ -262,7 +260,6 @@ export function AppShell({
           {/* Tab 1: Diagnósticos */}
           <Link
             href="/"
-            prefetch={false}
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname === "/"
                 ? "text-[var(--accent-copper)] font-semibold"
@@ -278,7 +275,6 @@ export function AppShell({
           {/* Tab 2: Biblioteca */}
           <Link
             href="/biblioteca"
-            prefetch={false}
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname.startsWith("/biblioteca")
                 ? "text-[var(--accent-copper)] font-semibold"
@@ -294,7 +290,6 @@ export function AppShell({
           {/* Tab 3: Conhecimento */}
           <Link
             href="/conhecimento"
-            prefetch={false}
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname.startsWith("/conhecimento")
                 ? "text-[var(--accent-copper)] font-semibold"
@@ -310,7 +305,6 @@ export function AppShell({
           {/* Tab 4: Busca */}
           <Link
             href="/busca"
-            prefetch={false}
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname.startsWith("/busca")
                 ? "text-[var(--accent-copper)] font-semibold"
