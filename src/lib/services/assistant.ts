@@ -5,6 +5,11 @@ import {
   getEmbeddingProviderName,
   isExternalEmbeddingConfigured,
 } from "@/lib/ai/embeddings";
+import {
+  generateAssistantNarrative,
+  getAssistantModelName,
+  isLlmConfigured,
+} from "@/lib/ai/assistant-llm";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
   AiFeedbackRating,
@@ -546,7 +551,7 @@ async function getAvailableTests(
   }));
 }
 
-function buildStructuredResponse(
+async function buildStructuredResponse(
   context: DiagnosticAssistantContext,
   similarCases: SemanticMatchResult[],
   relatedDocuments: SemanticMatchResult[],
@@ -655,23 +660,82 @@ function buildStructuredResponse(
       (primarySymptomInsight ? 0.05 : 0),
   );
 
+  let narrative = { technicalSummary, mainHypothesis, evidence, nextTest, validationGoal, safetyNote };
+  let modelName = "heuristic-v1";
+
+  if (isLlmConfigured()) {
+    try {
+      const llmNarrative = await generateAssistantNarrative({
+        equipmentLabel: context.label,
+        category: context.category,
+        manufacturer: context.manufacturer,
+        summary: context.summary,
+        categoryStrategyFocus: strategy.summaryFocus,
+        categoryFirstMove: strategy.firstMove,
+        categorySafety: strategy.safety,
+        symptoms: context.symptoms,
+        tests: context.tests.map((item) => ({
+          testName: item.testName,
+          testGroup: item.testGroup,
+          resultStatus: item.resultStatus,
+          actualResult: item.actualResult,
+        })),
+        measurements: context.measurements,
+        hypotheses: context.hypotheses.map((item) => ({
+          title: item.title,
+          confidenceScore: item.confidenceScore,
+          status: item.status,
+        })),
+        recommendedTestName: nextTestName,
+        heuristicMainHypothesis: mainHypothesis,
+        heuristicNextTest: nextTest,
+        heuristicValidationGoal: validationGoal,
+        similarCases: similarCases.map((item) => ({
+          title: item.title,
+          excerpt: item.excerpt,
+          similarityLabel: item.similarityLabel,
+        })),
+        relatedDocuments: relatedDocuments.map((item) => ({
+          title: item.title,
+          excerpt: item.excerpt,
+        })),
+        symptomGroupInsight:
+          primarySymptomInsight && primarySymptomEntry?.group
+            ? {
+                group: primarySymptomEntry.group,
+                topCause: primarySymptomInsight.topCause,
+                count: primarySymptomInsight.count,
+              }
+            : null,
+      });
+
+      if (llmNarrative) {
+        narrative = llmNarrative;
+        modelName = getAssistantModelName();
+      }
+    } catch {
+      // Keep the heuristic narrative if the LLM call fails for any reason.
+    }
+  }
+
   return {
     confidence,
+    modelName,
     rawResponseText: [
-      `Resumo tecnico: ${technicalSummary}`,
-      `Hipotese principal: ${mainHypothesis}`,
-      `Evidencias: ${evidence.join(" ")}`,
-      `Proximo teste recomendado: ${nextTest}`,
-      `O que esse passo valida: ${validationGoal}`,
-      `Observacao de seguranca: ${safetyNote}`,
+      `Resumo tecnico: ${narrative.technicalSummary}`,
+      `Hipotese principal: ${narrative.mainHypothesis}`,
+      `Evidencias: ${narrative.evidence.join(" ")}`,
+      `Proximo teste recomendado: ${narrative.nextTest}`,
+      `O que esse passo valida: ${narrative.validationGoal}`,
+      `Observacao de seguranca: ${narrative.safetyNote}`,
     ].join("\n\n"),
     structured: {
-      technicalSummary,
-      mainHypothesis,
-      evidence,
-      nextTest,
-      validationGoal,
-      safetyNote,
+      technicalSummary: narrative.technicalSummary,
+      mainHypothesis: narrative.mainHypothesis,
+      evidence: narrative.evidence,
+      nextTest: narrative.nextTest,
+      validationGoal: narrative.validationGoal,
+      safetyNote: narrative.safetyNote,
       categoryStrategy: strategy.firstMove,
       recommendedTestId: recommendedTest?.id ?? null,
       recommendedTestName: recommendedTest?.name ?? null,
@@ -695,7 +759,7 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
       getHistoricalSymptomGroupInsights(supabase),
     ]);
 
-  const payload = buildStructuredResponse(
+  const payload = await buildStructuredResponse(
     context,
     similarCases,
     relatedDocuments,
@@ -713,7 +777,7 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
     confidence_score: payload.confidence,
     raw_response_text: payload.rawResponseText,
     structured_response_json: payload.structured,
-    model_name: getEmbeddingProviderName(),
+    model_name: payload.modelName,
   });
 
   if (error) {

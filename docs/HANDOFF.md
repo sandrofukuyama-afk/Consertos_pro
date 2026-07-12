@@ -157,7 +157,16 @@ Fase 6 continua:
   - `pickUnperformedTest` pondera pela taxa de sucesso historica (seguida ou helpful) de cada `test_group` (`getHistoricalTestGroupSuccess`)
   - `mainHypothesis`/evidencia/confianca agora usam `getHistoricalSymptomGroupInsights`, que busca em `resolved_cases.final_failure_mode` a causa mais recorrente historicamente para o `symptom_group` do sintoma principal do caso
 - ~~mostrar taxa percentual de aceitacao e helpful por categoria~~ feito: `acceptanceRate`/`helpfulRate` em `aiCategoryBreakdown`
-- eventualmente trocar a heuristica atual por chamada LLM estruturada quando houver contexto suficiente (unico item da fase 6 ainda nao iniciado)
+- ~~eventualmente trocar a heuristica atual por chamada LLM estruturada~~ feito:
+  - `src/lib/ai/assistant-llm.ts` chama `gpt-4o-mini` via Chat Completions com `response_format: json_schema` (strict)
+  - a narrativa (resumo tecnico, hipotese, evidencias, proximo teste, meta de validacao, observacao de seguranca) e gerada pelo LLM quando `OPENAI_API_KEY` esta configurada
+  - o LLM e obrigado por prompt a recomendar exatamente o teste ja escolhido pela heuristica (`recommendedTestName`), evitando alucinar testes que nao existem no catalogo
+  - em caso de falha da chamada (erro de rede, resposta malformada, chave ausente), cai de volta para a narrativa heuristica original sem quebrar o fluxo
+  - `ai_responses.model_name` agora reflete o modelo real usado (`gpt-4o-mini` ou `heuristic-v1`), antes usava o nome do provedor de embeddings por engano
+
+Fase 6 concluida. Chave `OPENAI_API_KEY` foi configurada e validada em 2026-07-12 (chamada real de teste retornou 200 tanto para embeddings quanto para chat completions).
+
+Pendente: apos configurar a chave, e necessario clicar em "Sincronizar agora" em `/conhecimento` (login manual no navegador) para reprocessar os embeddings existentes, que foram gerados no modo `hashing-v1` antes da chave estar disponivel — nao foi possivel automatizar esse clique neste ambiente por falta de navegador headless.
 
 ## Observacao importante
 
