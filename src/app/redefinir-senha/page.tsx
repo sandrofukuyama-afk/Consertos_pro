@@ -32,7 +32,7 @@ export default function RedefinirSenhaPage() {
     }
 
     if (password !== confirmPassword) {
-      setError("As senhas nao coincidem.");
+      setError("As senhas não coincidem.");
       return;
     }
 
@@ -67,12 +67,12 @@ export default function RedefinirSenhaPage() {
           </h1>
 
           {status === "checking" ? (
-            <p className="mt-5 text-sm text-[var(--muted)]">Verificando o link de recuperacao...</p>
+            <p className="mt-5 text-sm text-[var(--muted)]">Verificando o link de recuperação...</p>
           ) : null}
 
           {status === "invalid" ? (
             <div className="mt-5 rounded-2xl border border-[rgba(202,106,85,0.28)] bg-[rgba(202,106,85,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
-              Este link e invalido ou ja expirou. Solicite um novo link em &quot;Esqueceu a senha?&quot; na tela de login.
+              Este link é inválido ou já expirou. Solicite um novo link em &quot;Esqueceu a senha?&quot; na tela de login.
             </div>
           ) : null}
 

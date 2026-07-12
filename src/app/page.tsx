@@ -22,8 +22,8 @@ export default async function Home({ searchParams }: HomePageProps) {
 
   return (
     <AppShell
-      title="Diagnosticos em andamento"
-      description="Primeira central operacional do ConsertosPro. Esta base ja organiza casos ativos, proximo passo sugerido, timeline tecnica, hipoteses e memoria confirmada seguindo o escopo do MVP."
+      title="Diagnósticos em andamento"
+      description="Primeira central operacional do ConsertosPro. Esta base já organiza casos ativos, próximo passo sugerido, timeline técnica, hipóteses e memória confirmada seguindo o escopo do MVP."
       user={user}
     >
       <div className="grid gap-4">
@@ -43,7 +43,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Integracao Supabase
+                Integração Supabase
               </p>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
                 {supabaseReady
@@ -51,7 +51,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                   : "Base conectada ao projeto, aguardando chave publishable"}
               </h3>
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                URL configurada: {url ?? "nao definida"}.
+                URL configurada: {url ?? "não definida"}.
                 {!supabaseReady &&
                   " Falta preencher NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY para ativar auth, queries e storage no app."}
               </p>
@@ -109,7 +109,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                 </h3>
               </div>
               <p className="max-w-md text-sm leading-6 text-[var(--muted)]">
-                Estrutura pensada para depois receber busca, filtros, responsavel e persistencia real.
+                Estrutura pensada para depois receber busca, filtros, responsável e persistência real.
               </p>
             </div>
 
@@ -119,7 +119,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                   <span>Equipamento</span>
                   <span>Defeito atual</span>
                   <span>Placa</span>
-                  <span>Tecnico</span>
+                  <span>Técnico</span>
                   <span>Status</span>
                 </div>
                 {dashboard.diagnostics.map((diagnostic) => (
@@ -169,16 +169,16 @@ export default async function Home({ searchParams }: HomePageProps) {
           <div className="grid gap-4">
             <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-white shadow-[0_20px_52px_rgba(29,36,36,0.18)]">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-                Proximo passo sugerido
+                Próximo passo sugerido
               </p>
               <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
                 Isolar a linha LCD_VDD antes de regravar BIOS
               </h3>
               <p className="mt-3 text-sm leading-7 text-[rgba(255,245,236,0.76)]">
-                O plano do produto pede um teste por vez e resposta baseada em evidencia. Esta area ja simula o lugar onde a IA vai justificar o melhor proximo teste quando a camada de contexto estiver pronta.
+                O plano do produto pede um teste por vez e resposta baseada em evidência. Esta área já simula o lugar onde a IA vai justificar o melhor próximo teste quando a camada de contexto estiver pronta.
               </p>
               <div className="mt-5 rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(255,245,236,0.84)]">
-                Justificativa: ha medicao estavel de 19V, consumo inicial coerente e historico recente de casos semelhantes com falha no circuito de imagem. A regravacao agora teria custo maior e menor poder de isolamento.
+                Justificativa: há medição estável de 19V, consumo inicial coerente e histórico recente de casos semelhantes com falha no circuito de imagem. A regravação agora teria custo maior e menor poder de isolamento.
               </div>
             </article>
 
@@ -210,7 +210,7 @@ export default async function Home({ searchParams }: HomePageProps) {
 
             <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Hipoteses em aberto
+                Hipóteses em aberto
               </p>
               <div className="mt-4 space-y-3">
                 {hypotheses.map((item) => (
@@ -224,12 +224,12 @@ export default async function Home({ searchParams }: HomePageProps) {
                           {item.title}
                         </p>
                         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                          Evidencia: {item.evidence}
+                          Evidência: {item.evidence}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                          Confianca {item.confidence}
+                          Confiança {item.confidence}
                         </span>
                         <StatusPill label={item.status} />
                       </div>
@@ -246,7 +246,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                  Biblioteca tecnica
+                  Biblioteca técnica
                 </p>
                 <h3 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Documentos recentes
@@ -280,7 +280,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               Causas confirmadas
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Memoria forte da bancada
+              Memória forte da bancada
             </h3>
             <div className="mt-4 space-y-3">
               {dashboard.knowledgeItems.map((item) => (

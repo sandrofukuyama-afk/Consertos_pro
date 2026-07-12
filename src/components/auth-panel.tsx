@@ -13,7 +13,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
           Entrar
         </p>
         <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-[var(--foreground)]">
-          Acesse a bancada tecnica
+          Acesse a bancada técnica
         </h2>
         <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
           Use seu email e senha do Supabase Auth para entrar no ambiente interno.
@@ -70,7 +70,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
               />
             </label>
             <button className="rounded-full border border-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-[var(--accent-copper)]">
-              Enviar link de recuperacao
+              Enviar link de recuperação
             </button>
           </form>
         </details>
@@ -81,10 +81,10 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
           Primeiro acesso
         </p>
         <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight">
-          Crie seu usuario tecnico
+          Crie seu usuário técnico
         </h2>
         <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.74)]">
-          O cadastro cria a conta no Supabase Auth e a sincronizacao do perfil tecnico acontece automaticamente pela trigger do banco.
+          O cadastro cria a conta no Supabase Auth e a sincronização do perfil técnico acontece automaticamente pela trigger do banco.
         </p>
 
         <form action={signUpAction} className="mt-6 grid gap-4">

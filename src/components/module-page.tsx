@@ -20,13 +20,13 @@ export function ModulePage({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-            Direcao inicial
+            Direção inicial
           </p>
           <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            Modulo pronto para detalhamento incremental
+            Módulo pronto para detalhamento incremental
           </h3>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-            Esta tela foi preparada como base estrutural do aplicativo. O proximo passo aqui e ligar os formulários, services e persistencia ao modelo de dados descrito na documentacao.
+            Esta tela foi preparada como base estrutural do aplicativo. O próximo passo aqui é ligar os formulários, services e persistência ao modelo de dados descrito na documentação.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -53,8 +53,8 @@ export function ModulePage({
           <div className="mt-5 space-y-4">
             {[
               "Fluxo rapido para a bancada",
-              "Rastreabilidade por tecnico",
-              "Separacao entre historico e conhecimento consolidado",
+              "Rastreabilidade por técnico",
+              "Separação entre histórico e conhecimento consolidado",
               "Base preparada para Supabase Auth, Storage e schema SQL",
             ].map((item) => (
               <div

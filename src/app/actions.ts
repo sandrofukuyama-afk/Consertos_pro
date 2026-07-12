@@ -50,14 +50,14 @@ export async function signUpAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/login?message=Conta criada. Agora faca login.");
+  redirect("/login?message=Conta criada. Agora faça login.");
 }
 
 export async function requestPasswordResetAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
 
   if (!email) {
-    redirect("/login?error=Informe um email valido para recuperar a senha.");
+    redirect("/login?error=Informe um email válido para recuperar a senha.");
   }
 
   const headerList = await headers();
@@ -121,7 +121,7 @@ export async function createDiagnosticAction(formData: FormData) {
 
   await syncDiagnosticEmbeddingSource(data.id, supabase);
   revalidatePath("/");
-  redirect(`/diagnosticos/${data.id}?message=Diagnostico criado com sucesso.`);
+  redirect(`/diagnosticos/${data.id}?message=Diagnóstico criado com sucesso.`);
 }
 
 export async function addDiagnosticSymptomAction(formData: FormData) {
@@ -135,7 +135,7 @@ export async function addDiagnosticSymptomAction(formData: FormData) {
   const isPrimary = formData.get("is_primary") === "on";
 
   if (!diagnosticId || !symptomId) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Sintoma invalido.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Sintoma inválido.`);
   }
 
   const { error } = await supabase.from("diagnostic_symptoms").insert({
@@ -170,7 +170,7 @@ export async function addDiagnosticTestAction(formData: FormData) {
   const resultStatus = String(formData.get("result_status") ?? "pending");
 
   if (!diagnosticId || !testId) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Teste invalido.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Teste inválido.`);
   }
 
   const { data: currentRuns } = await supabase
@@ -223,7 +223,7 @@ export async function addMeasurementAction(formData: FormData) {
     : null;
 
   if (!diagnosticId || !measurementType) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Medicao invalida.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Medição inválida.`);
   }
 
   const { error } = await supabase.from("measurements").insert({
@@ -247,7 +247,7 @@ export async function addMeasurementAction(formData: FormData) {
   await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
-  redirect(`/diagnosticos/${diagnosticId}?message=Medicao registrada.`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Medição registrada.`);
 }
 
 export async function addHypothesisAction(formData: FormData) {
@@ -263,7 +263,7 @@ export async function addHypothesisAction(formData: FormData) {
   const confidenceScore = confidenceRaw ? Number(confidenceRaw) : null;
 
   if (!diagnosticId || !title) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Hipotese invalida.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Hipótese inválida.`);
   }
 
   const { error } = await supabase.from("hypotheses").insert({
@@ -286,7 +286,7 @@ export async function addHypothesisAction(formData: FormData) {
 
   await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
-  redirect(`/diagnosticos/${diagnosticId}?message=Hipotese registrada.`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Hipótese registrada.`);
 }
 
 export async function generateDiagnosticAssistantAction(formData: FormData) {
@@ -295,7 +295,7 @@ export async function generateDiagnosticAssistantAction(formData: FormData) {
   const diagnosticId = String(formData.get("diagnostic_id") ?? "");
 
   if (!diagnosticId) {
-    redirect("/?error=Diagnostico invalido para recomendacao.");
+    redirect("/?error=Diagnóstico inválido para recomendação.");
   }
 
   try {
@@ -303,12 +303,12 @@ export async function generateDiagnosticAssistantAction(formData: FormData) {
     revalidatePath(`/diagnosticos/${diagnosticId}`);
     redirect(
       `/diagnosticos/${diagnosticId}?message=${encodeURIComponent(
-        `Assistente tecnico atualizado com confianca ${result.confidence.toFixed(2)} usando ${result.provider}.`,
+        `Assistente técnico atualizado com confiança ${result.confidence.toFixed(2)} usando ${result.provider}.`,
       )}`,
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Falha ao gerar recomendacao tecnica.";
+      error instanceof Error ? error.message : "Falha ao gerar recomendação técnica.";
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(message)}`);
   }
 }
@@ -358,7 +358,7 @@ export async function saveAssistantFeedbackAction(formData: FormData) {
 
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/conhecimento");
-  redirect(`/diagnosticos/${diagnosticId}?message=Feedback da recomendacao salvo.`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Feedback da recomendação salvo.`);
 }
 
 export async function uploadAttachmentAction(formData: FormData) {
@@ -372,7 +372,7 @@ export async function uploadAttachmentAction(formData: FormData) {
   const file = formData.get("file");
 
   if (!diagnosticId || !title || !(file instanceof File) || file.size === 0) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Anexo invalido.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Anexo inválido.`);
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -417,7 +417,7 @@ export async function analyzeAttachmentImageAction(formData: FormData) {
   const attachmentId = String(formData.get("attachment_id") ?? "");
 
   if (!diagnosticId || !attachmentId) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Anexo invalido para analise.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Anexo inválido para análise.`);
   }
 
   const { data: attachment } = await supabase
@@ -427,7 +427,7 @@ export async function analyzeAttachmentImageAction(formData: FormData) {
     .maybeSingle();
 
   if (!attachment || !attachment.mime_type.startsWith("image/")) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Este anexo nao e uma imagem analisavel.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Este anexo não é uma imagem analisável.`);
   }
 
   const { data: signed } = await supabase.storage
@@ -435,7 +435,7 @@ export async function analyzeAttachmentImageAction(formData: FormData) {
     .createSignedUrl(attachment.storage_path, 300);
 
   if (!signed?.signedUrl) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Nao foi possivel gerar acesso a imagem.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Não foi possível gerar acesso à imagem.`);
   }
 
   let analysis: Awaited<ReturnType<typeof analyzeBoardImage>> = null;
@@ -447,7 +447,7 @@ export async function analyzeAttachmentImageAction(formData: FormData) {
   }
 
   if (!analysis) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Analise de imagem nao esta configurada.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Análise de imagem não está configurada.`);
   }
 
   await supabase
@@ -459,7 +459,7 @@ export async function analyzeAttachmentImageAction(formData: FormData) {
     .eq("id", attachmentId);
 
   revalidatePath(`/diagnosticos/${diagnosticId}`);
-  redirect(`/diagnosticos/${diagnosticId}?message=Analise de imagem concluida.`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Análise de imagem concluída.`);
 }
 
 export async function closeDiagnosticAction(formData: FormData) {
@@ -494,7 +494,7 @@ export async function closeDiagnosticAction(formData: FormData) {
     .maybeSingle();
 
   if (existing) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Este diagnostico ja foi encerrado.`);
+    redirect(`/diagnosticos/${diagnosticId}?error=Este diagnóstico já foi encerrado.`);
   }
 
   const mappedStatus = caseStatus === "unresolved" ? "unresolved" : "resolved";
@@ -576,7 +576,7 @@ export async function closeDiagnosticAction(formData: FormData) {
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   revalidatePath("/conhecimento");
-  redirect(`/diagnosticos/${diagnosticId}?message=Diagnostico encerrado com sucesso.`);
+  redirect(`/diagnosticos/${diagnosticId}?message=Diagnóstico encerrado com sucesso.`);
 }
 
 export async function uploadTechnicalDocumentAction(formData: FormData) {
@@ -597,7 +597,7 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
     !(file instanceof File) ||
     file.size === 0
   ) {
-    redirect("/biblioteca?error=Documento invalido.");
+    redirect("/biblioteca?error=Documento inválido.");
   }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -635,7 +635,7 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
     );
   }
 
-  let message = "Documento tecnico enviado.";
+  let message = "Documento técnico enviado.";
 
   try {
     const result = await syncTechnicalDocumentSemanticSource(
@@ -644,14 +644,14 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
       supabase,
     );
 
-    message = `Documento tecnico enviado e indexado em ${result.chunksCount} chunks.`;
+    message = `Documento técnico enviado e indexado em ${result.chunksCount} chunks.`;
   } catch {
     await supabase
       .from("technical_documents")
       .update({ is_indexed: false })
       .eq("id", insertedDocument.id);
 
-    message = "Documento tecnico enviado, mas a indexacao inicial ficou pendente.";
+    message = "Documento técnico enviado, mas a indexação inicial ficou pendente.";
   }
 
   revalidatePath("/biblioteca");
@@ -671,12 +671,12 @@ export async function syncSemanticMemoryAction() {
     revalidatePath("/biblioteca");
     redirect(
       `/conhecimento?message=${encodeURIComponent(
-        `Memoria semantica sincronizada com ${result.processed} registros usando ${result.provider}.`,
+        `Memória semântica sincronizada com ${result.processed} registros usando ${result.provider}.`,
       )}`,
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Falha ao sincronizar memoria semantica.";
+      error instanceof Error ? error.message : "Falha ao sincronizar memória semântica.";
     redirect(`/conhecimento?error=${encodeURIComponent(message)}`);
   }
 }

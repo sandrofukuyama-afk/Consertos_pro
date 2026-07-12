@@ -20,7 +20,7 @@ export default async function NewDiagnosticPage({
 
   return (
     <AppShell
-      title="Novo diagnostico"
+      title="Novo diagnóstico"
       description="Primeiro fluxo real do backend: abrir um caso no banco, com autor autenticado, categoria e relato inicial."
       user={user}
       actionLabel="Voltar para dashboard"
@@ -69,7 +69,7 @@ export default async function NewDiagnosticPage({
                   className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   defaultValue=""
                 >
-                  <option value="">Nao identificado ainda</option>
+                  <option value="">Não identificado ainda</option>
                   {manufacturers.map((manufacturer) => (
                     <option key={manufacturer.id} value={manufacturer.id}>
                       {manufacturer.name}
@@ -101,18 +101,18 @@ export default async function NewDiagnosticPage({
             </label>
 
             <label className="grid gap-2 text-sm text-[var(--foreground)]">
-              <span className="font-medium">Condicao fisica observada</span>
+              <span className="font-medium">Condição física observada</span>
               <textarea
                 name="physical_condition_notes"
                 rows={4}
-                placeholder="Oxidacao, marcas de aquecimento, sinais de reparo anterior, etc."
+                placeholder="Oxidação, marcas de aquecimento, sinais de reparo anterior, etc."
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
               />
             </label>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Criar diagnostico
+                Criar diagnóstico
               </button>
               <Link
                 href="/"
@@ -126,13 +126,13 @@ export default async function NewDiagnosticPage({
 
         <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-            Responsavel atual
+            Responsável atual
           </p>
           <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
             {user.fullName}
           </h3>
           <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.78)]">
-            O caso sera criado com rastreabilidade completa no campo `opened_by_user_id` e ja nasce pronto para evoluir com sintomas, testes, medicoes e anexos.
+            O caso será criado com rastreabilidade completa no campo `opened_by_user_id` e já nasce pronto para evoluir com sintomas, testes, medições e anexos.
           </p>
         </aside>
       </div>

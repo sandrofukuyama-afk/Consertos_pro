@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Fase 2 em andamento
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-[rgba(255,245,236,0.76)]">
-            O aplicativo ja conversa com o Supabase Auth e com o schema remoto da oficina. A partir daqui a dashboard deixa de ser apenas conceito e passa a operar com dados reais.
+            O aplicativo já conversa com o Supabase Auth e com o schema remoto da oficina. A partir daqui a dashboard deixa de ser apenas conceito e passa a operar com dados reais.
           </p>
         </section>
 

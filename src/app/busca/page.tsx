@@ -21,7 +21,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
   return (
     <AppShell
       title="Busca inteligente"
-      description="Consulta operacional em diagnosticos e documentos tecnicos com filtros por texto, escopo, status e categoria."
+      description="Consulta operacional em diagnósticos e documentos técnicos com filtros por texto, escopo, status e categoria."
       user={user}
     >
       <div className="grid gap-4">
@@ -40,7 +40,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
             >
               <option value="all">Tudo</option>
-              <option value="diagnostics">Diagnosticos</option>
+              <option value="diagnostics">Diagnósticos</option>
               <option value="documents">Documentos</option>
             </select>
             <select
@@ -53,7 +53,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
               <option value="active">Ativo</option>
               <option value="waiting_input">Aguardando teste</option>
               <option value="resolved">Resolvido</option>
-              <option value="unresolved">Nao resolvido</option>
+              <option value="unresolved">Não resolvido</option>
               <option value="archived">Arquivado</option>
             </select>
             <select
@@ -78,20 +78,20 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Busca semantica
+                Busca semântica
               </p>
               <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                Contextos mais proximos do que voce digitou
+                Contextos mais próximos do que você digitou
               </h3>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 Motor atual: {data.semanticProvider}
                 {data.externalProviderConfigured
                   ? " com embeddings externos ativos."
-                  : " em modo local, pronto para evoluir sem depender de configuracao extra."}
+                  : " em modo local, pronto para evoluir sem depender de configuração extra."}
               </p>
             </div>
             <p className="text-sm text-[var(--muted)]">
-              {data.semanticMatches.length} correspondencias
+              {data.semanticMatches.length} correspondências
             </p>
           </div>
 
@@ -135,7 +135,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
               )
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] lg:col-span-3">
-                Digite pelo menos 3 caracteres para ativar a busca semantica e comparar com a memoria tecnica indexada.
+                Digite pelo menos 3 caracteres para ativar a busca semântica e comparar com a memória técnica indexada.
               </div>
             )}
           </div>
@@ -146,7 +146,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                  Diagnosticos
+                  Diagnósticos
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Casos encontrados
@@ -186,7 +186,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Nenhum diagnostico encontrado com os filtros atuais.
+                  Nenhum diagnóstico encontrado com os filtros atuais.
                 </div>
               )}
             </div>
@@ -199,7 +199,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                   Documentos
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                  Referencias tecnicas
+                  Referências técnicas
                 </h3>
               </div>
               <p className="text-sm text-[var(--muted)]">

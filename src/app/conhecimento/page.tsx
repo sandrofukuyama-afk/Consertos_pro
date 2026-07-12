@@ -20,7 +20,7 @@ export default async function ConhecimentoPage({
   return (
     <AppShell
       title="Conhecimento consolidado"
-      description="Centro da memoria tecnica reutilizavel da oficina, agora com base vetorial para casos semelhantes e documentos mais proximos do contexto buscado."
+      description="Centro da memória técnica reutilizável da oficina, agora com base vetorial para casos semelhantes e documentos mais próximos do contexto buscado."
       user={user}
     >
       <div className="grid gap-4">
@@ -39,19 +39,19 @@ export default async function ConhecimentoPage({
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_420px]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Infraestrutura semantica
+              Infraestrutura semântica
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Vetores e fontes da memoria
+              Vetores e fontes da memória
             </h3>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-              O app agora ja consegue indexar resumos de diagnosticos, casos resolvidos e documentos tecnicos para recuperar contexto semelhante na busca.
+              O app agora já consegue indexar resumos de diagnósticos, casos resolvidos e documentos técnicos para recuperar contexto semelhante na busca.
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               {[
                 {
-                  label: "Fontes semanticas",
+                  label: "Fontes semânticas",
                   value: String(overview.sourceCount),
                 },
                 {
@@ -86,7 +86,7 @@ export default async function ConhecimentoPage({
               </p>
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {overview.externalProviderConfigured
-                  ? "Embeddings externos ativos para melhorar similaridade semantica."
+                  ? "Embeddings externos ativos para melhorar similaridade semântica."
                   : "Modo local ativo para manter a fase funcionando agora, com caminho aberto para trocar por embeddings externos depois."}
               </p>
             </div>
@@ -94,13 +94,13 @@ export default async function ConhecimentoPage({
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-              Sincronizacao
+              Sincronização
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight">
-              Atualizar memoria vetorial
+              Atualizar memória vetorial
             </h3>
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-              Reprocessa documentos, diagnosticos e casos resolvidos para manter a busca semantica alinhada com o estado atual da base.
+              Reprocessa documentos, diagnósticos e casos resolvidos para manter a busca semântica alinhada com o estado atual da base.
             </p>
             <form action={syncSemanticMemoryAction} className="mt-5">
               <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
@@ -116,10 +116,10 @@ export default async function ConhecimentoPage({
               Aprendizado da IA
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Feedback e adocao das sugestoes
+              Feedback e adoção das sugestões
             </h3>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-              Esse painel comeca a mostrar se as recomendacoes estao sendo seguidas e como os tecnicos percebem a utilidade delas.
+              Esse painel começa a mostrar se as recomendações estão sendo seguidas e como os técnicos percebem a utilidade delas.
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -133,7 +133,7 @@ export default async function ConhecimentoPage({
                   value: String(overview.aiMetrics.feedbackCount),
                 },
                 {
-                  label: "Sugestoes seguidas",
+                  label: "Sugestões seguidas",
                   value: String(overview.aiMetrics.followedCount),
                 },
               ].map((item) => (
@@ -162,7 +162,7 @@ export default async function ConhecimentoPage({
                   value: String(overview.aiMetrics.partiallyHelpfulCount),
                 },
                 {
-                  label: "Nao ajudou",
+                  label: "Não ajudou",
                   value: String(overview.aiMetrics.notHelpfulCount),
                 },
               ].map((item) => (
@@ -209,19 +209,19 @@ export default async function ConhecimentoPage({
                     </div>
                     <p className="mt-3 text-sm text-[var(--foreground)]">
                       {item.wasFollowed === true
-                        ? "A sugestao foi seguida na bancada."
+                        ? "A sugestão foi seguida na bancada."
                         : item.wasFollowed === false
-                          ? "A sugestao nao foi seguida."
-                          : "Sem confirmacao se a sugestao foi seguida."}
+                          ? "A sugestão não foi seguida."
+                          : "Sem confirmação se a sugestão foi seguida."}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                      {item.note || "Sem observacao adicional."}
+                      {item.note || "Sem observação adicional."}
                     </p>
                   </article>
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda nao ha feedback suficiente para medir a utilidade das recomendacoes.
+                  Ainda não há feedback suficiente para medir a utilidade das recomendações.
                 </div>
               )}
             </div>
@@ -234,7 +234,7 @@ export default async function ConhecimentoPage({
               Desempenho por categoria
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Onde a IA esta ajudando mais
+              Onde a IA está ajudando mais
             </h3>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -253,14 +253,14 @@ export default async function ConhecimentoPage({
                       <p>Seguidas: {item.followedCount}</p>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm font-semibold text-[var(--accent-teal)]">
-                      <p>Aceitacao: {item.acceptanceRate}%</p>
+                      <p>Aceitação: {item.acceptanceRate}%</p>
                       <p>Helpful: {item.helpfulRate}%</p>
                     </div>
                   </article>
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2">
-                  Ainda nao ha feedback suficiente para comparar categorias.
+                  Ainda não há feedback suficiente para comparar categorias.
                 </div>
               )}
             </div>
@@ -271,7 +271,7 @@ export default async function ConhecimentoPage({
               Testes mais seguidos
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Sugestoes com mais adocao
+              Sugestões com mais adoção
             </h3>
 
             <div className="mt-5 space-y-3">
@@ -293,7 +293,7 @@ export default async function ConhecimentoPage({
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda nao ha testes sugeridos com execucao registrada.
+                  Ainda não há testes sugeridos com execução registrada.
                 </div>
               )}
             </div>
@@ -302,7 +302,7 @@ export default async function ConhecimentoPage({
 
         <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-            Tendencia temporal
+            Tendência temporal
           </p>
           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
             Feedback por semana
@@ -322,14 +322,14 @@ export default async function ConhecimentoPage({
                     Feedbacks: {item.feedbackCount}
                   </p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-sm font-semibold text-[var(--accent-teal)]">
-                    <p>Aceitacao: {item.acceptanceRate}%</p>
+                    <p>Aceitação: {item.acceptanceRate}%</p>
                     <p>Helpful: {item.helpfulRate}%</p>
                   </div>
                 </article>
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2 xl:col-span-4">
-                Ainda nao ha semanas com feedback suficiente para mostrar tendencia.
+                Ainda não há semanas com feedback suficiente para mostrar tendência.
               </div>
             )}
           </div>
@@ -360,7 +360,7 @@ export default async function ConhecimentoPage({
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2 xl:col-span-3">
-                Ainda nao ha casos resolvidos suficientes para alimentar a memoria consolidada.
+                Ainda não há casos resolvidos suficientes para alimentar a memória consolidada.
               </div>
             )}
           </div>

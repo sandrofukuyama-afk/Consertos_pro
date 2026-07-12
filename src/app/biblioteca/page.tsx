@@ -23,8 +23,8 @@ export default async function BibliotecaPage({
 
   return (
     <AppShell
-      title="Biblioteca tecnica"
-      description="Upload real de documentos tecnicos no Supabase Storage, com metadados e listagem consultavel para a oficina."
+      title="Biblioteca técnica"
+      description="Upload real de documentos técnicos no Supabase Storage, com metadados e listagem consultável para a oficina."
       user={user}
     >
       <div className="grid gap-4">
@@ -43,7 +43,7 @@ export default async function BibliotecaPage({
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_420px]">
           <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Documentos tecnicos
+              Documentos técnicos
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Biblioteca operacional
@@ -71,7 +71,7 @@ export default async function BibliotecaPage({
                       Fabricante: {item.manufacturer}
                     </p>
                     <p className="mt-1 text-sm text-[var(--muted)]">
-                      Relacao: {item.relation}
+                      Relação: {item.relation}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
@@ -84,7 +84,7 @@ export default async function BibliotecaPage({
                             : "bg-[rgba(202,106,85,0.12)] text-[var(--danger)]"
                         }`}
                       >
-                        {item.isIndexed ? "Indexado" : "Indexacao pendente"}
+                        {item.isIndexed ? "Indexado" : "Indexação pendente"}
                       </span>
                     </div>
                     {item.signedUrl ? (
@@ -101,7 +101,7 @@ export default async function BibliotecaPage({
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Nenhum documento tecnico foi enviado ainda.
+                  Nenhum documento técnico foi enviado ainda.
                 </div>
               )}
             </div>
@@ -112,10 +112,10 @@ export default async function BibliotecaPage({
               Novo upload
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Adicionar referencia tecnica
+              Adicionar referência técnica
             </h3>
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-              Use esta area para subir esquemas, boardviews, BIOS e materiais de apoio que vao alimentar a memoria consultavel da oficina.
+              Use esta área para subir esquemas, boardviews, BIOS e materiais de apoio que vão alimentar a memória consultável da oficina.
             </p>
             <div className="mt-5">
               <TechnicalDocumentUploadForm manufacturers={catalog.manufacturers} />

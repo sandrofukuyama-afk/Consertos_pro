@@ -20,7 +20,7 @@ type AppShellProps = {
 export function AppShell({
   title,
   description,
-  actionLabel = "Novo diagnostico",
+  actionLabel = "Novo diagnóstico",
   actionHref = "/diagnosticos/novo",
   user,
   children,
@@ -38,10 +38,10 @@ export function AppShell({
                 ConsertosPro
               </p>
               <h1 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-white">
-                Bancada com memoria tecnica
+                Bancada com memória técnica
               </h1>
               <p className="mt-3 max-w-xs text-sm leading-6 text-[rgba(255,245,236,0.72)]">
-                Fundacao do MVP orientada pelo plano do projeto, pronta para ganhar dados reais e integracao com Supabase.
+                Fundação do MVP orientada pelo plano do projeto, pronta para ganhar dados reais e integração com Supabase.
               </p>
             </div>
 
@@ -82,10 +82,10 @@ export function AppShell({
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)]">
-                Proxima fase
+                Próxima fase
               </p>
               <p className="mt-2 text-sm leading-6 text-[rgba(255,245,236,0.82)]">
-                Formularios operacionais, timeline real, anexos e busca integrada.
+                Formulários operacionais, timeline real, anexos e busca integrada.
               </p>
             </div>
           </div>

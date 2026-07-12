@@ -13,11 +13,11 @@ export const navItems: NavItem[] = [
   {
     href: "/",
     label: "Diagnosticos",
-    description: "Casos, timeline e proximos testes",
+    description: "Casos, timeline e próximos testes",
   },
   {
     href: "/catalogo-tecnico",
-    label: "Catalogo Tecnico",
+    label: "Catálogo Técnico",
     description: "Modelos, placas e componentes",
   },
   {
@@ -28,22 +28,22 @@ export const navItems: NavItem[] = [
   {
     href: "/conhecimento",
     label: "Conhecimento",
-    description: "Causas confirmadas e solucoes",
+    description: "Causas confirmadas e soluções",
   },
   {
     href: "/busca",
     label: "Busca",
-    description: "Consulta estruturada e semantica",
+    description: "Consulta estruturada e semântica",
   },
   {
     href: "/estatisticas",
-    label: "Estatisticas",
-    description: "Defeitos recorrentes e tempo de resolucao",
+    label: "Estatísticas",
+    description: "Defeitos recorrentes e tempo de resolução",
   },
   {
     href: "/configuracoes",
-    label: "Configuracoes",
-    description: "Usuarios, revisao e governanca",
+    label: "Configurações",
+    description: "Usuários, revisão e governança",
   },
 ];
 
@@ -63,7 +63,7 @@ export const kpis: Kpi[] = [
   {
     label: "Resolvidos hoje",
     value: "03",
-    change: "1 promovido para memoria",
+    change: "1 promovido para memória",
     tone: "amber",
   },
 ];
@@ -76,7 +76,7 @@ export const activeDiagnostics: DiagnosticCase[] = [
     symptom: "Liga sem imagem e aquece PCH",
     board: "Mainboard NM-D031",
     technician: "Marcos Vieira",
-    updatedAt: "ha 12 min",
+    updatedAt: "há 12 min",
     status: "Ativo",
   },
   {
@@ -86,27 +86,27 @@ export const activeDiagnostics: DiagnosticCase[] = [
     symptom: "Liga com som sem imagem",
     board: "T-Con BN96-56812A",
     technician: "Bruna Cezar",
-    updatedAt: "ha 27 min",
+    updatedAt: "há 27 min",
     status: "Aguardando teste",
   },
   {
     id: "DX-2053",
     category: "Celular",
     equipment: "Motorola Edge 30 Neo",
-    symptom: "Nao carrega apos troca de conector",
+    symptom: "Não carrega após troca de conector",
     board: "Sub-board carga XT2245",
     technician: "Rafael Teles",
-    updatedAt: "ha 45 min",
+    updatedAt: "há 45 min",
     status: "Ativo",
   },
   {
     id: "DX-2054",
     category: "Desktop",
     equipment: "Dell OptiPlex 7090",
-    symptom: "Desliga apos 15 segundos",
+    symptom: "Desliga após 15 segundos",
     board: "Mainboard Q470",
     technician: "Livia Rocha",
-    updatedAt: "ha 1 h",
+    updatedAt: "há 1 h",
     status: "Resolvido hoje",
   },
 ];
@@ -114,18 +114,18 @@ export const activeDiagnostics: DiagnosticCase[] = [
 export const timeline: TimelineEntry[] = [
   {
     time: "09:12",
-    title: "Medicao 19V registrada",
-    description: "Linha principal estavel na entrada da mainboard.",
+    title: "Medição 19V registrada",
+    description: "Linha principal estável na entrada da mainboard.",
   },
   {
     time: "09:36",
-    title: "Teste com fonte assimetrica",
+    title: "Teste com fonte assimétrica",
     description: "Consumo inicial em 0.041A sem subida de imagem.",
   },
   {
     time: "10:05",
-    title: "Hipotese fortalecida",
-    description: "Curto intermitente na linha LCD_VDD apos aquecimento.",
+    title: "Hipótese fortalecida",
+    description: "Curto intermitente na linha LCD_VDD após aquecimento.",
   },
 ];
 
@@ -137,15 +137,15 @@ export const hypotheses: Hypothesis[] = [
     status: "Fortalecida",
   },
   {
-    title: "Firmware corrompido apos atualizacao",
+    title: "Firmware corrompido após atualização",
     confidence: "0.41",
-    evidence: "Historico do equipamento indica falha apos reinicio",
+    evidence: "Histórico do equipamento indica falha após reinício",
     status: "Aberta",
   },
   {
     title: "Cabo flat com fuga para terra",
     confidence: "0.18",
-    evidence: "Sem reproducao ao isolar o conjunto",
+    evidence: "Sem reprodução ao isolar o conjunto",
     status: "Descartada",
   },
 ];
@@ -157,7 +157,7 @@ export const documents: DocumentItem[] = [
     relation: "Lenovo IdeaPad 3",
   },
   {
-    title: "Mapa de tensoes BN96-56812A",
+    title: "Mapa de tensões BN96-56812A",
     type: "Voltage map",
     relation: "Samsung UN50AU7700",
   },
@@ -170,19 +170,19 @@ export const documents: DocumentItem[] = [
 
 export const knowledgeItems: KnowledgeItem[] = [
   {
-    cause: "Curto no circuito de backlight apos oxidacao",
+    cause: "Curto no circuito de backlight após oxidação",
     incidence: "12 casos",
-    note: "Recorrencia alta em notebooks com dano liquido leve.",
+    note: "Recorrência alta em notebooks com dano líquido leve.",
   },
   {
-    cause: "EEPROM corrompida apos queda de energia",
+    cause: "EEPROM corrompida após queda de energia",
     incidence: "7 casos",
-    note: "Regravacao validada em 5 ocorrencias deste trimestre.",
+    note: "Regravação validada em 5 ocorrências deste trimestre.",
   },
   {
     cause: "MOSFET aquecendo na linha de carga",
     incidence: "5 casos",
-    note: "Maior frequencia em sub-placas com retrabalho anterior.",
+    note: "Maior frequência em sub-placas com retrabalho anterior.",
   },
 ];
 
@@ -193,48 +193,48 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
       description: "Fabricantes, categorias, modelos, placas e componentes com relacionamentos claros.",
     },
     {
-      title: "Preparar consistencia futura",
+      title: "Preparar consistência futura",
       description: "Campos normalizados para evitar duplicidade e melhorar busca por bancada.",
     },
   ],
   biblioteca: [
     {
-      title: "Receber documentos tecnicos",
-      description: "Metadados, associacoes por modelo ou placa e caminho pronto para storage.",
+      title: "Receber documentos técnicos",
+      description: "Metadados, associações por modelo ou placa e caminho pronto para storage.",
     },
     {
-      title: "Abrir trilha para indexacao",
+      title: "Abrir trilha para indexação",
       description: "Separar arquivo, chunking e preparo para embeddings sem acoplar ao MVP.",
     },
   ],
   conhecimento: [
     {
-      title: "Separar evidencia de confirmacao",
-      description: "Promover apenas causas revisadas como memoria forte da oficina.",
+      title: "Separar evidência de confirmação",
+      description: "Promover apenas causas revisadas como memória forte da oficina.",
     },
     {
-      title: "Conectar solucao ao caso",
+      title: "Conectar solução ao caso",
       description: "Registrar o que foi aplicado, o que funcionou e o que deve perder peso futuro.",
     },
   ],
   busca: [
     {
-      title: "Comecar por busca textual",
+      title: "Começar por busca textual",
       description: "Casos, sintomas, placas, componentes e documentos com filtros objetivos.",
     },
     {
-      title: "Reservar a camada semantica",
-      description: "Area pronta para pgvector, ranking e recuperacao contextual posterior.",
+      title: "Reservar a camada semântica",
+      description: "Área pronta para pgvector, ranking e recuperação contextual posterior.",
     },
   ],
   configuracoes: [
     {
-      title: "Mapear perfis tecnicos",
-      description: "Controle basico de acesso, revisor tecnico e rastreabilidade de autores.",
+      title: "Mapear perfis técnicos",
+      description: "Controle básico de acesso, revisor técnico e rastreabilidade de autores.",
     },
     {
-      title: "Definir governanca",
-      description: "Auditoria, revisao humana e promocao controlada de conhecimento.",
+      title: "Definir governança",
+      description: "Auditoria, revisão humana e promoção controlada de conhecimento.",
     },
   ],
 };

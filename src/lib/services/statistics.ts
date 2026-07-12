@@ -7,10 +7,10 @@ export const CAUSE_TYPE_LABELS: Record<string, string> = {
   component_failure: "Falha de componente",
   short_circuit: "Curto-circuito",
   bad_solder: "Solda fria",
-  firmware_corruption: "Corrupcao de firmware",
+  firmware_corruption: "Corrupção de firmware",
   line_missing: "Linha ausente",
-  liquid_damage: "Dano por liquido",
-  thermal_failure: "Falha termica",
+  liquid_damage: "Dano por líquido",
+  thermal_failure: "Falha térmica",
   other: "Outro",
 };
 
@@ -187,7 +187,7 @@ export async function getWorkshopStatistics(): Promise<WorkshopStatistics> {
     }
 
     const diagnostic = pickRelation(row.diagnostics);
-    const manufacturer = pickRelation(diagnostic?.manufacturers)?.name ?? "Nao identificado";
+    const manufacturer = pickRelation(diagnostic?.manufacturers)?.name ?? "Não identificado";
     const model = pickRelation(diagnostic?.equipment_models)?.model_name ?? null;
 
     const manufacturerEntry = manufacturerMap.get(manufacturer) ?? {

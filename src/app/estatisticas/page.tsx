@@ -24,8 +24,8 @@ export default async function EstatisticasPage() {
 
   return (
     <AppShell
-      title="Estatisticas tecnicas"
-      description="Inteligencia operacional da oficina: defeitos recorrentes, componentes mais falhos, tempo medio de resolucao e frequencia por fabricante e modelo."
+      title="Estatísticas técnicas"
+      description="Inteligência operacional da oficina: defeitos recorrentes, componentes mais falhos, tempo médio de resolução e frequência por fabricante e modelo."
       user={user}
     >
       <div className="grid gap-4">
@@ -40,7 +40,7 @@ export default async function EstatisticasPage() {
           </article>
           <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-              Tempo medio de resolucao
+              Tempo médio de resolução
             </p>
             <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
               {formatMinutes(stats.averageResolutionMinutes)}
@@ -50,10 +50,10 @@ export default async function EstatisticasPage() {
 
         <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-            Distribuicao de resultado
+            Distribuição de resultado
           </p>
           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            Confirmado, provavel e nao resolvido
+            Confirmado, provável e não resolvido
           </h3>
 
           <div className="mt-5">
@@ -67,13 +67,13 @@ export default async function EstatisticasPage() {
                 },
                 {
                   key: "probable",
-                  label: "Provavel",
+                  label: "Provável",
                   value: stats.resolutionRate.probable,
                   color: "var(--accent-amber)",
                 },
                 {
                   key: "unresolved",
-                  label: "Nao resolvido",
+                  label: "Não resolvido",
                   value: stats.resolutionRate.unresolved,
                   color: "var(--danger)",
                 },
@@ -88,17 +88,17 @@ export default async function EstatisticasPage() {
               Por fabricante
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Casos e tempo medio
+              Casos e tempo médio
             </h3>
 
             <div className="mt-5">
               <StatBarChart
                 accent="teal"
-                emptyLabel="Ainda nao ha casos resolvidos suficientes."
+                emptyLabel="Ainda não há casos resolvidos suficientes."
                 items={stats.byManufacturer.map((item) => ({
                   key: item.manufacturer,
                   label: item.manufacturer,
-                  sublabel: `Tempo medio: ${formatMinutes(item.averageResolutionMinutes)}`,
+                  sublabel: `Tempo médio: ${formatMinutes(item.averageResolutionMinutes)}`,
                   value: item.caseCount,
                   valueLabel: `${item.caseCount} caso(s)`,
                 }))}
@@ -108,16 +108,16 @@ export default async function EstatisticasPage() {
 
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Frequencia de causas
+              Frequência de causas
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Padroes confirmados na bancada
+              Padrões confirmados na bancada
             </h3>
 
             <div className="mt-5">
               <StatBarChart
                 accent="copper"
-                emptyLabel="Ainda nao ha causas confirmadas registradas."
+                emptyLabel="Ainda não há causas confirmadas registradas."
                 items={stats.causeFrequency.map((item) => ({
                   key: item.causeType,
                   label: CAUSE_TYPE_LABELS[item.causeType] ?? item.causeType,
@@ -141,11 +141,11 @@ export default async function EstatisticasPage() {
             <div className="mt-5">
               <StatBarChart
                 accent="teal"
-                emptyLabel="Ainda nao ha modelos com casos resolvidos suficientes."
+                emptyLabel="Ainda não há modelos com casos resolvidos suficientes."
                 items={stats.byModel.map((item) => ({
                   key: `${item.manufacturer}-${item.model}`,
                   label: item.model,
-                  sublabel: `${item.manufacturer} · Tempo medio: ${formatMinutes(item.averageResolutionMinutes)}`,
+                  sublabel: `${item.manufacturer} · Tempo médio: ${formatMinutes(item.averageResolutionMinutes)}`,
                   value: item.caseCount,
                   valueLabel: `${item.caseCount} caso(s)`,
                 }))}
@@ -164,7 +164,7 @@ export default async function EstatisticasPage() {
             <div className="mt-5">
               <StatBarChart
                 accent="copper"
-                emptyLabel="Ainda nao ha componentes vinculados a causas confirmadas."
+                emptyLabel="Ainda não há componentes vinculados a causas confirmadas."
                 items={stats.recurringComponents.map((item) => ({
                   key: item.componentRef,
                   label: item.componentRef,
