@@ -191,9 +191,37 @@ export type SearchDocumentResult = {
   signedUrl: string | null;
 };
 
+export type SemanticMatchResult = {
+  id: string;
+  sourceType: "diagnostic" | "resolved_case" | "technical_document";
+  title: string;
+  subtitle: string;
+  excerpt: string;
+  similarityLabel: string;
+  href: string | null;
+};
+
 export type SearchPageData = {
   filters: SearchFilters;
   categories: CatalogOption[];
   diagnostics: SearchDiagnosticResult[];
   documents: SearchDocumentResult[];
+  semanticMatches: SemanticMatchResult[];
+  semanticProvider: string;
+  externalProviderConfigured: boolean;
+};
+
+export type KnowledgeOverviewData = {
+  provider: string;
+  externalProviderConfigured: boolean;
+  sourceCount: number;
+  embeddingCount: number;
+  pendingDocumentCount: number;
+  recentResolvedCases: Array<{
+    id: string;
+    label: string;
+    status: string;
+    summary: string;
+    createdAt: string;
+  }>;
 };

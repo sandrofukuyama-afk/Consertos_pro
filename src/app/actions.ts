@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
 import {
-  buildTechnicalDocumentIndexPayload,
-  extractTechnicalDocumentText,
-} from "@/lib/services/document-indexing";
+  syncDiagnosticEmbeddingSource,
+  syncResolvedCaseEmbeddingSource,
+  syncSemanticBacklog,
+  syncTechnicalDocumentSemanticSource,
+} from "@/lib/services/semantic";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signInAction(formData: FormData) {
@@ -92,6 +94,7 @@ export async function createDiagnosticAction(formData: FormData) {
     redirect(`/diagnosticos/novo?error=${encodeURIComponent(error.message)}`);
   }
 
+  await syncDiagnosticEmbeddingSource(data.id, supabase);
   revalidatePath("/");
   redirect(`/diagnosticos/${data.id}?message=Diagnostico criado com sucesso.`);
 }
@@ -122,6 +125,7 @@ export async function addDiagnosticSymptomAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Sintoma registrado.`);
@@ -165,6 +169,7 @@ export async function addDiagnosticTestAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Teste registrado.`);
@@ -211,6 +216,7 @@ export async function addMeasurementAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Medicao registrada.`);
@@ -250,6 +256,7 @@ export async function addHypothesisAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   redirect(`/diagnosticos/${diagnosticId}?message=Hipotese registrada.`);
 }
@@ -411,8 +418,11 @@ export async function closeDiagnosticAction(formData: FormData) {
     }
   }
 
+  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
+  await syncResolvedCaseEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
+  revalidatePath("/conhecimento");
   redirect(`/diagnosticos/${diagnosticId}?message=Diagnostico encerrado com sucesso.`);
 }
 
@@ -475,65 +485,13 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
   let message = "Documento tecnico enviado.";
 
   try {
-    const manufacturerName = manufacturerId
-      ? (
-          await supabase
-            .from("manufacturers")
-            .select("name")
-            .eq("id", manufacturerId)
-            .maybeSingle()
-        ).data?.name
-      : null;
-
-    const extractedText = await extractTechnicalDocumentText(file);
-    const payload = buildTechnicalDocumentIndexPayload({
-      title,
-      documentType,
-      manufacturerName,
-      notes,
-      fileName: file.name,
-      mimeType: file.type || "application/octet-stream",
-      extractedText,
-    });
-
-    const { error: chunkError } = await supabase.from("document_chunks").insert(
-      payload.chunks.map((chunk) => ({
-        technical_document_id: insertedDocument.id,
-        chunk_order: chunk.chunkOrder,
-        section_label: chunk.sectionLabel,
-        chunk_text: chunk.chunkText,
-        token_estimate: chunk.tokenEstimate,
-      })),
+    const result = await syncTechnicalDocumentSemanticSource(
+      insertedDocument.id,
+      file,
+      supabase,
     );
 
-    if (chunkError) {
-      throw chunkError;
-    }
-
-    const { error: sourceError } = await supabase.from("embedding_sources").insert({
-      source_type: "technical_document",
-      source_id: insertedDocument.id,
-      content_role: "summary",
-      content_text: payload.summaryText,
-      content_hash: payload.summaryHash,
-      is_active: true,
-      last_generated_at: new Date().toISOString(),
-    });
-
-    if (sourceError) {
-      throw sourceError;
-    }
-
-    const { error: indexFlagError } = await supabase
-      .from("technical_documents")
-      .update({ is_indexed: true })
-      .eq("id", insertedDocument.id);
-
-    if (indexFlagError) {
-      throw indexFlagError;
-    }
-
-    message = `Documento tecnico enviado e indexado em ${payload.chunks.length} chunks.`;
+    message = `Documento tecnico enviado e indexado em ${result.chunksCount} chunks.`;
   } catch {
     await supabase
       .from("technical_documents")
@@ -545,6 +503,27 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
 
   revalidatePath("/biblioteca");
   revalidatePath("/busca");
+  revalidatePath("/conhecimento");
   revalidatePath("/");
   redirect(`/biblioteca?message=${encodeURIComponent(message)}`);
+}
+
+export async function syncSemanticMemoryAction() {
+  await requireCurrentUser();
+
+  try {
+    const result = await syncSemanticBacklog();
+    revalidatePath("/busca");
+    revalidatePath("/conhecimento");
+    revalidatePath("/biblioteca");
+    redirect(
+      `/conhecimento?message=${encodeURIComponent(
+        `Memoria semantica sincronizada com ${result.processed} registros usando ${result.provider}.`,
+      )}`,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Falha ao sincronizar memoria semantica.";
+    redirect(`/conhecimento?error=${encodeURIComponent(message)}`);
+  }
 }

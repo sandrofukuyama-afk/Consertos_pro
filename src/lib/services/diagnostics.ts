@@ -337,7 +337,7 @@ export async function getTechnicalDocuments() {
         relation: model?.model_name ?? board?.board_code ?? "Referencia geral",
         uploadedAt: formatRelativeTime(row.created_at),
         chunksCount: chunks.length,
-        isIndexed: row.is_indexed,
+        isIndexed: row.is_indexed || chunks.length > 0,
         signedUrl: signed?.signedUrl ?? null,
       } satisfies TechnicalDocumentListItem;
     }),

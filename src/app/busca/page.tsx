@@ -74,6 +74,73 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
           </form>
         </section>
 
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                Busca semantica
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                Contextos mais proximos do que voce digitou
+              </h3>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Motor atual: {data.semanticProvider}
+                {data.externalProviderConfigured
+                  ? " com embeddings externos ativos."
+                  : " em modo local, pronto para evoluir sem depender de configuracao extra."}
+              </p>
+            </div>
+            <p className="text-sm text-[var(--muted)]">
+              {data.semanticMatches.length} correspondencias
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            {data.semanticMatches.length ? (
+              data.semanticMatches.map((item) =>
+                item.href ? (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(184,109,60,0.3)]"
+                  >
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                      {item.sourceType} / {item.similarityLabel}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                      {item.title}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">{item.subtitle}</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
+                      {item.excerpt}
+                    </p>
+                  </Link>
+                ) : (
+                  <article
+                    key={item.id}
+                    className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                  >
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                      {item.sourceType} / {item.similarityLabel}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                      {item.title}
+                    </p>
+                    <p className="mt-2 text-xs text-[var(--muted)]">{item.subtitle}</p>
+                    <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
+                      {item.excerpt}
+                    </p>
+                  </article>
+                ),
+              )
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] lg:col-span-3">
+                Digite pelo menos 3 caracteres para ativar a busca semantica e comparar com a memoria tecnica indexada.
+              </div>
+            )}
+          </div>
+        </section>
+
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
             <div className="flex items-end justify-between gap-4">

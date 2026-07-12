@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSemanticSearchResults } from "@/lib/services/semantic";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
   CatalogOption,
@@ -40,6 +41,7 @@ export async function getSearchPageData(
 
   const categories = (categoriesRows ?? []) as CatalogOption[];
   const queryText = filters.q ? `%${filters.q}%` : null;
+  const semantic = await getSemanticSearchResults(filters.q, supabase);
 
   let diagnostics: SearchDiagnosticResult[] = [];
   let documents: SearchDocumentResult[] = [];
@@ -149,5 +151,8 @@ export async function getSearchPageData(
     categories,
     diagnostics,
     documents,
+    semanticMatches: semantic.matches,
+    semanticProvider: semantic.provider,
+    externalProviderConfigured: semantic.externalProviderConfigured,
   };
 }
