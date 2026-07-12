@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, isRedirectError } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
 import { analyzeBoardImage } from "@/lib/ai/image-analysis";
@@ -909,6 +909,29 @@ export async function syncSemanticMemoryAction() {
       )}`,
     );
   } catch (error) {
+    try {
+      const fs = require("fs");
+      fs.writeFileSync(
+        "c:/Users/User/Projetos/Antigravity/ConsertosPro/error_debug.log",
+        JSON.stringify({
+          message: error instanceof Error ? error.message : String(error),
+          name: error instanceof Error ? error.name : null,
+          stack: error instanceof Error ? error.stack : null,
+          digest: error && typeof error === "object" && "digest" in error ? (error as any).digest : null,
+          isRedirect: isRedirectError(error),
+        }, null, 2)
+      );
+    } catch (e) {
+      // ignore log write errors
+    }
+
+    if (
+      isRedirectError(error) ||
+      (error instanceof Error && error.message === "NEXT_REDIRECT") ||
+      (error && typeof error === "object" && "digest" in error && String((error as any).digest).startsWith("NEXT_REDIRECT"))
+    ) {
+      throw error;
+    }
     const message =
       error instanceof Error ? error.message : "Falha ao sincronizar memória inteligente.";
     redirect(`/conhecimento?error=${encodeURIComponent(message)}`);
