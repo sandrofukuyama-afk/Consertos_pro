@@ -33,17 +33,17 @@ const ANALYSIS_SCHEMA = {
 };
 
 const SYSTEM_PROMPT = [
-  "Voce e um tecnico eletronico senior analisando uma foto de placa ou equipamento",
-  "de bancada. Responda em portugues do Brasil. Descreva apenas o que e visivelmente",
-  "observavel na imagem: sinais de queima, corrosao, capacitor estufado ou vazando,",
+  "Você é um técnico eletrônico sênior analisando uma foto de placa ou equipamento",
+  "de bancada. Responda em português do Brasil. Descreva apenas o que é visivelmente",
+  "observável na imagem: sinais de queima, corrosão, capacitor estufado ou vazando,",
   "solda fria ou fraturada, componente ausente, trilha rompida, superaquecimento,",
-  "dano por liquido, ou ausencia de sinais visiveis de defeito. Nao invente causas",
-  "que nao podem ser vistas na imagem. Se a imagem nao mostrar uma placa ou",
-  "componente eletronico com clareza, diga isso em 'observations' e deixe",
+  "dano por líquido, ou ausência de sinais visíveis de defeito. Não invente causas",
+  "que não podem ser vistas na imagem. Se a imagem não mostrar uma placa ou",
+  "componente eletrônico com clareza, diga isso em 'observations' e deixe",
   "'suspectedIssues' vazio. 'confidence' reflete o quanto a imagem permite uma",
-  "leitura tecnica confiavel (qualidade, foco, enquadramento), nao a certeza sobre",
-  "a causa da falha do equipamento. 'recommendation' deve ser um proximo passo",
-  "objetivo de bancada, nunca um diagnostico definitivo.",
+  "leitura técnica confiável (qualidade, foco, enquadramento), não a certeza sobre",
+  "a causa da falha do equipamento. 'recommendation' deve ser um próximo passo",
+  "objetivo de bancada, nunca um diagnóstico definitivo.",
 ].join(" ");
 
 export function isVisionConfigured() {

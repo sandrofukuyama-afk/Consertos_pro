@@ -14,7 +14,7 @@ export function TechnicalDocumentUploadForm({
         required
         type="text"
         name="title"
-        placeholder="Titulo do documento"
+        placeholder="Título do documento"
         className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       />
       <select
@@ -53,7 +53,7 @@ export function TechnicalDocumentUploadForm({
       <textarea
         name="notes"
         rows={3}
-        placeholder="Observacoes ou contexto tecnico"
+        placeholder="Observações ou contexto técnico"
         className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       />
       <input

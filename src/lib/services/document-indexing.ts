@@ -113,7 +113,7 @@ export function buildTechnicalDocumentIndexPayload(
 ): DocumentIndexPayload {
   const metadataText = normalizeWhitespace(
     [
-      `Documento tecnico ${input.title}.`,
+      `Documento técnico ${input.title}.`,
       `Tipo ${input.documentType}.`,
       input.manufacturerName ? `Fabricante ${input.manufacturerName}.` : "",
       input.notes ? `Notas ${input.notes}.` : "",

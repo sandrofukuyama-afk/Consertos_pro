@@ -86,13 +86,13 @@ export async function getDashboardData(): Promise<DashboardData> {
     return {
       id: row.id.slice(0, 8).toUpperCase(),
       recordId: row.id,
-      category: category?.name ?? "Nao classificado",
+      category: category?.name ?? "Não classificado",
       equipment: modelName,
       symptom: extractFirstSentence(
         row.current_summary ?? row.initial_problem_report,
       ),
-      board: "Analise geral",
-      technician: technician?.display_name ?? "Nao atribuido",
+      board: "Análise geral",
+      technician: technician?.display_name ?? "Não atribuído",
       updatedAt: formatRelativeTime(row.updated_at),
       status: mapStatus(row.status),
     } satisfies DiagnosticCase;
@@ -139,7 +139,7 @@ export async function getDashboardData(): Promise<DashboardData> {
             return {
               title: row.title,
               type: row.document_type,
-              relation: model?.model_name ?? board?.board_code ?? "Referencia geral",
+              relation: model?.model_name ?? board?.board_code ?? "Referência geral",
             };
           })
         : fallbackDocuments,

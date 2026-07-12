@@ -21,7 +21,7 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "ConsertosPro",
-  description: "Central tecnica para diagnostico assistido e memoria operacional.",
+  description: "Central técnica para diagnóstico assistido e memória operacional.",
 };
 
 export default function RootLayout({

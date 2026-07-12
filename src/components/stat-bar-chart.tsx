@@ -75,7 +75,7 @@ export function StatusDistributionBar({ segments }: StatusDistributionBarProps) 
   if (!total) {
     return (
       <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-        Ainda nao ha casos resolvidos suficientes para medir a distribuicao.
+        Ainda não há casos resolvidos suficientes para medir a distribuição.
       </div>
     );
   }

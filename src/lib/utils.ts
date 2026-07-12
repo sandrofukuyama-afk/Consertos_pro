@@ -11,17 +11,17 @@ export function formatRelativeTime(value: string | null) {
   }
 
   if (diffInMinutes < 60) {
-    return `ha ${diffInMinutes} min`;
+    return `há ${diffInMinutes} min`;
   }
 
   const diffInHours = Math.round(diffInMinutes / 60);
 
   if (diffInHours < 24) {
-    return `ha ${diffInHours} h`;
+    return `há ${diffInHours} h`;
   }
 
   const diffInDays = Math.round(diffInHours / 24);
-  return `ha ${diffInDays} d`;
+  return `há ${diffInDays} d`;
 }
 
 export function extractFirstSentence(value: string | null | undefined) {

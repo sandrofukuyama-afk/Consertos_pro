@@ -129,7 +129,7 @@ async function upsertEmbeddingSource(
       .single();
 
     if (error || !data) {
-      throw error ?? new Error("Nao foi possivel inserir a fonte semantica.");
+      throw error ?? new Error("Não foi possível inserir a fonte semântica.");
     }
 
     embeddingSourceId = data.id;
@@ -168,9 +168,9 @@ export async function syncDiagnosticEmbeddingSource(
   const category = pickRelation(data.equipment_categories);
   const manufacturer = pickRelation(data.manufacturers);
   const contentText = [
-    `Diagnostico ${data.equipment_label ?? data.id}.`,
-    `Categoria ${category?.name ?? "Nao classificada"}.`,
-    `Fabricante ${manufacturer?.name ?? "Nao identificado"}.`,
+    `Diagnóstico ${data.equipment_label ?? data.id}.`,
+    `Categoria ${category?.name ?? "Não classificada"}.`,
+    `Fabricante ${manufacturer?.name ?? "Não identificado"}.`,
     `Status ${data.status}.`,
     `Prioridade ${data.priority}.`,
     `Resumo ${data.current_summary ?? data.initial_problem_report}.`,
@@ -227,17 +227,17 @@ export async function syncResolvedCaseEmbeddingSource(
   const solution = Array.isArray(data.applied_solutions) ? data.applied_solutions[0] : null;
   const contentText = [
     `Caso resolvido ${diagnostic?.equipment_label ?? diagnostic?.id ?? data.id}.`,
-    `Categoria ${category?.name ?? "Nao classificada"}.`,
-    `Fabricante ${manufacturer?.name ?? "Nao identificado"}.`,
-    `Classificacao ${data.case_status}.`,
-    `Falha final ${data.final_failure_mode ?? "Nao detalhada"}.`,
-    `Resolucao ${data.resolution_summary}.`,
+    `Categoria ${category?.name ?? "Não classificada"}.`,
+    `Fabricante ${manufacturer?.name ?? "Não identificado"}.`,
+    `Classificação ${data.case_status}.`,
+    `Falha final ${data.final_failure_mode ?? "Não detalhada"}.`,
+    `Resolução ${data.resolution_summary}.`,
     `Resultado ${data.repair_outcome}.`,
     cause?.title ? `Causa confirmada ${cause.title}.` : "",
     cause?.technical_explanation
-      ? `Explicacao tecnica ${cause.technical_explanation}.`
+      ? `Explicação técnica ${cause.technical_explanation}.`
       : "",
-    solution?.title ? `Solucao aplicada ${solution.title}.` : "",
+    solution?.title ? `Solução aplicada ${solution.title}.` : "",
     solution?.procedure_description
       ? `Procedimento ${solution.procedure_description}.`
       : "",
@@ -466,8 +466,8 @@ export async function getSemanticSearchResults(
         return {
           id: item.embedding_source_id,
           sourceType: item.source_type,
-          title: document?.title ?? "Documento tecnico",
-          subtitle: "Documento tecnico indexado",
+          title: document?.title ?? "Documento técnico",
+          subtitle: "Documento técnico indexado",
           excerpt: truncate(item.content_text),
           similarityLabel: `${Math.round(item.similarity * 100)}%`,
           href: signedUrl,
@@ -481,7 +481,7 @@ export async function getSemanticSearchResults(
           id: item.embedding_source_id,
           sourceType: item.source_type,
           title: "Caso resolvido semelhante",
-          subtitle: truncate(resolvedCase?.resolution_summary ?? "Memoria consolidada"),
+          subtitle: truncate(resolvedCase?.resolution_summary ?? "Memória consolidada"),
           excerpt: truncate(item.content_text),
           similarityLabel: `${Math.round(item.similarity * 100)}%`,
           href: resolvedCase?.diagnostic_id
@@ -493,7 +493,7 @@ export async function getSemanticSearchResults(
       return {
         id: item.embedding_source_id,
         sourceType: item.source_type,
-        title: "Diagnostico semelhante",
+        title: "Diagnóstico semelhante",
         subtitle: "Contexto operacional da bancada",
         excerpt: truncate(item.content_text),
         similarityLabel: `${Math.round(item.similarity * 100)}%`,
@@ -636,7 +636,7 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
       diagnostics: { equipment_categories: { name: string } | Array<{ name: string }> | null } | null;
     }> | null) ?? [])) {
     const diagnostic = pickRelation(row.diagnostics);
-    const category = pickRelation(diagnostic?.equipment_categories)?.name ?? "Nao classificado";
+    const category = pickRelation(diagnostic?.equipment_categories)?.name ?? "Não classificado";
     const entry = categoryMetricsMap.get(category) ?? {
       category,
       feedbackCount: 0,
@@ -750,7 +750,7 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
         rating: item.feedback_rating as "helpful" | "partially_helpful" | "not_helpful",
         wasFollowed: item.was_followed ?? null,
         note: item.note ?? "",
-        submittedBy: user?.full_name ?? "Tecnico interno",
+        submittedBy: user?.full_name ?? "Técnico interno",
         createdAt: formatRelativeTime(item.created_at),
       };
     }),

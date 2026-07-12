@@ -8,31 +8,31 @@ export type GuidedFlowStepDefinition = {
 const DESKTOP_FLOW: GuidedFlowStepDefinition[] = [
   {
     order: 1,
-    label: "Confirmar energizacao",
-    description: "Checar LED de status, ventoinhas e resposta ao botao de power.",
+    label: "Confirmar energização",
+    description: "Checar LED de status, ventoinhas e resposta ao botão de power.",
     testGroup: "power",
   },
   {
     order: 2,
-    label: "Isolar fonte de alimentacao",
-    description: "Medir tensoes primarias da fonte fora da placa-mae, se possivel.",
+    label: "Isolar fonte de alimentação",
+    description: "Medir tensões primárias da fonte fora da placa-mãe, se possível.",
     testGroup: "power",
   },
   {
     order: 3,
-    label: "Verificar sinais de video",
-    description: "Confirmar POST e saida de video antes de investigar perifericos.",
+    label: "Verificar sinais de vídeo",
+    description: "Confirmar POST e saída de vídeo antes de investigar periféricos.",
     testGroup: "electrical",
   },
   {
     order: 4,
-    label: "Testar memoria e sequencia de boot",
-    description: "Isolar modulos de memoria e checar beeps ou codigos de erro.",
+    label: "Testar memória e sequência de boot",
+    description: "Isolar módulos de memória e checar beeps ou códigos de erro.",
     testGroup: "firmware",
   },
   {
     order: 5,
-    label: "Isolar componente ou periferico suspeito",
+    label: "Isolar componente ou periférico suspeito",
     description: "Remover ou substituir o subconjunto suspeito por um conhecido bom.",
     testGroup: "replacement",
   },
@@ -41,26 +41,26 @@ const DESKTOP_FLOW: GuidedFlowStepDefinition[] = [
 const NOTEBOOK_FLOW: GuidedFlowStepDefinition[] = [
   {
     order: 1,
-    label: "Medir consumo em fonte assimetrica",
-    description: "Com bateria removida quando aplicavel, checar consumo inicial ao ligar.",
+    label: "Medir consumo em fonte assimétrica",
+    description: "Com bateria removida quando aplicável, checar consumo inicial ao ligar.",
     testGroup: "power",
   },
   {
     order: 2,
-    label: "Confirmar sequencia de start",
+    label: "Confirmar sequência de start",
     description: "Observar LEDs, ventoinha e tentativas de POST.",
     testGroup: "power",
   },
   {
     order: 3,
     label: "Checar tela e backlight",
-    description: "Testar com fonte de video externa se a imagem nao aparecer no painel.",
+    description: "Testar com fonte de vídeo externa se a imagem não aparecer no painel.",
     testGroup: "electrical",
   },
   {
     order: 4,
     label: "Validar firmware ou BIOS",
-    description: "Confirmar se ha corrupcao de firmware antes de trocas de hardware.",
+    description: "Confirmar se há corrupção de firmware antes de trocas de hardware.",
     testGroup: "firmware",
   },
   {
@@ -74,8 +74,8 @@ const NOTEBOOK_FLOW: GuidedFlowStepDefinition[] = [
 const TELEVISION_FLOW: GuidedFlowStepDefinition[] = [
   {
     order: 1,
-    label: "Isolar a fonte de alimentacao",
-    description: "Medir tensoes de saida da fonte antes de suspeitar do painel.",
+    label: "Isolar a fonte de alimentação",
+    description: "Medir tensões de saída da fonte antes de suspeitar do painel.",
     testGroup: "power",
   },
   {
@@ -86,8 +86,8 @@ const TELEVISION_FLOW: GuidedFlowStepDefinition[] = [
   },
   {
     order: 3,
-    label: "Verificar T-Con e trilha de video",
-    description: "Isolar entre processamento de imagem e o proprio painel.",
+    label: "Verificar T-Con e trilha de vídeo",
+    description: "Isolar entre processamento de imagem e o próprio painel.",
     testGroup: "electrical",
   },
   {
@@ -102,13 +102,13 @@ const SMARTPHONE_FLOW: GuidedFlowStepDefinition[] = [
   {
     order: 1,
     label: "Verificar linha VBAT",
-    description: "Medir consumo e tensao da linha principal de bateria.",
+    description: "Medir consumo e tensão da linha principal de bateria.",
     testGroup: "power",
   },
   {
     order: 2,
     label: "Verificar linha de carga",
-    description: "Confirmar se o carregamento inicia e se ha aquecimento anormal.",
+    description: "Confirmar se o carregamento inicia e se há aquecimento anormal.",
     testGroup: "power",
   },
   {

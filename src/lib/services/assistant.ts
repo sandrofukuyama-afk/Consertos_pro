@@ -116,11 +116,11 @@ function resolveCategoryStrategy(category: string): CategoryStrategy {
     return {
       preferredGroups: ["power", "electrical", "firmware"],
       summaryFocus:
-        "Para notebook, a recomendacao deve separar cedo alimentacao primaria, sequencia de start e corrupcao de firmware antes de trocas amplas.",
+        "Para notebook, a recomendação deve separar cedo alimentação primária, sequência de start e corrupção de firmware antes de trocas amplas.",
       firstMove:
-        "Priorizar consumo em fonte assimetrica, tensoes primarias e confirmacao de etapas de start.",
+        "Priorizar consumo em fonte assimétrica, tensões primárias e confirmação de etapas de start.",
       safety:
-        "Remover bateria quando aplicavel e registrar consumo inicial antes de insistir no power.",
+        "Remover bateria quando aplicável e registrar consumo inicial antes de insistir no power.",
     };
   }
 
@@ -128,11 +128,11 @@ function resolveCategoryStrategy(category: string): CategoryStrategy {
     return {
       preferredGroups: ["power", "electrical", "replacement"],
       summaryFocus:
-        "Para televisao, a recomendacao deve isolar fonte, backlight, T-Con e trilha de video com foco em blocos funcionais.",
+        "Para televisão, a recomendação deve isolar fonte, backlight, T-Con e trilha de vídeo com foco em blocos funcionais.",
       firstMove:
-        "Separar cedo se a falha esta em energia, painel ou processamento de imagem.",
+        "Separar cedo se a falha está em energia, painel ou processamento de imagem.",
       safety:
-        "Cuidado com alta tensao em fonte e backlight antes de medir linhas ativas.",
+        "Cuidado com alta tensão em fonte e backlight antes de medir linhas ativas.",
     };
   }
 
@@ -140,9 +140,9 @@ function resolveCategoryStrategy(category: string): CategoryStrategy {
     return {
       preferredGroups: ["power", "electrical", "replacement"],
       summaryFocus:
-        "Para smartphone, a recomendacao deve usar consumo, linha de carga e aquecimento como trilhas principais antes de medidas invasivas.",
+        "Para smartphone, a recomendação deve usar consumo, linha de carga e aquecimento como trilhas principais antes de medidas invasivas.",
       firstMove:
-        "Priorizar linha VBAT, linha de carga e observacao termica localizada.",
+        "Priorizar linha VBAT, linha de carga e observação térmica localizada.",
       safety:
         "Evitar energizar sem controlar corrente e temperatura durante testes de bancada.",
     };
@@ -151,11 +151,11 @@ function resolveCategoryStrategy(category: string): CategoryStrategy {
   return {
     preferredGroups: ["power", "electrical", "replacement"],
     summaryFocus:
-      "Para desktop, a recomendacao deve separar fonte, acionamento e video antes de substituir subconjuntos inteiros.",
+      "Para desktop, a recomendação deve separar fonte, acionamento e vídeo antes de substituir subconjuntos inteiros.",
     firstMove:
-      "Confirmar energizacao, sinais basicos de start e bloco de video com uma etapa objetiva por vez.",
+      "Confirmar energização, sinais básicos de start e bloco de vídeo com uma etapa objetiva por vez.",
     safety:
-      "Registrar terra e linhas principais antes de medicao em placas energizadas.",
+      "Registrar terra e linhas principais antes de medição em placas energizadas.",
   };
 }
 
@@ -297,9 +297,9 @@ async function getDiagnosticAssistantContext(
     label: data.equipment_label ?? "Sem etiqueta",
     summary: data.current_summary ?? data.initial_problem_report,
     initialReport: data.initial_problem_report,
-    category: category?.name ?? "Nao classificado",
-    manufacturer: manufacturer?.name ?? "Nao identificado",
-    physicalNotes: data.physical_condition_notes ?? "Sem observacoes fisicas.",
+    category: category?.name ?? "Não classificado",
+    manufacturer: manufacturer?.name ?? "Não identificado",
+    physicalNotes: data.physical_condition_notes ?? "Sem observações físicas.",
     symptoms: (data.diagnostic_symptoms ?? []).map((item) => ({
       name: pickRelation(item.symptoms)?.name ?? "Sintoma",
       severity: item.severity,
@@ -445,7 +445,7 @@ async function getSimilarCasesAndDocuments(
     similarCases.push({
       id: item.embedding_source_id,
       sourceType: item.source_type,
-      title: diagnostic.equipment_label ?? "Diagnostico semelhante",
+      title: diagnostic.equipment_label ?? "Diagnóstico semelhante",
       subtitle: "Contexto operacional da bancada",
       excerpt: truncate(diagnostic.current_summary ?? diagnostic.initial_problem_report),
       similarityLabel: `${Math.round(item.similarity * 100)}%`,
@@ -470,7 +470,7 @@ async function getSimilarCasesAndDocuments(
       id: item.embedding_source_id,
       sourceType: item.source_type,
       title: document.title,
-      subtitle: "Documento tecnico relacionado",
+      subtitle: "Documento técnico relacionado",
       excerpt: truncate(item.content_text),
       similarityLabel: `${Math.round(item.similarity * 100)}%`,
       href: signedUrl ?? null,
@@ -577,53 +577,53 @@ async function buildStructuredResponse(
     strategy.preferredGroups,
     groupSuccessRate,
   );
-  const nextTestName = recommendedTest?.name ?? "Executar o proximo teste objetivo da bancada";
+  const nextTestName = recommendedTest?.name ?? "Executar o próximo teste objetivo da bancada";
 
-  let nextTest = "Registrar um proximo passo objetivo na bancada.";
-  let validationGoal = "Gerar evidencia suficiente para reduzir as hipoteses abertas.";
+  let nextTest = "Registrar um próximo passo objetivo na bancada.";
+  let validationGoal = "Gerar evidência suficiente para reduzir as hipóteses abertas.";
   const mainHypothesis =
     strongestHypothesis?.title ??
     (primarySymptomInsight
       ? `Historicamente, a causa mais recorrente para sintomas do grupo ${primarySymptomEntry?.group} foi ${primarySymptomInsight.topCause} (em ${primarySymptomInsight.count} caso(s) resolvido(s)).`
       : primarySymptom
         ? `A falha principal ainda precisa ser isolada a partir do sintoma ${primarySymptom}.`
-        : "Ainda nao ha hipotese dominante com evidencia suficiente.");
+        : "Ainda não há hipótese dominante com evidência suficiente.");
 
   if (!context.symptoms.length) {
-    nextTest = "Registrar pelo menos um sintoma principal antes de pedir nova recomendacao.";
-    validationGoal = "Dar contexto minimo para que a triagem deixe de ser generica.";
+    nextTest = "Registrar pelo menos um sintoma principal antes de pedir nova recomendação.";
+    validationGoal = "Dar contexto mínimo para que a triagem deixe de ser genérica.";
   } else if (!context.tests.length) {
     nextTest = `Executar o teste ${nextTestName} e registrar procedimento e resultado observado.`;
     validationGoal = `${strategy.firstMove} Isso cria a primeira quebra objetiva entre blocos do defeito.`;
   } else if (latestTest?.resultStatus === "pending") {
-    nextTest = `Concluir o teste ${latestTest.testName} antes de abrir outra frente de verificacao.`;
-    validationGoal = "Evitar ramificacoes sem fechar a evidencia que ja foi iniciada.";
+    nextTest = `Concluir o teste ${latestTest.testName} antes de abrir outra frente de verificação.`;
+    validationGoal = "Evitar ramificações sem fechar a evidência que já foi iniciada.";
   } else if (!context.measurements.length) {
-    nextTest = "Adicionar uma medicao objetiva no ponto principal relacionado ao ultimo teste executado.";
-    validationGoal = "Transformar a conclusao do teste em dado comparavel e auditavel.";
+    nextTest = "Adicionar uma medição objetiva no ponto principal relacionado ao último teste executado.";
+    validationGoal = "Transformar a conclusão do teste em dado comparável e auditável.";
   } else if (strongestHypothesis) {
-    nextTest = `Validar a hipotese ${strongestHypothesis.title} com um teste binario ou medicao no ponto mais proximo da causa suspeita.`;
-    validationGoal = "Confirmar ou enfraquecer a hipotese mais forte sem repetir etapas ja percorridas.";
+    nextTest = `Validar a hipótese ${strongestHypothesis.title} com um teste binário ou medição no ponto mais próximo da causa suspeita.`;
+    validationGoal = "Confirmar ou enfraquecer a hipótese mais forte sem repetir etapas já percorridas.";
   } else {
-    nextTest = `Executar o teste ${nextTestName} como proxima separacao objetiva do defeito.`;
-    validationGoal = "Avancar um passo com maior poder de isolamento do que repetir inspecoes abertas.";
+    nextTest = `Executar o teste ${nextTestName} como próxima separação objetiva do defeito.`;
+    validationGoal = "Avançar um passo com maior poder de isolamento do que repetir inspeções abertas.";
   }
 
   const evidence = [
     `Resumo atual do caso: ${context.summary}`,
-    `Estrategia da categoria: ${strategy.summaryFocus}`,
+    `Estratégia da categoria: ${strategy.summaryFocus}`,
     primarySymptom ? `Sintoma dominante observado: ${primarySymptom}.` : null,
     primarySymptomInsight
-      ? `Historico do grupo ${primarySymptomEntry?.group}: causa mais frequente foi ${primarySymptomInsight.topCause} (${primarySymptomInsight.count} caso(s)).`
+      ? `Histórico do grupo ${primarySymptomEntry?.group}: causa mais frequente foi ${primarySymptomInsight.topCause} (${primarySymptomInsight.count} caso(s)).`
       : null,
     latestTest
-      ? `Ultimo teste registrado: ${latestTest.testName} com status ${latestTest.resultStatus}.`
+      ? `Último teste registrado: ${latestTest.testName} com status ${latestTest.resultStatus}.`
       : null,
     latestMeasurement
-      ? `Medicao recente: ${latestMeasurement.measurementType} em ${latestMeasurement.pointLabel ?? "ponto nao informado"} com leitura ${latestMeasurement.measuredValueText ?? latestMeasurement.measuredValueNumeric ?? "nao informada"}${latestMeasurement.unit ? ` ${latestMeasurement.unit}` : ""}.`
+      ? `Medição recente: ${latestMeasurement.measurementType} em ${latestMeasurement.pointLabel ?? "ponto não informado"} com leitura ${latestMeasurement.measuredValueText ?? latestMeasurement.measuredValueNumeric ?? "não informada"}${latestMeasurement.unit ? ` ${latestMeasurement.unit}` : ""}.`
       : null,
     strongestHypothesis
-      ? `Hipotese mais forte no historico: ${strongestHypothesis.title}.`
+      ? `Hipótese mais forte no histórico: ${strongestHypothesis.title}.`
       : null,
     similarCases[0]
       ? `Caso semelhante recuperado: ${similarCases[0].title} (${similarCases[0].similarityLabel}).`
@@ -634,11 +634,11 @@ async function buildStructuredResponse(
   ].filter((item): item is string => Boolean(item));
 
   const technicalSummary = [
-    `O diagnostico ${context.label} esta em ${context.category} da ${context.manufacturer}.`,
+    `O diagnóstico ${context.label} está em ${context.category} da ${context.manufacturer}.`,
     `O foco atual permanece em ${context.summary}.`,
     strategy.summaryFocus,
     latestTest
-      ? `Ja existe historico de teste suficiente para orientar o proximo passo sem reiniciar a triagem.`
+      ? `Já existe histórico de teste suficiente para orientar o próximo passo sem reiniciar a triagem.`
       : `Ainda falta um primeiro teste objetivo para sair da fase de coleta inicial.`,
   ].join(" ");
 
@@ -646,7 +646,7 @@ async function buildStructuredResponse(
     nextTest + " " + context.summary,
   )
     ? strategy.safety
-    : "Manter o registro do procedimento e evitar trocar componente sem evidencia objetiva.";
+    : "Manter o registro do procedimento e evitar trocar componente sem evidência objetiva.";
 
   const confidence = Math.min(
     0.86,
@@ -722,12 +722,12 @@ async function buildStructuredResponse(
     confidence,
     modelName,
     rawResponseText: [
-      `Resumo tecnico: ${narrative.technicalSummary}`,
-      `Hipotese principal: ${narrative.mainHypothesis}`,
-      `Evidencias: ${narrative.evidence.join(" ")}`,
-      `Proximo teste recomendado: ${narrative.nextTest}`,
+      `Resumo técnico: ${narrative.technicalSummary}`,
+      `Hipótese principal: ${narrative.mainHypothesis}`,
+      `Evidências: ${narrative.evidence.join(" ")}`,
+      `Próximo teste recomendado: ${narrative.nextTest}`,
       `O que esse passo valida: ${narrative.validationGoal}`,
-      `Observacao de seguranca: ${narrative.safetyNote}`,
+      `Observação de segurança: ${narrative.safetyNote}`,
     ].join("\n\n"),
     structured: {
       technicalSummary: narrative.technicalSummary,
@@ -748,7 +748,7 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
   const context = await getDiagnosticAssistantContext(diagnosticId, supabase);
 
   if (!context) {
-    throw new Error("Diagnostico nao encontrado para gerar recomendacao.");
+    throw new Error("Diagnóstico não encontrado para gerar recomendação.");
   }
 
   const [{ similarCases, relatedDocuments }, availableTests, groupSuccessRate, symptomGroupInsights] =
@@ -843,9 +843,9 @@ export async function getDiagnosticAssistantSnapshot(
     latestResponse: latestResponse
       ? {
           id: latestResponse.id,
-          reasoningSummary: latestResponse.reasoning_summary ?? "Sem resumo tecnico.",
+          reasoningSummary: latestResponse.reasoning_summary ?? "Sem resumo técnico.",
           recommendedNextStep:
-            latestResponse.recommended_next_step ?? "Sem proximo passo registrado.",
+            latestResponse.recommended_next_step ?? "Sem próximo passo registrado.",
           confidenceScore: formatConfidence(Number(latestResponse.confidence_score ?? 0)),
           rawResponseText: latestResponse.raw_response_text,
           modelName: latestResponse.model_name ?? "assistant-v1",
@@ -870,7 +870,7 @@ export async function getDiagnosticAssistantSnapshot(
               rating: formatFeedbackRating(feedbackRow.feedback_rating as AiFeedbackRating),
               wasFollowed: feedbackRow.was_followed ?? null,
               note: feedbackRow.note ?? "",
-              submittedBy: feedbackUser?.full_name ?? "Tecnico interno",
+              submittedBy: feedbackUser?.full_name ?? "Técnico interno",
               createdAt: formatRelativeTime(feedbackRow.created_at),
             };
           })(),

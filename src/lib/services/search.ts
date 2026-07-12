@@ -90,8 +90,8 @@ export async function getSearchPageData(
       return {
         id: row.id,
         label: row.equipment_label ?? row.id.slice(0, 8).toUpperCase(),
-        category: category?.name ?? "Nao classificado",
-        manufacturer: manufacturer?.name ?? "Nao identificado",
+        category: category?.name ?? "Não classificado",
+        manufacturer: manufacturer?.name ?? "Não identificado",
         status: prettifyStatus(row.status),
         summary: row.current_summary ?? row.initial_problem_report,
         updatedAt: formatRelativeTime(row.updated_at),
@@ -137,8 +137,8 @@ export async function getSearchPageData(
           id: row.id,
           title: row.title,
           documentType: prettifyStatus(row.document_type),
-          manufacturer: manufacturer?.name ?? "Nao informado",
-          relation: model?.model_name ?? board?.board_code ?? "Referencia geral",
+          manufacturer: manufacturer?.name ?? "Não informado",
+          relation: model?.model_name ?? board?.board_code ?? "Referência geral",
           uploadedAt: formatRelativeTime(row.created_at),
           signedUrl: signed?.signedUrl ?? null,
         };

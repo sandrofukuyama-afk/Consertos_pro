@@ -151,7 +151,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         return {
           id: item.id,
           title: item.title,
-          description: item.description ?? "Sem descricao.",
+          description: item.description ?? "Sem descrição.",
           attachmentType: prettifyStatus(item.attachment_type),
           mimeType: item.mime_type,
           uploadedAt: formatRelativeTime(item.created_at),
@@ -203,16 +203,16 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     ...(data.ai_responses ?? []).map((item) => ({
       id: `ai-response-${item.id}`,
       kind: "IA",
-      title: "Recomendacao tecnica registrada",
+      title: "Recomendação técnica registrada",
       description:
         item.recommended_next_step ??
         item.reasoning_summary ??
-        "Leitura tecnica salva para orientar o proximo passo.",
+        "Leitura técnica salva para orientar o próximo passo.",
       happenedAt: item.created_at ?? new Date().toISOString(),
     })),
     ...(data.measurements ?? []).map((item) => ({
       id: `measurement-${item.id}`,
-      kind: "Medicao",
+      kind: "Medição",
       title: item.point_label ?? "Leitura registrada",
       description:
         item.measured_value_text ??
@@ -223,9 +223,9 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     })),
     ...(data.hypotheses ?? []).map((item) => ({
       id: `hypothesis-${item.id}`,
-      kind: "Hipotese",
+      kind: "Hipótese",
       title: item.title,
-      description: item.evidence_summary ?? item.description ?? "Hipotese adicionada.",
+      description: item.evidence_summary ?? item.description ?? "Hipótese adicionada.",
       happenedAt: item.created_at ?? new Date().toISOString(),
     })),
     ...(data.attachments ?? []).map((item) => ({
@@ -244,15 +244,15 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   return {
     id: data.id,
-    category: category?.name ?? "Nao classificado",
-    manufacturer: manufacturer?.name ?? "Nao identificado",
+    category: category?.name ?? "Não classificado",
+    manufacturer: manufacturer?.name ?? "Não identificado",
     label: data.equipment_label ?? "Sem etiqueta",
     status: prettifyStatus(data.status),
     priority: prettifyStatus(data.priority),
-    summary: data.current_summary ?? "Resumo ainda nao definido.",
+    summary: data.current_summary ?? "Resumo ainda não definido.",
     initialReport: data.initial_problem_report,
-    physicalNotes: data.physical_condition_notes ?? "Sem observacoes fisicas.",
-    openedBy: openedBy?.full_name ?? "Usuario interno",
+    physicalNotes: data.physical_condition_notes ?? "Sem observações físicas.",
+    openedBy: openedBy?.full_name ?? "Usuário interno",
     createdAt: formatRelativeTime(data.created_at),
     preventiveInsight,
     guidedFlow,
@@ -269,7 +269,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       return {
         id: item.id,
         name: symptom?.name ?? "Sintoma",
-        severity: item.severity ?? "nao informada",
+        severity: item.severity ?? "não informada",
         sourceType: prettifyStatus(item.source_type),
         isPrimary: item.is_primary,
         capturedAt: formatRelativeTime(item.captured_at),
@@ -287,7 +287,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         procedureNotes: item.procedure_notes ?? "Sem procedimento descrito.",
         actualResult: item.actual_result ?? "Sem resultado final registrado.",
         performedAt: formatRelativeTime(item.performed_at),
-        technician: tech?.full_name ?? "Tecnico interno",
+        technician: tech?.full_name ?? "Técnico interno",
         requestedByAi: Boolean(item.requested_by_ai_response_id),
         requestedByAiResponseId: item.requested_by_ai_response_id ?? null,
       };
@@ -298,28 +298,28 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         item.measured_value_text ??
         (item.measured_value_numeric !== null && item.measured_value_numeric !== undefined
           ? `${item.measured_value_numeric}${item.unit ? ` ${item.unit}` : ""}`
-          : "Sem valor numerico");
+          : "Sem valor numérico");
 
       return {
         id: item.id,
         measurementType: prettifyStatus(item.measurement_type),
-        pointLabel: item.point_label ?? "Ponto nao informado",
+        pointLabel: item.point_label ?? "Ponto não informado",
         measuredValue,
-        expectedValue: item.expected_value_text ?? "Nao informado",
+        expectedValue: item.expected_value_text ?? "Não informado",
         measuredAt: formatRelativeTime(item.measured_at),
-        technician: tech?.full_name ?? "Tecnico interno",
+        technician: tech?.full_name ?? "Técnico interno",
       };
     }),
     hypotheses: (data.hypotheses ?? []).map((item) => ({
       id: item.id,
       title: item.title,
-      description: item.description ?? "Sem descricao complementar.",
+      description: item.description ?? "Sem descrição complementar.",
       status: prettifyStatus(item.status),
       confidence:
         item.confidence_score !== null && item.confidence_score !== undefined
           ? String(item.confidence_score)
           : "0",
-      evidence: item.evidence_summary ?? "Sem evidencia registrada.",
+      evidence: item.evidence_summary ?? "Sem evidência registrada.",
       createdAt: formatRelativeTime(item.created_at),
     })),
     attachments,
@@ -404,8 +404,8 @@ export async function getTechnicalDocuments() {
         id: row.id,
         title: row.title,
         documentType: prettifyStatus(row.document_type),
-        manufacturer: manufacturer?.name ?? "Nao informado",
-        relation: model?.model_name ?? board?.board_code ?? "Referencia geral",
+        manufacturer: manufacturer?.name ?? "Não informado",
+        relation: model?.model_name ?? board?.board_code ?? "Referência geral",
         uploadedAt: formatRelativeTime(row.created_at),
         chunksCount: chunks.length,
         isIndexed: row.is_indexed || chunks.length > 0,

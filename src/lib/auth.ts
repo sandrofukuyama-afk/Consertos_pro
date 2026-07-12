@@ -27,7 +27,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
         authUser.user_metadata.full_name ??
         authUser.user_metadata.name ??
         authUser.email?.split("@")[0] ??
-        "Tecnico",
+        "Técnico",
       email: authUser.email ?? "",
     };
   }
