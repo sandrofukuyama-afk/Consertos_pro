@@ -8,7 +8,7 @@ export default async function ConfiguracoesPage() {
   return (
     <ModulePage
       title="Configurações e acessos"
-      description="Aqui ficam os usuarios, quem pode acessar o sistema e o historico do que foi alterado."
+      description="Aqui ficam os usuários, quem pode acessar o sistema e o histórico do que foi alterado."
       highlights={moduleTasks.configuracoes}
       user={user}
     />

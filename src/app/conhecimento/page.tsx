@@ -46,7 +46,7 @@ export default async function ConhecimentoPage({
               Dados usados na busca
             </h3>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-              O app ja consegue ler resumos de diagnosticos, casos resolvidos e documentos tecnicos para achar itens parecidos.
+              O app já consegue ler resumos de diagnósticos, casos resolvidos e documentos técnicos para achar itens parecidos.
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -101,7 +101,7 @@ export default async function ConhecimentoPage({
               Atualizar dados da busca
             </h3>
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-              Atualiza documentos, diagnosticos e casos resolvidos para a busca usar os dados mais recentes.
+              Atualiza documentos, diagnósticos e casos resolvidos para a busca usar os dados mais recentes.
             </p>
             <form action={syncSemanticMemoryAction} className="mt-5">
               <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
@@ -361,7 +361,7 @@ export default async function ConhecimentoPage({
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2 xl:col-span-3">
-                Ainda nao ha casos resolvidos suficientes para encher esta base.
+                Ainda não há casos resolvidos suficientes para encher esta base.
               </div>
             )}
           </div>

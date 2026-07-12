@@ -43,7 +43,7 @@ export const navItems: NavItem[] = [
   {
     href: "/configuracoes",
     label: "Configurações",
-    description: "Usuarios e permissoes",
+    description: "Usuários e permissões",
   },
 ];
 
@@ -194,13 +194,13 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
     },
     {
       title: "Evitar repeticao",
-      description: "Campos padronizados para nao cadastrar a mesma coisa mais de uma vez.",
+      description: "Campos padronizados para não cadastrar a mesma coisa mais de uma vez.",
     },
   ],
   biblioteca: [
     {
       title: "Guardar documentos",
-      description: "Salvar arquivos com informacoes da placa, modelo ou equipamento.",
+      description: "Salvar arquivos com informações da placa, modelo ou equipamento.",
     },
     {
       title: "Preparar para busca",
@@ -214,7 +214,7 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
     },
     {
       title: "Salvar o que deu certo",
-      description: "Registrar o que foi feito, o que resolveu e o que nao ajudou.",
+      description: "Registrar o que foi feito, o que resolveu e o que não ajudou.",
     },
   ],
   busca: [
@@ -233,8 +233,8 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
       description: "Controlar quem entra no sistema e quem fez cada registro.",
     },
     {
-      title: "Guardar alteracoes",
-      description: "Mostrar o historico de mudancas e as revisoes feitas.",
+      title: "Guardar alterações",
+      description: "Mostrar o histórico de mudanças e as revisões feitas.",
     },
   ],
 };

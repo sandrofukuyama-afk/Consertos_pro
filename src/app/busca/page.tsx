@@ -22,7 +22,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
   return (
     <AppShell
       title="Busca"
-      description="Pesquise em diagnosticos e documentos usando texto, status e categoria."
+      description="Pesquise em diagnósticos e documentos usando texto, status e categoria."
       user={user}
     >
       <div className="grid gap-4">
@@ -88,7 +88,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                 Motor atual: {formatProviderLabel(data.semanticProvider)}
                 {data.externalProviderConfigured
                   ? " com IA externa ligada para melhorar os resultados."
-                  : " em modo local, funcionando sem configuracao extra."}
+                  : " em modo local, funcionando sem configuração extra."}
               </p>
             </div>
             <p className="text-sm text-[var(--muted)]">

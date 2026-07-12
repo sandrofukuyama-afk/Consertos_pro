@@ -47,7 +47,7 @@ export default async function DiagnosticDetailPage({
   return (
     <AppShell
       title={`Diagnóstico ${detail.label}`}
-      description="Veja os detalhes do caso com sintomas, testes, medicoes e anexos."
+      description="Veja os detalhes do caso com sintomas, testes, medições e anexos."
       user={user}
       actionLabel="Voltar para dashboard"
       actionHref="/"

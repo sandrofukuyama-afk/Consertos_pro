@@ -26,7 +26,7 @@ export function ModulePage({
             Pagina pronta para continuar
           </h3>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--muted)]">
-            Esta pagina ja esta pronta. O proximo passo aqui e ligar os formularios e salvar tudo no banco.
+            Esta página já está pronta. O próximo passo aqui é ligar os formulários e salvar tudo no banco.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">

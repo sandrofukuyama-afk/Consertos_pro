@@ -151,7 +151,7 @@ export async function createDiagnosticAction(formData: FormData) {
     .filter((item): item is File => item instanceof File && item.size > 0);
 
   if (!categoryId || !problemReport) {
-    redirect("/diagnosticos/novo?error=Categoria e relato inicial sao obrigatorios.");
+    redirect("/diagnosticos/novo?error=Categoria e relato inicial são obrigatórios.");
   }
 
   let manufacturerId = selectedManufacturerId;

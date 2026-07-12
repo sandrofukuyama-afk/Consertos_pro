@@ -38,12 +38,12 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
   }
 
   const labels: Record<string, string> = {
-    manufacturingYear: "Ano de fabricacao",
-    accessoriesIncluded: "Acessorios",
+    manufacturingYear: "Ano de fabricação",
+    accessoriesIncluded: "Acessórios",
     tvScreenSizeInches: "Tela (pol)",
     tvScreenType: "Tipo de tela",
     tvKind: "Tipo de TV",
-    tvResolution: "Resolucao",
+    tvResolution: "Resolução",
     tvPanelCode: "Codigo do painel",
     notebookProcessor: "Processador",
     notebookRamGb: "RAM (GB)",
@@ -304,8 +304,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     id: data.id,
     category: category?.name ?? "Não classificado",
     manufacturer: manufacturer?.name ?? "Não identificado",
-    model: model?.model_name ?? "Nao informado",
-    serialNumber: data.equipment_serial_number ?? "Nao informado",
+    model: model?.model_name ?? "Não informado",
+    serialNumber: data.equipment_serial_number ?? "Não informado",
     label,
     status: prettifyStatus(data.status),
     priority: prettifyStatus(data.priority),

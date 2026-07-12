@@ -24,7 +24,7 @@ export default async function BibliotecaPage({
   return (
     <AppShell
       title="Biblioteca técnica"
-      description="Aqui voce guarda documentos tecnicos, PDFs, esquemas e arquivos de apoio."
+      description="Aqui você guarda documentos técnicos, PDFs, esquemas e arquivos de apoio."
       user={user}
     >
       <div className="grid gap-4">

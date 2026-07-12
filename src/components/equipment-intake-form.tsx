@@ -168,7 +168,7 @@ export function EquipmentIntakeForm({
             setModelId("");
           }}
         >
-          <option value="">Nao sei ainda</option>
+          <option value="">Não sei ainda</option>
           {manufacturers.map((manufacturer) => (
             <option key={manufacturer.id} value={manufacturer.id}>
               {manufacturer.name}
@@ -194,7 +194,7 @@ export function EquipmentIntakeForm({
           onChange={setModelId}
           disabled={!showModelSelect || showNewManufacturer}
         >
-          <option value="">Nao sei ainda</option>
+          <option value="">Não sei ainda</option>
           {filteredModels.map((model) => (
             <option key={model.id} value={model.id}>
               {model.name}
@@ -204,7 +204,7 @@ export function EquipmentIntakeForm({
         </SelectField>
 
         <Field
-          label="Numero de serie"
+          label="Número de série"
           name="equipment_serial_number"
           placeholder="Ex.: SN123456789"
         />
@@ -220,13 +220,13 @@ export function EquipmentIntakeForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field
-          label="Ano de fabricacao"
+          label="Ano de fabricação"
           name="manufacturing_year"
           placeholder="Ex.: 2022"
           type="number"
         />
         <Field
-          label="Acessorios que vieram"
+          label="Acessórios que vieram"
           name="accessories_included"
           placeholder="Ex.: fonte, controle, carregador, base"
         />
@@ -254,7 +254,7 @@ export function EquipmentIntakeForm({
             <option value="smart">Smart TV</option>
             <option value="normal">Normal</option>
           </StaticSelectField>
-          <StaticSelectField label="Resolucao" name="tv_resolution">
+          <StaticSelectField label="Resolução" name="tv_resolution">
             <option value="">Selecione</option>
             <option value="hd">HD</option>
             <option value="full_hd">Full HD</option>
@@ -279,7 +279,7 @@ export function EquipmentIntakeForm({
             placeholder="Ex.: Ryzen 5 5500U"
           />
           <Field
-            label="Memoria RAM (GB)"
+          label="Memória RAM (GB)"
             name="notebook_ram_gb"
             placeholder="Ex.: 8"
             type="number"
@@ -307,7 +307,7 @@ export function EquipmentIntakeForm({
           <StaticSelectField label="Veio com carregador?" name="notebook_charger_included">
             <option value="">Selecione</option>
             <option value="yes">Sim</option>
-            <option value="no">Nao</option>
+            <option value="no">Não</option>
           </StaticSelectField>
         </section>
       ) : null}
@@ -328,7 +328,7 @@ export function EquipmentIntakeForm({
           <StaticSelectField label="Dual SIM" name="smartphone_dual_sim">
             <option value="">Selecione</option>
             <option value="yes">Sim</option>
-            <option value="no">Nao</option>
+            <option value="no">Não</option>
           </StaticSelectField>
           <StaticSelectField label="Biometria" name="smartphone_biometric">
             <option value="">Selecione</option>
@@ -355,7 +355,7 @@ export function EquipmentIntakeForm({
             placeholder="Ex.: Core i5 10400"
           />
           <Field
-            label="Memoria RAM (GB)"
+          label="Memória RAM (GB)"
             name="desktop_ram_gb"
             placeholder="Ex.: 16"
             type="number"
@@ -372,10 +372,10 @@ export function EquipmentIntakeForm({
             placeholder="Ex.: 512"
             type="number"
           />
-          <StaticSelectField label="Tem placa de video?" name="desktop_dedicated_gpu">
+          <StaticSelectField label="Tem placa de vídeo?" name="desktop_dedicated_gpu">
             <option value="">Selecione</option>
             <option value="yes">Sim</option>
-            <option value="no">Nao</option>
+            <option value="no">Não</option>
           </StaticSelectField>
           <Field
             label="Fonte (W)"
@@ -392,7 +392,7 @@ export function EquipmentIntakeForm({
           required
           name="initial_problem_report"
           rows={5}
-          placeholder="Descreva sintomas, comportamento e o que ja foi visto na entrada."
+          placeholder="Descreva sintomas, comportamento e o que já foi visto na entrada."
           className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
         />
       </label>
@@ -417,7 +417,7 @@ export function EquipmentIntakeForm({
           className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
         />
         <span className="text-xs text-[var(--muted)]">
-          Pode enviar uma ou mais fotos ja na entrada do equipamento.
+          Pode enviar uma ou mais fotos já na entrada do equipamento.
         </span>
       </label>
 

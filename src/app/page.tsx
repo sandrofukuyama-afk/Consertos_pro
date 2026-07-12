@@ -23,7 +23,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <AppShell
       title="Diagnósticos em andamento"
-      description="Aqui voce acompanha os casos abertos, o proximo teste e o historico do que ja foi feito."
+      description="Aqui você acompanha os casos abertos, o próximo teste e o histórico do que já foi feito."
       user={user}
     >
       <div className="grid gap-4">
