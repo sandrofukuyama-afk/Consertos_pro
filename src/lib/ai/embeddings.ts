@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { logTokenUsage } from "@/lib/services/token-logger";
 
 export const EMBEDDING_DIMENSIONS = 1536;
 const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -86,7 +87,22 @@ async function createOpenAIEmbedding(input: string) {
 
   const payload = (await response.json()) as {
     data?: Array<{ embedding?: number[] }>;
+    usage?: {
+      prompt_tokens: number;
+      total_tokens: number;
+    };
   };
+
+  // Log token consumption asynchronously
+  if (payload.usage) {
+    logTokenUsage(
+      OPENAI_EMBEDDING_MODEL,
+      "gerar_embedding",
+      payload.usage.prompt_tokens,
+      0
+    );
+  }
+
   const embedding = payload.data?.[0]?.embedding;
 
   if (!embedding || embedding.length !== EMBEDDING_DIMENSIONS) {

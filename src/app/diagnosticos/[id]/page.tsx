@@ -1,19 +1,18 @@
 import Link from "next/link";
 
 import {
-  addBoardMeasurementAction,
   addDiagnosticSymptomAction,
   addDiagnosticTestAction,
   addHypothesisAction,
-  addMeasurementAction,
-  analyzeAttachmentImageAction,
   generateDiagnosticAssistantAction,
   saveAssistantFeedbackAction,
   uploadAttachmentAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
 import { AttachmentCard } from "@/components/attachment-card";
+import { BoardMeasurementForm } from "@/components/board-measurement-form";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
+import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
 import { requireCurrentUser } from "@/lib/auth";
 import {
@@ -816,64 +815,9 @@ export default async function DiagnosticDetailPage({
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Leituras da bancada
             </h3>
-
-            <form action={addMeasurementAction} className="mt-5 grid gap-3">
-              <input type="hidden" name="diagnostic_id" value={detail.id} />
-              <select
-                required
-                name="measurement_type"
-                defaultValue=""
-                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-              >
-                <option value="" disabled>
-                  Tipo de medição
-                </option>
-                <option value="voltage">Tensão</option>
-                <option value="current">Corrente</option>
-                <option value="resistance">Resistência</option>
-                <option value="temperature">Temperatura</option>
-                <option value="consumption">Consumo</option>
-                <option value="frequency">Frequência</option>
-                <option value="continuity">Continuidade</option>
-                <option value="other">Outra</option>
-              </select>
-              <input
-                type="text"
-                name="point_label"
-                placeholder="Ponto medido"
-                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-              />
-              <div className="grid gap-3 md:grid-cols-2">
-                <input
-                  type="number"
-                  step="0.0001"
-                  name="measured_value_numeric"
-                  placeholder="Valor numérico"
-                  className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-                />
-                <input
-                  type="text"
-                  name="unit"
-                  placeholder="Unidade"
-                  className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-                />
-              </div>
-              <input
-                type="text"
-                name="measured_value_text"
-                placeholder="Leitura textual complementar"
-                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-              />
-              <input
-                type="text"
-                name="expected_value_text"
-                placeholder="Valor esperado"
-                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-              />
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Registrar medição
-              </button>
-            </form>
+            <div className="mt-5">
+              <MeasurementForm diagnosticId={detail.id} />
+            </div>
 
             <div className="mt-5 space-y-3">
               {detail.measurements.length ? (
@@ -965,63 +909,9 @@ export default async function DiagnosticDetailPage({
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
                   Nova Medição de Referência
                 </p>
-                <form action={addBoardMeasurementAction} className="mt-3.5 grid gap-3">
-                  <input type="hidden" name="diagnostic_id" value={detail.id} />
-                  <select
-                    required
-                    name="board_id"
-                    className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
-                  >
-                    {detail.boards.map((b: any) => (
-                      <option key={b.id} value={b.boardId ?? ""}>
-                        Placa: {b.boardCode || b.name || "Principal"}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      required
-                      type="text"
-                      name="component_ref"
-                      placeholder="Ex: PL401, C2800"
-                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
-                    />
-                    <input
-                      required
-                      type="text"
-                      name="measurement_point"
-                      placeholder="Ex: Pin 1, Output"
-                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      required
-                      type="text"
-                      name="expected_value"
-                      placeholder="Ex: 3.3V, 450R"
-                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
-                    />
-                    <select
-                      name="condition"
-                      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
-                      defaultValue="power_off"
-                    >
-                      <option value="power_off">Sem Alimentação</option>
-                      <option value="power_on">Placa Ligada</option>
-                      <option value="diode_mode">Escala de Diodo</option>
-                    </select>
-                  </div>
-                  <textarea
-                    name="notes"
-                    rows={2}
-                    placeholder="Macetes adicionais da medição (Opcional)"
-                    className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none text-white w-full"
-                  />
-                  <button className="rounded-full bg-[var(--accent-teal)] px-5 py-3 text-sm font-semibold text-white hover:brightness-110 active:scale-98 transition-all w-full">
-                    Registrar na Base
-                  </button>
-                </form>
+                <div className="mt-3.5">
+                  <BoardMeasurementForm diagnosticId={detail.id} boards={detail.boards} />
+                </div>
               </div>
             </div>
           </section>
@@ -1113,7 +1003,12 @@ export default async function DiagnosticDetailPage({
             <div className="mt-5 space-y-3">
               {detail.attachments.length ? (
                 detail.attachments.map((item) => (
-                  <AttachmentCard key={item.id} item={item} diagnosticId={detail.id} />
+                  <AttachmentCard
+                    key={item.id}
+                    item={item}
+                    diagnosticId={detail.id}
+                    referenceMeasurements={detail.referenceMeasurements}
+                  />
                 ))
               ) : (
                 <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">

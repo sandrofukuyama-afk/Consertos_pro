@@ -18,6 +18,19 @@ function formatMinutes(value: number | null) {
   return `${hours}h ${minutes}min`;
 }
 
+function formatTokenCount(value: number) {
+  return new Intl.NumberFormat("pt-BR").format(value);
+}
+
+function formatUsd(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: value < 1 ? 4 : 2,
+    maximumFractionDigits: value < 1 ? 4 : 2,
+  }).format(value);
+}
+
 export default async function EstatisticasPage() {
   const userPromise = requireCurrentUser();
   const statsPromise = getWorkshopStatistics();
@@ -176,6 +189,137 @@ export default async function EstatisticasPage() {
               />
             </div>
           </article>
+        </section>
+
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                Consumo de API
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                Tokens e custo dos agentes
+              </h3>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Visão operacional do uso de IA por modelo e tipo de tarefa.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <article className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                Chamadas registradas
+              </p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                {stats.apiUsage.totalRequests}
+              </p>
+            </article>
+            <article className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                Tokens consumidos
+              </p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                {formatTokenCount(stats.apiUsage.totalTokens)}
+              </p>
+            </article>
+            <article className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                Custo estimado
+              </p>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                {formatUsd(stats.apiUsage.totalCostUsd)}
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
+            <article className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                Por finalidade
+              </p>
+              <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
+                Onde os tokens estao indo
+              </h4>
+              <div className="mt-4">
+                <StatBarChart
+                  accent="teal"
+                  emptyLabel="Ainda nao ha consumo de API suficiente para exibir este corte."
+                  items={stats.apiUsage.byPurpose.map((item) => ({
+                    key: item.purpose,
+                    label: item.purpose,
+                    sublabel: `${item.requestCount} chamada(s) · ${formatUsd(item.totalCostUsd)}`,
+                    value: item.totalTokens,
+                    valueLabel: `${formatTokenCount(item.totalTokens)} tokens`,
+                  }))}
+                />
+              </div>
+            </article>
+
+            <article className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                Por modelo
+              </p>
+              <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
+                Distribuicao entre motores
+              </h4>
+              <div className="mt-4 space-y-3">
+                {stats.apiUsage.byModel.length ? (
+                  stats.apiUsage.byModel.map((item) => (
+                    <div
+                      key={item.model}
+                      className="rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-semibold text-[var(--foreground)]">
+                            {item.model}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            {item.requestCount} chamada(s)
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+                            {formatTokenCount(item.totalTokens)} tokens
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--foreground)]">
+                            {formatUsd(item.totalCostUsd)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[20px] border border-dashed border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-6 text-sm text-[var(--muted)]">
+                    Ainda nao ha chamadas registradas.
+                  </div>
+                )}
+              </div>
+            </article>
+          </div>
+
+          <div className="mt-6 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              Ultimos 7 dias
+            </p>
+            <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
+              Evolucao diaria do consumo
+            </h4>
+            <div className="mt-4">
+              <StatBarChart
+                accent="copper"
+                emptyLabel="Ainda nao ha historico recente de consumo."
+                items={stats.apiUsage.recentDaily.map((item) => ({
+                  key: item.dayLabel,
+                  label: item.dayLabel,
+                  sublabel: formatUsd(item.totalCostUsd),
+                  value: item.totalTokens,
+                  valueLabel: `${formatTokenCount(item.totalTokens)} tokens`,
+                }))}
+              />
+            </div>
+          </div>
         </section>
       </div>
     </AppShell>

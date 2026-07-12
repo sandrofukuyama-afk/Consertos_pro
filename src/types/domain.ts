@@ -401,6 +401,28 @@ export type WorkshopStatistics = {
     causeType: string;
     count: number;
   }>;
+  apiUsage: {
+    totalRequests: number;
+    totalTokens: number;
+    totalCostUsd: number;
+    byPurpose: Array<{
+      purpose: string;
+      requestCount: number;
+      totalTokens: number;
+      totalCostUsd: number;
+    }>;
+    byModel: Array<{
+      model: string;
+      requestCount: number;
+      totalTokens: number;
+      totalCostUsd: number;
+    }>;
+    recentDaily: Array<{
+      dayLabel: string;
+      totalTokens: number;
+      totalCostUsd: number;
+    }>;
+  };
 };
 
 export type PreventiveInsight = {

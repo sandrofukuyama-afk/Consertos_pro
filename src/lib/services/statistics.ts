@@ -123,10 +123,16 @@ function average(values: number[]) {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
+function formatPurposeLabel(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 export async function getWorkshopStatistics(): Promise<WorkshopStatistics> {
   const supabase = await createClient();
 
-  const [resolvedCasesResult, confirmedCausesResult] = await Promise.all([
+  const [resolvedCasesResult, confirmedCausesResult, tokenLogsResult] = await Promise.all([
     supabase
       .from("resolved_cases")
       .select(
@@ -150,6 +156,9 @@ export async function getWorkshopStatistics(): Promise<WorkshopStatistics> {
           )
         `,
       ),
+    supabase
+      .from("ai_token_logs")
+      .select("model, purpose, total_tokens, estimated_cost_usd, created_at"),
   ]);
 
   const resolvedCases =
@@ -248,6 +257,69 @@ export async function getWorkshopStatistics(): Promise<WorkshopStatistics> {
     }
   }
 
+  const tokenLogs =
+    (tokenLogsResult.data as Array<{
+      model: string;
+      purpose: string;
+      total_tokens: number;
+      estimated_cost_usd: number | string;
+      created_at: string;
+    }> | null) ?? [];
+
+  const usageByPurpose = new Map<
+    string,
+    { purpose: string; requestCount: number; totalTokens: number; totalCostUsd: number }
+  >();
+  const usageByModel = new Map<
+    string,
+    { model: string; requestCount: number; totalTokens: number; totalCostUsd: number }
+  >();
+  const usageByDay = new Map<
+    string,
+    { dayLabel: string; totalTokens: number; totalCostUsd: number }
+  >();
+
+  let totalApiTokens = 0;
+  let totalApiCostUsd = 0;
+
+  for (const row of tokenLogs) {
+    const estimatedCostUsd = Number(row.estimated_cost_usd ?? 0);
+    totalApiTokens += row.total_tokens;
+    totalApiCostUsd += estimatedCostUsd;
+
+    const purposeEntry = usageByPurpose.get(row.purpose) ?? {
+      purpose: formatPurposeLabel(row.purpose),
+      requestCount: 0,
+      totalTokens: 0,
+      totalCostUsd: 0,
+    };
+    purposeEntry.requestCount += 1;
+    purposeEntry.totalTokens += row.total_tokens;
+    purposeEntry.totalCostUsd += estimatedCostUsd;
+    usageByPurpose.set(row.purpose, purposeEntry);
+
+    const modelEntry = usageByModel.get(row.model) ?? {
+      model: row.model,
+      requestCount: 0,
+      totalTokens: 0,
+      totalCostUsd: 0,
+    };
+    modelEntry.requestCount += 1;
+    modelEntry.totalTokens += row.total_tokens;
+    modelEntry.totalCostUsd += estimatedCostUsd;
+    usageByModel.set(row.model, modelEntry);
+
+    const day = new Date(row.created_at).toISOString().slice(0, 10);
+    const dayEntry = usageByDay.get(day) ?? {
+      dayLabel: day.split("-").reverse().join("/"),
+      totalTokens: 0,
+      totalCostUsd: 0,
+    };
+    dayEntry.totalTokens += row.total_tokens;
+    dayEntry.totalCostUsd += estimatedCostUsd;
+    usageByDay.set(day, dayEntry);
+  }
+
   return {
     totalResolvedCases: resolvedCases.length,
     averageResolutionMinutes: average(allResolutionTimes),
@@ -274,5 +346,19 @@ export async function getWorkshopStatistics(): Promise<WorkshopStatistics> {
     causeFrequency: [...causeCounts.entries()]
       .map(([causeType, count]) => ({ causeType, count }))
       .sort((a, b) => b.count - a.count || a.causeType.localeCompare(b.causeType)),
+    apiUsage: {
+      totalRequests: tokenLogs.length,
+      totalTokens: totalApiTokens,
+      totalCostUsd: totalApiCostUsd,
+      byPurpose: [...usageByPurpose.values()]
+        .sort((a, b) => b.totalTokens - a.totalTokens || a.purpose.localeCompare(b.purpose))
+        .slice(0, 8),
+      byModel: [...usageByModel.values()]
+        .sort((a, b) => b.totalTokens - a.totalTokens || a.model.localeCompare(b.model)),
+      recentDaily: [...usageByDay.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-7)
+        .map(([, value]) => value),
+    },
   };
 }

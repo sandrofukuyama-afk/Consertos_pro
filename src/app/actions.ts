@@ -5,7 +5,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
-import { analyzeBoardImage } from "@/lib/ai/image-analysis";
+import {
+  analyzeBoardImage,
+  extractComponentReferenceFromImage,
+  type ComponentOcrResult,
+} from "@/lib/ai/image-analysis";
 import { generateDiagnosticAssistantResponse } from "@/lib/services/assistant";
 import {
   syncDiagnosticEmbeddingSource,
@@ -704,6 +708,44 @@ export async function analyzeAttachmentImageAction(formData: FormData) {
 
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   redirect(`/diagnosticos/${diagnosticId}?message=Análise de imagem concluída.`);
+}
+
+export async function extractAttachmentComponentRefAction(
+  diagnosticId: string,
+  attachmentId: string,
+): Promise<ComponentOcrResult> {
+  await requireCurrentUser();
+  const supabase = await createClient();
+
+  if (!diagnosticId || !attachmentId) {
+    throw new Error("Anexo invalido para OCR.");
+  }
+
+  const { data: attachment } = await supabase
+    .from("attachments")
+    .select("id, storage_path, mime_type")
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (!attachment || !attachment.mime_type.startsWith("image/")) {
+    throw new Error("Este anexo nao e uma imagem utilizavel para OCR.");
+  }
+
+  const { data: signed } = await supabase.storage
+    .from("diagnostic-attachments")
+    .createSignedUrl(attachment.storage_path, 300);
+
+  if (!signed?.signedUrl) {
+    throw new Error("Nao foi possivel gerar acesso temporario a imagem.");
+  }
+
+  const result = await extractComponentReferenceFromImage(signed.signedUrl);
+
+  if (!result) {
+    throw new Error("OCR de componentes nao esta configurado.");
+  }
+
+  return result;
 }
 
 export async function closeDiagnosticAction(formData: FormData) {

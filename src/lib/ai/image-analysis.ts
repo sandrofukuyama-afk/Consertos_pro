@@ -1,3 +1,5 @@
+import { logTokenUsage } from "@/lib/services/token-logger";
+
 const VISION_MODEL = "gpt-4o-mini";
 
 export type BoardImageAnalysis = {
@@ -5,6 +7,12 @@ export type BoardImageAnalysis = {
   suspectedIssues: string[];
   confidence: "low" | "medium" | "high";
   recommendation: string;
+};
+
+export type ComponentOcrResult = {
+  componentRef: string | null;
+  confidence: "low" | "medium" | "high";
+  rationale: string;
 };
 
 const ANALYSIS_SCHEMA = {
@@ -44,6 +52,33 @@ const SYSTEM_PROMPT = [
   "leitura técnica confiável (qualidade, foco, enquadramento), não a certeza sobre",
   "a causa da falha do equipamento. 'recommendation' deve ser um próximo passo",
   "objetivo de bancada, nunca um diagnóstico definitivo.",
+].join(" ");
+
+const OCR_SCHEMA = {
+  type: "object",
+  properties: {
+    componentRef: {
+      anyOf: [{ type: "string" }, { type: "null" }],
+    },
+    confidence: {
+      type: "string",
+      enum: ["low", "medium", "high"],
+    },
+    rationale: { type: "string" },
+  },
+  required: ["componentRef", "confidence", "rationale"],
+  additionalProperties: false,
+};
+
+const OCR_SYSTEM_PROMPT = [
+  "Voce esta olhando uma foto macro de uma placa eletronica.",
+  "Sua tarefa e identificar a serigrafia principal de componente visivel na imagem,",
+  "como C2800, PL401, U12, Q45, R210 ou F1.",
+  "Retorne somente uma referencia quando houver leitura visual plausivel.",
+  "Nao invente caracteres ocultos nem chute referencias longas sem base visual.",
+  "Se a foto nao permitir leitura confiavel, retorne componentRef como null.",
+  "Padronize a referencia em letras maiusculas sem espacos.",
+  "Explique em rationale, em portugues do Brasil, o que sustentou a leitura ou por que ela ficou inconclusiva.",
 ].join(" ");
 
 export function isVisionConfigured() {
@@ -99,7 +134,21 @@ export async function analyzeBoardImage(imageUrl: string): Promise<BoardImageAna
 
   const payload = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+    };
   };
+
+  if (payload.usage) {
+    logTokenUsage(
+      VISION_MODEL,
+      "analise_imagem_placa",
+      payload.usage.prompt_tokens,
+      payload.usage.completion_tokens,
+    );
+  }
+
   const content = payload.choices?.[0]?.message?.content;
 
   if (!content) {
@@ -118,4 +167,93 @@ export async function analyzeBoardImage(imageUrl: string): Promise<BoardImageAna
   }
 
   return parsed;
+}
+
+export async function extractComponentReferenceFromImage(
+  imageUrl: string,
+): Promise<ComponentOcrResult | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    return null;
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: VISION_MODEL,
+      temperature: 0,
+      messages: [
+        { role: "system", content: OCR_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Leia a serigrafia do componente principal desta foto e retorne o JSON estruturado.",
+            },
+            {
+              type: "image_url",
+              image_url: { url: imageUrl },
+            },
+          ],
+        },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "component_reference_ocr",
+          strict: true,
+          schema: OCR_SCHEMA,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI OCR request failed with ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+    };
+  };
+
+  if (payload.usage) {
+    logTokenUsage(
+      VISION_MODEL,
+      "ocr_serigrafia_componente",
+      payload.usage.prompt_tokens,
+      payload.usage.completion_tokens,
+    );
+  }
+
+  const content = payload.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("OpenAI returned an empty OCR analysis.");
+  }
+
+  const parsed = JSON.parse(content) as ComponentOcrResult;
+
+  if (
+    (parsed.componentRef !== null && typeof parsed.componentRef !== "string") ||
+    typeof parsed.confidence !== "string" ||
+    typeof parsed.rationale !== "string"
+  ) {
+    throw new Error("OpenAI returned a malformed OCR payload.");
+  }
+
+  return {
+    componentRef: parsed.componentRef?.trim().toUpperCase() ?? null,
+    confidence: parsed.confidence,
+    rationale: parsed.rationale,
+  };
 }

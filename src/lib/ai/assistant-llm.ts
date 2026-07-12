@@ -1,3 +1,5 @@
+import { logTokenUsage } from "@/lib/services/token-logger";
+
 const CHAT_MODEL = "gpt-4o-mini";
 
 export type AssistantNarrativeFacts = {
@@ -120,7 +122,23 @@ export async function generateAssistantNarrative(
 
   const payload = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: {
+      prompt_tokens: number;
+      completion_tokens: number;
+      total_tokens: number;
+    };
   };
+
+  // Log token consumption asynchronously
+  if (payload.usage) {
+    logTokenUsage(
+      CHAT_MODEL,
+      "narrativa_diagnostico",
+      payload.usage.prompt_tokens,
+      payload.usage.completion_tokens
+    );
+  }
+
   const content = payload.choices?.[0]?.message?.content;
 
   if (!content) {
