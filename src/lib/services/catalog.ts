@@ -37,3 +37,69 @@ export async function getDiagnosticCatalog() {
 export async function getLibraryCatalog() {
   return getDiagnosticCatalog();
 }
+
+export async function getCatalogDashboardData() {
+  const supabase = await createClient();
+
+  const [
+    categories,
+    manufacturers,
+    boardTypes,
+    models,
+    boards,
+    components,
+    modelBoards,
+    boardComponents,
+  ] = await Promise.all([
+    supabase.from("equipment_categories").select("*").eq("is_active", true).order("name"),
+    supabase.from("manufacturers").select("*").eq("is_active", true).order("name"),
+    supabase.from("board_types").select("*").order("name"),
+    supabase
+      .from("equipment_models")
+      .select(`
+        *,
+        manufacturers(name),
+        equipment_categories(name)
+      `)
+      .eq("is_active", true)
+      .order("model_name"),
+    supabase
+      .from("boards")
+      .select(`
+        *,
+        board_types(name),
+        manufacturers(name)
+      `)
+      .eq("is_active", true)
+      .order("board_code"),
+    supabase.from("components").select("*").eq("is_active", true).order("component_ref"),
+    supabase
+      .from("model_boards")
+      .select(`
+        *,
+        equipment_models(model_name),
+        boards(board_code)
+      `)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("board_components")
+      .select(`
+        *,
+        boards(board_code),
+        components(component_ref, component_type)
+      `)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  return {
+    categories: categories.data ?? [],
+    manufacturers: manufacturers.data ?? [],
+    boardTypes: boardTypes.data ?? [],
+    models: models.data ?? [],
+    boards: boards.data ?? [],
+    components: components.data ?? [],
+    modelBoards: modelBoards.data ?? [],
+    boardComponents: boardComponents.data ?? [],
+  };
+}
+
