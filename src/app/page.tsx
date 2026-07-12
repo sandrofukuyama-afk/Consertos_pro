@@ -115,7 +115,7 @@ export default async function Home({ searchParams }: HomePageProps) {
 
             {dashboard.diagnostics.length ? (
               <div className="mt-5 overflow-hidden rounded-[24px] border border-[var(--panel-border)]">
-                <div className="grid grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                <div className="hidden md:grid grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                   <span>Equipamento</span>
                   <span>Defeito atual</span>
                   <span>Placa</span>
@@ -126,12 +126,17 @@ export default async function Home({ searchParams }: HomePageProps) {
                   <Link
                     key={diagnostic.id}
                     href={`/diagnosticos/${diagnostic.recordId}`}
-                    className="grid grid-cols-1 gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
+                    className="flex flex-col gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] hover:bg-white/2 transition"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--foreground)] break-words">
-                        {diagnostic.category}
-                      </p>
+                      <div className="flex items-center justify-between md:block">
+                        <p className="text-sm font-semibold text-[var(--foreground)] break-words">
+                          {diagnostic.category}
+                        </p>
+                        <div className="md:hidden">
+                          <StatusPill label={diagnostic.status} />
+                        </div>
+                      </div>
                       <p className="mt-1 text-sm text-[var(--muted)] break-words">
                         {diagnostic.equipment}
                       </p>
@@ -141,6 +146,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-[var(--foreground)] break-words">
+                        <span className="text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] mr-1 md:hidden">Sintoma:</span>
                         {diagnostic.symptom}
                       </p>
                       <p className="mt-2 text-xs text-[var(--muted)]">
@@ -148,12 +154,14 @@ export default async function Home({ searchParams }: HomePageProps) {
                       </p>
                     </div>
                     <p className="min-w-0 text-sm leading-6 text-[var(--foreground)] break-words">
+                      <span className="text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] mr-1 md:hidden">Placa:</span>
                       {diagnostic.board}
                     </p>
                     <p className="min-w-0 text-sm leading-6 text-[var(--foreground)] break-words">
+                      <span className="text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] mr-1 md:hidden">Técnico:</span>
                       {diagnostic.technician}
                     </p>
-                    <div className="flex items-start">
+                    <div className="hidden md:flex items-start">
                       <StatusPill label={diagnostic.status} />
                     </div>
                   </Link>
