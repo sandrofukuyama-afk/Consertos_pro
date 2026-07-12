@@ -509,6 +509,29 @@ export async function getSemanticSearchResults(
   };
 }
 
+function roundRate(part: number, total: number) {
+  if (total === 0) {
+    return 0;
+  }
+
+  return Math.round((part / total) * 100);
+}
+
+function getWeekLabel(dateValue: string) {
+  const date = new Date(dateValue);
+  const weekStart = new Date(date);
+  const dayOffset = (date.getUTCDay() + 6) % 7;
+  weekStart.setUTCDate(date.getUTCDate() - dayOffset);
+
+  const day = String(weekStart.getUTCDate()).padStart(2, "0");
+  const month = String(weekStart.getUTCMonth() + 1).padStart(2, "0");
+
+  return {
+    key: weekStart.toISOString().slice(0, 10),
+    label: `Semana de ${day}/${month}`,
+  };
+}
+
 export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData> {
   const supabase = await createClient();
   const [
@@ -573,6 +596,7 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
             id,
             feedback_rating,
             was_followed,
+            created_at,
             diagnostics(equipment_categories(name))
           `,
         ),
@@ -599,11 +623,16 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
     string,
     { category: string; feedbackCount: number; helpfulCount: number; followedCount: number }
   >();
+  const trendMap = new Map<
+    string,
+    { key: string; label: string; feedbackCount: number; helpfulCount: number; followedCount: number }
+  >();
 
   for (const row of
     ((categoryFeedbackResult.data as Array<{
       feedback_rating: string;
       was_followed: boolean | null;
+      created_at: string;
       diagnostics: { equipment_categories: { name: string } | Array<{ name: string }> | null } | null;
     }> | null) ?? [])) {
     const diagnostic = pickRelation(row.diagnostics);
@@ -626,6 +655,27 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
     }
 
     categoryMetricsMap.set(category, entry);
+
+    const week = getWeekLabel(row.created_at);
+    const trendEntry = trendMap.get(week.key) ?? {
+      key: week.key,
+      label: week.label,
+      feedbackCount: 0,
+      helpfulCount: 0,
+      followedCount: 0,
+    };
+
+    trendEntry.feedbackCount += 1;
+
+    if (row.feedback_rating === "helpful") {
+      trendEntry.helpfulCount += 1;
+    }
+
+    if (row.was_followed === true) {
+      trendEntry.followedCount += 1;
+    }
+
+    trendMap.set(week.key, trendEntry);
   }
 
   const followedTestCounts = new Map<string, number>();
@@ -655,9 +705,13 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
       ).length,
       notHelpfulCount: feedbackRows.filter((item) => item.feedback_rating === "not_helpful").length,
     },
-    aiCategoryBreakdown: [...categoryMetricsMap.values()].sort(
-      (a, b) => b.feedbackCount - a.feedbackCount || a.category.localeCompare(b.category),
-    ),
+    aiCategoryBreakdown: [...categoryMetricsMap.values()]
+      .map((item) => ({
+        ...item,
+        helpfulRate: roundRate(item.helpfulCount, item.feedbackCount),
+        acceptanceRate: roundRate(item.followedCount, item.feedbackCount),
+      }))
+      .sort((a, b) => b.feedbackCount - a.feedbackCount || a.category.localeCompare(b.category)),
     topFollowedTests: [...followedTestCounts.entries()]
       .map(([testName, count]) => ({
         testName,
@@ -665,6 +719,17 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
       }))
       .sort((a, b) => b.count - a.count || a.testName.localeCompare(b.testName))
       .slice(0, 5),
+    aiFeedbackTrend: [...trendMap.values()]
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .slice(-8)
+      .map((item) => ({
+        weekLabel: item.label,
+        feedbackCount: item.feedbackCount,
+        helpfulCount: item.helpfulCount,
+        followedCount: item.followedCount,
+        helpfulRate: roundRate(item.helpfulCount, item.feedbackCount),
+        acceptanceRate: roundRate(item.followedCount, item.feedbackCount),
+      })),
     recentResolvedCases: (resolvedCasesResult.data ?? []).map((item) => {
       const diagnostic = pickRelation(item.diagnostics);
 

@@ -273,10 +273,20 @@ export type KnowledgeOverviewData = {
     feedbackCount: number;
     helpfulCount: number;
     followedCount: number;
+    helpfulRate: number;
+    acceptanceRate: number;
   }>;
   topFollowedTests: Array<{
     testName: string;
     count: number;
+  }>;
+  aiFeedbackTrend: Array<{
+    weekLabel: string;
+    feedbackCount: number;
+    helpfulCount: number;
+    followedCount: number;
+    helpfulRate: number;
+    acceptanceRate: number;
   }>;
   recentResolvedCases: Array<{
     id: string;

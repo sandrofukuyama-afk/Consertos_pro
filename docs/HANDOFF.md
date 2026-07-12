@@ -152,11 +152,20 @@ Opcoes:
 
 Fase 6 continua:
 
-- cruzar feedback com periodo e tendencia temporal
-- refinar recomendacao usando sintomas por grupo e resultados anteriores
-- mostrar taxa percentual de aceitacao e helpful por categoria
+- ~~cruzar feedback com periodo e tendencia temporal~~ feito: painel `Feedback por semana` em `/conhecimento`
+- refinar recomendacao usando sintomas por grupo: feito parcialmente — `pickUnperformedTest` agora pondera pela taxa de sucesso historica (seguida ou helpful) de cada `test_group`, calculada em `getHistoricalTestGroupSuccess`
+- ~~mostrar taxa percentual de aceitacao e helpful por categoria~~ feito: `acceptanceRate`/`helpfulRate` em `aiCategoryBreakdown`
 - eventualmente trocar a heuristica atual por chamada LLM estruturada quando houver contexto suficiente
+- ainda falta: usar resultados anteriores por sintoma (nao so por grupo de teste) para refinar ainda mais a hipotese principal
 
 ## Observacao importante
 
 O repositório estava limpo no momento deste handoff. Tudo relevante ate aqui ja foi enviado para o GitHub.
+
+## Atualizacao 2026-07-12 (continuacao)
+
+- Migration `ai_feedback_metrics` aplicada no projeto remoto Supabase (`Consertos_Pro`, id `znsjsfyodlsomtpcwwhn`) via MCP.
+- `.env.local` criado localmente (nao versionado) para rodar `npm run dev`.
+- Commit `5977b83` com a feature de assistente tecnico enviado para `main`.
+- Fase 6 avancou: tendencia semanal de feedback, taxas percentuais por categoria, e recomendacao de teste agora pondera por sucesso historico do grupo.
+- Nao foi possivel validar visualmente no navegador neste ambiente (sem `chromium-cli`/navegador headless disponivel) — validar manualmente em `/conhecimento` apos login.

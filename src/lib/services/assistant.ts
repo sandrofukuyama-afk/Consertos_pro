@@ -159,6 +159,7 @@ function pickUnperformedTest(
   executedTests: string[],
   symptomNames: string[],
   preferredGroups: string[],
+  groupSuccessRate: Map<string, number>,
 ) {
   const executed = new Set(executedTests.map((item) => item.toLowerCase()));
   const symptomWords = new Set(symptomNames.flatMap(normalizeWords));
@@ -179,6 +180,10 @@ function pickUnperformedTest(
         }
       }
 
+      if (item.group) {
+        score += (groupSuccessRate.get(item.group) ?? 0) * 2;
+      }
+
       return {
         id: item.id,
         name: item.name,
@@ -188,6 +193,67 @@ function pickUnperformedTest(
     .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 
   return ranked[0] ?? availableTests[0] ?? null;
+}
+
+async function getHistoricalTestGroupSuccess(supabase: SupabaseServerClient) {
+  const { data } = await supabase
+    .from("diagnostic_test_runs")
+    .select(
+      `
+        tests(test_group),
+        ai_responses(
+          ai_response_feedback(feedback_rating, was_followed)
+        )
+      `,
+    )
+    .not("requested_by_ai_response_id", "is", null);
+
+  const totals = new Map<string, { success: number; total: number }>();
+
+  for (const row of
+    ((data ?? []) as Array<{
+      tests: { test_group: string | null } | Array<{ test_group: string | null }> | null;
+      ai_responses:
+        | {
+            ai_response_feedback:
+              | { feedback_rating: string; was_followed: boolean | null }
+              | Array<{ feedback_rating: string; was_followed: boolean | null }>
+              | null;
+          }
+        | Array<{
+            ai_response_feedback:
+              | { feedback_rating: string; was_followed: boolean | null }
+              | Array<{ feedback_rating: string; was_followed: boolean | null }>
+              | null;
+          }>
+        | null;
+    }>)) {
+    const group = pickRelation(row.tests)?.test_group;
+
+    if (!group) {
+      continue;
+    }
+
+    const response = pickRelation(row.ai_responses);
+    const feedback = response ? pickRelation(response.ai_response_feedback) : null;
+    const entry = totals.get(group) ?? { success: 0, total: 0 };
+
+    entry.total += 1;
+
+    if (feedback && (feedback.was_followed === true || feedback.feedback_rating === "helpful")) {
+      entry.success += 1;
+    }
+
+    totals.set(group, entry);
+  }
+
+  const rateMap = new Map<string, number>();
+
+  for (const [group, { success, total }] of totals) {
+    rateMap.set(group, total > 0 ? success / total : 0);
+  }
+
+  return rateMap;
 }
 
 async function getDiagnosticAssistantContext(
@@ -434,6 +500,7 @@ function buildStructuredResponse(
   similarCases: SemanticMatchResult[],
   relatedDocuments: SemanticMatchResult[],
   availableTests: Array<{ id: string; name: string; group: string | null }>,
+  groupSuccessRate: Map<string, number>,
 ) {
   const strategy = resolveCategoryStrategy(context.category);
   const latestTest = [...context.tests].sort((a, b) => b.stepOrder - a.stepOrder)[0] ?? null;
@@ -447,6 +514,7 @@ function buildStructuredResponse(
     context.tests.map((item) => item.testName),
     context.symptoms.map((item) => item.name),
     strategy.preferredGroups,
+    groupSuccessRate,
   );
   const nextTestName = recommendedTest?.name ?? "Executar o proximo teste objetivo da bancada";
 
@@ -557,9 +625,10 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
     throw new Error("Diagnostico nao encontrado para gerar recomendacao.");
   }
 
-  const [{ similarCases, relatedDocuments }, availableTests] = await Promise.all([
+  const [{ similarCases, relatedDocuments }, availableTests, groupSuccessRate] = await Promise.all([
     getSimilarCasesAndDocuments(context, supabase),
     getAvailableTests(supabase),
+    getHistoricalTestGroupSuccess(supabase),
   ]);
 
   const payload = buildStructuredResponse(
@@ -567,6 +636,7 @@ export async function generateDiagnosticAssistantResponse(diagnosticId: string) 
     similarCases,
     relatedDocuments,
     availableTests,
+    groupSuccessRate,
   );
 
   const { error } = await supabase.from("ai_responses").insert({

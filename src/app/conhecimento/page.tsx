@@ -252,6 +252,10 @@ export default async function ConhecimentoPage({
                       <p>Helpful: {item.helpfulCount}</p>
                       <p>Seguidas: {item.followedCount}</p>
                     </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm font-semibold text-[var(--accent-teal)]">
+                      <p>Aceitacao: {item.acceptanceRate}%</p>
+                      <p>Helpful: {item.helpfulRate}%</p>
+                    </div>
                   </article>
                 ))
               ) : (
@@ -294,6 +298,41 @@ export default async function ConhecimentoPage({
               )}
             </div>
           </article>
+        </section>
+
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+            Tendencia temporal
+          </p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+            Feedback por semana
+          </h3>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {overview.aiFeedbackTrend.length ? (
+              overview.aiFeedbackTrend.map((item) => (
+                <article
+                  key={item.weekLabel}
+                  className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                >
+                  <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                    {item.weekLabel}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Feedbacks: {item.feedbackCount}
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm font-semibold text-[var(--accent-teal)]">
+                    <p>Aceitacao: {item.acceptanceRate}%</p>
+                    <p>Helpful: {item.helpfulRate}%</p>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)] md:col-span-2 xl:col-span-4">
+                Ainda nao ha semanas com feedback suficiente para mostrar tendencia.
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
