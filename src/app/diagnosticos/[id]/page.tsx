@@ -11,6 +11,7 @@ import {
   uploadAttachmentAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
+import { AttachmentCard } from "@/components/attachment-card";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
 import { StatusPill } from "@/components/status-pill";
 import { requireCurrentUser } from "@/lib/auth";
@@ -945,61 +946,7 @@ export default async function DiagnosticDetailPage({
             <div className="mt-5 space-y-3">
               {detail.attachments.length ? (
                 detail.attachments.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-                  >
-                    <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {item.title}
-                    </p>
-                    <p className="mt-2 text-sm text-[var(--foreground)]">
-                      {item.description}
-                    </p>
-                    <p className="mt-2 text-xs text-[var(--muted)]">
-                      {item.attachmentType} • {item.uploadedAt}
-                    </p>
-                    {item.signedUrl ? (
-                      <a
-                        href={item.signedUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-3 inline-flex text-sm font-semibold text-[var(--accent-copper)]"
-                      >
-                        Abrir arquivo
-                      </a>
-                    ) : null}
-
-                    {item.mimeType.startsWith("image/") ? (
-                      item.imageAnalysis ? (
-                        <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
-                          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
-                            Análise de imagem por IA • confiança {item.imageAnalysis.confidence} • {item.imageAnalysis.analyzedAt}
-                          </p>
-                          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[var(--foreground)]">
-                            {item.imageAnalysis.observations.map((observation) => (
-                              <li key={observation}>{observation}</li>
-                            ))}
-                          </ul>
-                          {item.imageAnalysis.suspectedIssues.length ? (
-                            <p className="mt-2 text-sm text-[var(--danger)]">
-                              Suspeitas: {item.imageAnalysis.suspectedIssues.join("; ")}
-                            </p>
-                          ) : null}
-                          <p className="mt-2 text-sm text-[var(--muted)]">
-                            Recomendação: {item.imageAnalysis.recommendation}
-                          </p>
-                        </div>
-                      ) : (
-                        <form action={analyzeAttachmentImageAction} className="mt-3">
-                          <input type="hidden" name="diagnostic_id" value={detail.id} />
-                          <input type="hidden" name="attachment_id" value={item.id} />
-                          <button className="rounded-full border border-[var(--accent-teal)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-teal)]">
-                            Analisar imagem com IA
-                          </button>
-                        </form>
-                      )
-                    ) : null}
-                  </div>
+                  <AttachmentCard key={item.id} item={item} diagnosticId={detail.id} />
                 ))
               ) : (
                 <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">

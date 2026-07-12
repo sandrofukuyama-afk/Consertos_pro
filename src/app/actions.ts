@@ -947,3 +947,26 @@ export async function syncSemanticMemoryAction() {
     redirect(`/conhecimento?error=${encodeURIComponent(message)}`);
   }
 }
+
+export async function saveAttachmentAnnotationsAction(
+  attachmentId: string,
+  diagnosticId: string,
+  annotations: any[]
+) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("attachments")
+    .update({
+      annotations: annotations,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", attachmentId);
+
+  if (error) {
+    throw new Error(`Falha ao salvar as anotações: ${error.message}`);
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+}

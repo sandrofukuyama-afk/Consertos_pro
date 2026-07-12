@@ -106,6 +106,14 @@ export type AiFeedbackRating =
   | "partially_helpful"
   | "not_helpful";
 
+export type ComponentAnnotation = {
+  id: string;
+  x: number;
+  y: number;
+  note: string;
+  color: "red" | "yellow" | "green";
+};
+
 export type DiagnosticDetail = {
   id: string;
   category: string;
@@ -190,6 +198,7 @@ export type DiagnosticDetail = {
       recommendation: string;
       analyzedAt: string;
     } | null;
+    annotations: ComponentAnnotation[];
   }>;
   timeline: Array<{
     id: string;

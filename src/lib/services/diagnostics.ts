@@ -154,7 +154,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           created_at,
           storage_path,
           ai_image_analysis,
-          ai_image_analyzed_at
+          ai_image_analyzed_at,
+          annotations
         )
       `,
     )
@@ -296,6 +297,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
                   analyzedAt: formatRelativeTime(item.ai_image_analyzed_at),
                 }
               : null,
+          annotations: (item as any).annotations ?? [],
         };
       }),
     ),
