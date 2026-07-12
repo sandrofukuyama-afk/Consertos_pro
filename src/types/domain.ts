@@ -82,6 +82,23 @@ export type TestOption = CatalogOption & {
   unit?: string | null;
 };
 
+export type AssistantStructuredResponse = {
+  technicalSummary: string;
+  mainHypothesis: string;
+  evidence: string[];
+  nextTest: string;
+  validationGoal: string;
+  safetyNote: string;
+  categoryStrategy: string;
+  recommendedTestId: string | null;
+  recommendedTestName: string | null;
+};
+
+export type AiFeedbackRating =
+  | "helpful"
+  | "partially_helpful"
+  | "not_helpful";
+
 export type DiagnosticDetail = {
   id: string;
   category: string;
@@ -116,6 +133,8 @@ export type DiagnosticDetail = {
     actualResult: string;
     performedAt: string;
     technician: string;
+    requestedByAi: boolean;
+    requestedByAiResponseId: string | null;
   }>;
   measurements: Array<{
     id: string;
@@ -150,6 +169,30 @@ export type DiagnosticDetail = {
     description: string;
     happenedAt: string;
   }>;
+  assistantSnapshot: {
+    latestResponse: {
+      id: string;
+      reasoningSummary: string;
+      recommendedNextStep: string;
+      confidenceScore: string;
+      rawResponseText: string;
+      modelName: string;
+      createdAt: string;
+      structured: AssistantStructuredResponse | null;
+      feedback: {
+        id: string;
+        rating: AiFeedbackRating;
+        wasFollowed: boolean | null;
+        note: string;
+        submittedBy: string;
+        createdAt: string;
+      } | null;
+    } | null;
+    similarCases: SemanticMatchResult[];
+    relatedDocuments: SemanticMatchResult[];
+    provider: string;
+    externalProviderConfigured: boolean;
+  };
 };
 
 export type TechnicalDocumentListItem = {
@@ -217,11 +260,38 @@ export type KnowledgeOverviewData = {
   sourceCount: number;
   embeddingCount: number;
   pendingDocumentCount: number;
+  aiMetrics: {
+    totalResponses: number;
+    feedbackCount: number;
+    followedCount: number;
+    helpfulCount: number;
+    partiallyHelpfulCount: number;
+    notHelpfulCount: number;
+  };
+  aiCategoryBreakdown: Array<{
+    category: string;
+    feedbackCount: number;
+    helpfulCount: number;
+    followedCount: number;
+  }>;
+  topFollowedTests: Array<{
+    testName: string;
+    count: number;
+  }>;
   recentResolvedCases: Array<{
     id: string;
     label: string;
     status: string;
     summary: string;
+    createdAt: string;
+  }>;
+  recentAiFeedback: Array<{
+    id: string;
+    diagnosticId: string;
+    rating: AiFeedbackRating;
+    wasFollowed: boolean | null;
+    note: string;
+    submittedBy: string;
     createdAt: string;
   }>;
 };

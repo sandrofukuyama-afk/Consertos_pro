@@ -31,6 +31,14 @@ O app ja tem:
 - busca textual
 - base de busca semantica
 - pagina de conhecimento consolidado
+- assistente tecnico no detalhe do diagnostico
+- recomendacao salva em `ai_responses`
+- casos semelhantes e documentos relacionados no detalhe do caso
+- vinculo opcional entre recomendacao da IA e teste executado
+- feedback estruturado do tecnico para recomendacoes da IA
+- metricas iniciais da IA em `/conhecimento`
+- heuristica do assistente especializada por categoria
+- comparativo de feedback por categoria e testes mais seguidos
 
 ## Busca semantica
 
@@ -51,10 +59,51 @@ Foi implementado:
 - `src/lib/ai/embeddings.ts`
 - `src/lib/services/semantic.ts`
 - `src/lib/services/search.ts`
+- `src/lib/services/assistant.ts`
+- `src/lib/services/diagnostics.ts`
+- `src/lib/services/semantic.ts`
 - `src/app/conhecimento/page.tsx`
 - `src/app/busca/page.tsx`
+- `src/app/diagnosticos/[id]/page.tsx`
 - `src/app/actions.ts`
 - `supabase/migrations/20260711235319_semantic_search_foundation.sql`
+- `supabase/migrations/20260712113000_ai_feedback_metrics.sql`
+
+## Assistente tecnico
+
+Foi implementado:
+
+- geracao de recomendacao estruturada para o diagnostico atual
+- persistencia da recomendacao em `ai_responses`
+- exibicao de:
+  - resumo tecnico
+  - hipotese principal
+  - evidencias consideradas
+  - proximo teste recomendado
+  - observacao de seguranca
+- recuperacao de:
+  - casos semelhantes
+  - documentos relacionados
+- acao `Usar sugestao no formulario`
+- rastreabilidade com `requested_by_ai_response_id` ao registrar teste
+- timeline agora inclui eventos de recomendacao da IA
+- formulario de feedback para a ultima recomendacao
+- persistencia de feedback em `ai_response_feedback`
+- metricas simples:
+  - total de respostas
+  - total de feedbacks
+  - sugestoes seguidas
+  - helpful / parcial / nao ajudou
+- painel em `/conhecimento` com feedback recente da bancada
+- especializacao inicial da recomendacao para:
+  - desktop
+  - notebook
+  - television
+  - smartphone
+- exibicao da estrategia da categoria dentro da recomendacao
+- painel em `/conhecimento` com:
+  - desempenho por categoria
+  - testes sugeridos com maior adocao
 
 ## Validacao feita
 
@@ -63,7 +112,10 @@ Foi implementado:
 
 ## Bloqueio atual
 
-O codigo esta pronto, mas a migration semantica ainda precisa ser confirmada no banco remoto do Supabase.
+O codigo agora depende de duas migrations novas no banco remoto do Supabase:
+
+- semantic search foundation
+- ai feedback metrics
 
 Comandos esperados no terminal do projeto:
 
@@ -98,13 +150,12 @@ Opcoes:
 
 ## Proximo passo recomendado
 
-Fase 6:
+Fase 6 continua:
 
-- assistente tecnico de diagnostico
-- sugestao do proximo teste
-- justificativa baseada no diagnostico atual
-- consulta a casos semelhantes
-- consulta a documentos relacionados
+- cruzar feedback com periodo e tendencia temporal
+- refinar recomendacao usando sintomas por grupo e resultados anteriores
+- mostrar taxa percentual de aceitacao e helpful por categoria
+- eventualmente trocar a heuristica atual por chamada LLM estruturada quando houver contexto suficiente
 
 ## Observacao importante
 

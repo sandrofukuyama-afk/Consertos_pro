@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireCurrentUser } from "@/lib/auth";
+import { generateDiagnosticAssistantResponse } from "@/lib/services/assistant";
 import {
   syncDiagnosticEmbeddingSource,
   syncResolvedCaseEmbeddingSource,
@@ -137,6 +138,8 @@ export async function addDiagnosticTestAction(formData: FormData) {
 
   const diagnosticId = String(formData.get("diagnostic_id") ?? "");
   const testId = String(formData.get("test_id") ?? "");
+  const requestedByAiResponseId =
+    String(formData.get("requested_by_ai_response_id") ?? "").trim() || null;
   const procedureNotes =
     String(formData.get("procedure_notes") ?? "").trim() || null;
   const actualResult = String(formData.get("actual_result") ?? "").trim() || null;
@@ -160,6 +163,7 @@ export async function addDiagnosticTestAction(formData: FormData) {
     test_id: testId,
     performed_by_user_id: user.id,
     step_order: nextStep,
+    requested_by_ai_response_id: requestedByAiResponseId,
     result_status: resultStatus,
     procedure_notes: procedureNotes,
     actual_result: actualResult,
@@ -259,6 +263,78 @@ export async function addHypothesisAction(formData: FormData) {
   await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   redirect(`/diagnosticos/${diagnosticId}?message=Hipotese registrada.`);
+}
+
+export async function generateDiagnosticAssistantAction(formData: FormData) {
+  await requireCurrentUser();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "");
+
+  if (!diagnosticId) {
+    redirect("/?error=Diagnostico invalido para recomendacao.");
+  }
+
+  try {
+    const result = await generateDiagnosticAssistantResponse(diagnosticId);
+    revalidatePath(`/diagnosticos/${diagnosticId}`);
+    redirect(
+      `/diagnosticos/${diagnosticId}?message=${encodeURIComponent(
+        `Assistente tecnico atualizado com confianca ${result.confidence.toFixed(2)} usando ${result.provider}.`,
+      )}`,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Falha ao gerar recomendacao tecnica.";
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(message)}`);
+  }
+}
+
+export async function saveAssistantFeedbackAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+  const aiResponseId = String(formData.get("ai_response_id") ?? "").trim();
+  const feedbackRating = String(formData.get("feedback_rating") ?? "").trim();
+  const wasFollowedRaw = String(formData.get("was_followed") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  if (!diagnosticId || !aiResponseId || !feedbackRating) {
+    redirect(`/diagnosticos/${diagnosticId || ""}?error=Feedback da IA incompleto.`);
+  }
+
+  const wasFollowed =
+    wasFollowedRaw === "yes" ? true : wasFollowedRaw === "no" ? false : null;
+
+  const { data: existing } = await supabase
+    .from("ai_response_feedback")
+    .select("id")
+    .eq("ai_response_id", aiResponseId)
+    .maybeSingle();
+
+  const payload = {
+    ai_response_id: aiResponseId,
+    diagnostic_id: diagnosticId,
+    feedback_rating: feedbackRating,
+    was_followed: wasFollowed,
+    note,
+    submitted_by_user_id: user.id,
+  };
+
+  const result = existing?.id
+    ? await supabase
+        .from("ai_response_feedback")
+        .update(payload)
+        .eq("id", existing.id)
+    : await supabase.from("ai_response_feedback").insert(payload);
+
+  if (result.error) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(result.error.message)}`);
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  revalidatePath("/conhecimento");
+  redirect(`/diagnosticos/${diagnosticId}?message=Feedback da recomendacao salvo.`);
 }
 
 export async function uploadAttachmentAction(formData: FormData) {

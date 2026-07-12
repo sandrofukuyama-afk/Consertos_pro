@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
@@ -55,12 +56,19 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         diagnostic_test_runs(
           id,
           step_order,
+          requested_by_ai_response_id,
           result_status,
           procedure_notes,
           actual_result,
           performed_at,
           tests(name),
           users!diagnostic_test_runs_performed_by_user_id_fkey(full_name)
+        ),
+        ai_responses(
+          id,
+          reasoning_summary,
+          recommended_next_step,
+          created_at
         ),
         measurements(
           id,
@@ -104,22 +112,25 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const openedBy = pickRelation(data.users);
   const resolvedCase = pickRelation(data.resolved_cases);
 
-  const attachments = await Promise.all(
-    (data.attachments ?? []).map(async (item) => {
-      const { data: signed } = await supabase.storage
-        .from("diagnostic-attachments")
-        .createSignedUrl(item.storage_path, 3600);
+  const [attachments, assistantSnapshot] = await Promise.all([
+    Promise.all(
+      (data.attachments ?? []).map(async (item) => {
+        const { data: signed } = await supabase.storage
+          .from("diagnostic-attachments")
+          .createSignedUrl(item.storage_path, 3600);
 
-      return {
-        id: item.id,
-        title: item.title,
-        description: item.description ?? "Sem descricao.",
-        attachmentType: prettifyStatus(item.attachment_type),
-        uploadedAt: formatRelativeTime(item.created_at),
-        signedUrl: signed?.signedUrl ?? null,
-      };
-    }),
-  );
+        return {
+          id: item.id,
+          title: item.title,
+          description: item.description ?? "Sem descricao.",
+          attachmentType: prettifyStatus(item.attachment_type),
+          uploadedAt: formatRelativeTime(item.created_at),
+          signedUrl: signed?.signedUrl ?? null,
+        };
+      }),
+    ),
+    getDiagnosticAssistantSnapshot(diagnosticId, supabase),
+  ]);
 
   const timeline = [
     ...(data.diagnostic_symptoms ?? []).map((item) => {
@@ -139,11 +150,23 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       return {
         id: `test-${item.id}`,
         kind: "Teste",
-        title: test?.name ?? "Teste executado",
+        title: item.requested_by_ai_response_id
+          ? `${test?.name ?? "Teste executado"} sugerido pela IA`
+          : test?.name ?? "Teste executado",
         description: item.actual_result ?? item.procedure_notes ?? "Sem resultado registrado.",
         happenedAt: item.performed_at ?? new Date().toISOString(),
       };
     }),
+    ...(data.ai_responses ?? []).map((item) => ({
+      id: `ai-response-${item.id}`,
+      kind: "IA",
+      title: "Recomendacao tecnica registrada",
+      description:
+        item.recommended_next_step ??
+        item.reasoning_summary ??
+        "Leitura tecnica salva para orientar o proximo passo.",
+      happenedAt: item.created_at ?? new Date().toISOString(),
+    })),
     ...(data.measurements ?? []).map((item) => ({
       id: `measurement-${item.id}`,
       kind: "Medicao",
@@ -220,6 +243,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         actualResult: item.actual_result ?? "Sem resultado final registrado.",
         performedAt: formatRelativeTime(item.performed_at),
         technician: tech?.full_name ?? "Tecnico interno",
+        requestedByAi: Boolean(item.requested_by_ai_response_id),
+        requestedByAiResponseId: item.requested_by_ai_response_id ?? null,
       };
     }),
     measurements: (data.measurements ?? []).map((item) => {
@@ -254,6 +279,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     })),
     attachments,
     timeline,
+    assistantSnapshot,
   } satisfies DiagnosticDetail;
 }
 

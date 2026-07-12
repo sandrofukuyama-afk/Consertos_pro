@@ -511,8 +511,18 @@ export async function getSemanticSearchResults(
 
 export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData> {
   const supabase = await createClient();
-  const [sourceCountResult, embeddingCountResult, documentBacklogResult, resolvedCasesResult] =
-    await Promise.all([
+  const [
+    sourceCountResult,
+    embeddingCountResult,
+    documentBacklogResult,
+    resolvedCasesResult,
+    aiResponsesCountResult,
+    aiFeedbackResult,
+    aiFollowedRunsResult,
+    recentAiFeedbackResult,
+    categoryFeedbackResult,
+    followedTestsResult,
+  ] = await Promise.all([
       supabase.from("embedding_sources").select("*", { count: "exact", head: true }),
       supabase.from("embeddings").select("*", { count: "exact", head: true }),
       supabase
@@ -532,7 +542,102 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
         )
         .order("created_at", { ascending: false })
         .limit(6),
+      supabase.from("ai_responses").select("*", { count: "exact", head: true }),
+      supabase
+        .from("ai_response_feedback")
+        .select("id, feedback_rating", { count: "exact" })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("diagnostic_test_runs")
+        .select("requested_by_ai_response_id")
+        .not("requested_by_ai_response_id", "is", null),
+      supabase
+        .from("ai_response_feedback")
+        .select(
+          `
+            id,
+            diagnostic_id,
+            feedback_rating,
+            was_followed,
+            note,
+            created_at,
+            users(full_name)
+          `,
+        )
+        .order("created_at", { ascending: false })
+        .limit(6),
+      supabase
+        .from("ai_response_feedback")
+        .select(
+          `
+            id,
+            feedback_rating,
+            was_followed,
+            diagnostics(equipment_categories(name))
+          `,
+        ),
+      supabase
+        .from("diagnostic_test_runs")
+        .select(
+          `
+            requested_by_ai_response_id,
+            tests(name)
+          `,
+        )
+        .not("requested_by_ai_response_id", "is", null),
     ]);
+
+  const feedbackRows =
+    (aiFeedbackResult.data as Array<{ id: string; feedback_rating: string }> | null) ?? [];
+  const followedResponseIds = new Set(
+    ((aiFollowedRunsResult.data as Array<{ requested_by_ai_response_id: string | null }> | null) ??
+      [])
+      .map((item) => item.requested_by_ai_response_id)
+      .filter((item): item is string => Boolean(item)),
+  );
+  const categoryMetricsMap = new Map<
+    string,
+    { category: string; feedbackCount: number; helpfulCount: number; followedCount: number }
+  >();
+
+  for (const row of
+    ((categoryFeedbackResult.data as Array<{
+      feedback_rating: string;
+      was_followed: boolean | null;
+      diagnostics: { equipment_categories: { name: string } | Array<{ name: string }> | null } | null;
+    }> | null) ?? [])) {
+    const diagnostic = pickRelation(row.diagnostics);
+    const category = pickRelation(diagnostic?.equipment_categories)?.name ?? "Nao classificado";
+    const entry = categoryMetricsMap.get(category) ?? {
+      category,
+      feedbackCount: 0,
+      helpfulCount: 0,
+      followedCount: 0,
+    };
+
+    entry.feedbackCount += 1;
+
+    if (row.feedback_rating === "helpful") {
+      entry.helpfulCount += 1;
+    }
+
+    if (row.was_followed === true) {
+      entry.followedCount += 1;
+    }
+
+    categoryMetricsMap.set(category, entry);
+  }
+
+  const followedTestCounts = new Map<string, number>();
+
+  for (const row of
+    ((followedTestsResult.data as Array<{
+      requested_by_ai_response_id: string | null;
+      tests: { name: string } | Array<{ name: string }> | null;
+    }> | null) ?? [])) {
+    const testName = pickRelation(row.tests)?.name ?? "Teste sugerido";
+    followedTestCounts.set(testName, (followedTestCounts.get(testName) ?? 0) + 1);
+  }
 
   return {
     provider: getEmbeddingProviderName(),
@@ -540,6 +645,26 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
     sourceCount: sourceCountResult.count ?? 0,
     embeddingCount: embeddingCountResult.count ?? 0,
     pendingDocumentCount: documentBacklogResult.count ?? 0,
+    aiMetrics: {
+      totalResponses: aiResponsesCountResult.count ?? 0,
+      feedbackCount: aiFeedbackResult.count ?? 0,
+      followedCount: followedResponseIds.size,
+      helpfulCount: feedbackRows.filter((item) => item.feedback_rating === "helpful").length,
+      partiallyHelpfulCount: feedbackRows.filter(
+        (item) => item.feedback_rating === "partially_helpful",
+      ).length,
+      notHelpfulCount: feedbackRows.filter((item) => item.feedback_rating === "not_helpful").length,
+    },
+    aiCategoryBreakdown: [...categoryMetricsMap.values()].sort(
+      (a, b) => b.feedbackCount - a.feedbackCount || a.category.localeCompare(b.category),
+    ),
+    topFollowedTests: [...followedTestCounts.entries()]
+      .map(([testName, count]) => ({
+        testName,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count || a.testName.localeCompare(b.testName))
+      .slice(0, 5),
     recentResolvedCases: (resolvedCasesResult.data ?? []).map((item) => {
       const diagnostic = pickRelation(item.diagnostics);
 
@@ -548,6 +673,19 @@ export async function getKnowledgeOverviewData(): Promise<KnowledgeOverviewData>
         label: diagnostic?.equipment_label ?? "Caso resolvido",
         status: item.case_status,
         summary: item.resolution_summary,
+        createdAt: formatRelativeTime(item.created_at),
+      };
+    }),
+    recentAiFeedback: (recentAiFeedbackResult.data ?? []).map((item) => {
+      const user = pickRelation(item.users);
+
+      return {
+        id: item.id,
+        diagnosticId: item.diagnostic_id,
+        rating: item.feedback_rating as "helpful" | "partially_helpful" | "not_helpful",
+        wasFollowed: item.was_followed ?? null,
+        note: item.note ?? "",
+        submittedBy: user?.full_name ?? "Tecnico interno",
         createdAt: formatRelativeTime(item.created_at),
       };
     }),

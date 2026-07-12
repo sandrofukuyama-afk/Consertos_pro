@@ -5,6 +5,8 @@ import {
   addDiagnosticTestAction,
   addHypothesisAction,
   addMeasurementAction,
+  generateDiagnosticAssistantAction,
+  saveAssistantFeedbackAction,
   uploadAttachmentAction,
 } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
@@ -21,6 +23,8 @@ type DiagnosticDetailPageProps = {
   searchParams: Promise<{
     error?: string;
     message?: string;
+    ai_response_id?: string;
+    suggested_test_id?: string;
   }>;
 };
 
@@ -31,6 +35,8 @@ export default async function DiagnosticDetailPage({
   const user = await requireCurrentUser();
   const { id } = await params;
   const query = await searchParams;
+  const suggestedTestId = query.suggested_test_id?.trim() ?? "";
+  const requestedByAiResponseId = query.ai_response_id?.trim() ?? "";
   const [detail, options] = await Promise.all([
     getDiagnosticDetail(id),
     getDiagnosticFormOptions(id),
@@ -71,7 +77,17 @@ export default async function DiagnosticDetailPage({
                   Relato inicial: {detail.initialReport}
                 </p>
               </div>
-              <StatusPill label={detail.status === "resolved" ? "Resolvido hoje" : detail.status === "waiting input" ? "Aguardando teste" : "Ativo"} />
+              <StatusPill
+                label={
+                  detail.status === "resolved" || detail.status === "Resolvido"
+                    ? "Resolvido hoje"
+                    : detail.status === "waiting input" ||
+                        detail.status === "waiting_input" ||
+                        detail.status === "Aguardando teste"
+                      ? "Aguardando teste"
+                      : "Ativo"
+                }
+              />
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -109,6 +125,287 @@ export default async function DiagnosticDetailPage({
             <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.78)]">
               Este detalhe ja aceita sintomas, testes e medicoes. O proximo degrau e adicionar anexos e historico cronologico unificado.
             </p>
+          </aside>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+            <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                  Assistente tecnico
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                  Proximo passo guiado por contexto
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  Usa o historico do caso, memoria semantica e documentos relacionados para sugerir um unico passo objetivo por vez.
+                </p>
+              </div>
+              <form action={generateDiagnosticAssistantAction}>
+                <input type="hidden" name="diagnostic_id" value={detail.id} />
+                <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
+                  {detail.assistantSnapshot.latestResponse ? "Atualizar recomendacao" : "Gerar recomendacao"}
+                </button>
+              </form>
+            </div>
+
+            {detail.assistantSnapshot.latestResponse ? (
+              <div className="mt-5 grid gap-4">
+                <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                        Ultima leitura registrada
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--muted)]">
+                        Motor {detail.assistantSnapshot.provider} - {detail.assistantSnapshot.latestResponse.createdAt}
+                      </p>
+                    </div>
+                    <StatusPill label={`Confianca ${detail.assistantSnapshot.latestResponse.confidenceScore}`} />
+                  </div>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">Resumo tecnico</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        {detail.assistantSnapshot.latestResponse.structured?.technicalSummary ?? detail.assistantSnapshot.latestResponse.reasoningSummary}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">Hipotese principal</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        {detail.assistantSnapshot.latestResponse.structured?.mainHypothesis ?? "Sem hipotese consolidada na ultima resposta."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-[22px] border border-[rgba(184,109,60,0.18)] bg-white/70 p-4">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">Proximo teste recomendado</p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                      {detail.assistantSnapshot.latestResponse.structured?.nextTest ?? detail.assistantSnapshot.latestResponse.recommendedNextStep}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {detail.assistantSnapshot.latestResponse.structured?.validationGoal ?? "Sem objetivo de validacao detalhado."}
+                    </p>
+                    {detail.assistantSnapshot.latestResponse.structured?.categoryStrategy ? (
+                      <p className="mt-3 text-sm text-[var(--muted)]">
+                        Estrategia da categoria: {detail.assistantSnapshot.latestResponse.structured.categoryStrategy}
+                      </p>
+                    ) : null}
+                    {detail.assistantSnapshot.latestResponse.structured?.recommendedTestId ? (
+                      <Link
+                        href={`/diagnosticos/${detail.id}?ai_response_id=${detail.assistantSnapshot.latestResponse.id}&suggested_test_id=${detail.assistantSnapshot.latestResponse.structured.recommendedTestId}#registrar-teste`}
+                        className="mt-4 inline-flex rounded-full border border-[rgba(184,109,60,0.24)] bg-white px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
+                      >
+                        Usar sugestao no formulario
+                      </Link>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">Evidencias consideradas</p>
+                      <div className="mt-2 space-y-2">
+                        {(detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).length ? (
+                          (detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).map((item) => (
+                            <p
+                              key={item}
+                              className="rounded-[18px] border border-[var(--panel-border)] bg-white/70 px-3 py-2 text-sm text-[var(--muted)]"
+                            >
+                              {item}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-sm text-[var(--muted)]">Nenhuma evidencia estruturada foi salva na ultima rodada.</p>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">Observacao de seguranca</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        {detail.assistantSnapshot.latestResponse.structured?.safetyNote ?? "Sem observacao de seguranca registrada."}
+                      </p>
+                      <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">Modo atual</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                        {detail.assistantSnapshot.externalProviderConfigured
+                          ? "Embeddings externos ativos para recuperar memoria com maior fidelidade semantica."
+                          : "Modo local ativo para manter a recomendacao auditavel mesmo sem provedor externo configurado."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-[22px] border border-[var(--panel-border)] bg-white/70 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          Feedback do tecnico
+                        </p>
+                        <p className="mt-2 text-sm text-[var(--muted)]">
+                          Salve se a recomendacao ajudou e se ela foi seguida de fato na bancada.
+                        </p>
+                      </div>
+                      {detail.assistantSnapshot.latestResponse.feedback ? (
+                        <StatusPill
+                          label={detail.assistantSnapshot.latestResponse.feedback.rating.replaceAll("_", " ")}
+                        />
+                      ) : null}
+                    </div>
+
+                    {detail.assistantSnapshot.latestResponse.feedback ? (
+                      <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] p-4 text-sm text-[var(--foreground)]">
+                        <p>
+                          Ultimo feedback: {detail.assistantSnapshot.latestResponse.feedback.submittedBy} • {detail.assistantSnapshot.latestResponse.feedback.createdAt}
+                        </p>
+                        <p className="mt-2 text-[var(--muted)]">
+                          {detail.assistantSnapshot.latestResponse.feedback.wasFollowed === true
+                            ? "A sugestao foi seguida."
+                            : detail.assistantSnapshot.latestResponse.feedback.wasFollowed === false
+                              ? "A sugestao nao foi seguida."
+                              : "Nao foi informado se a sugestao foi seguida."}
+                        </p>
+                        <p className="mt-2 text-[var(--muted)]">
+                          {detail.assistantSnapshot.latestResponse.feedback.note || "Sem observacao adicional."}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <form action={saveAssistantFeedbackAction} className="mt-4 grid gap-3">
+                      <input type="hidden" name="diagnostic_id" value={detail.id} />
+                      <input
+                        type="hidden"
+                        name="ai_response_id"
+                        value={detail.assistantSnapshot.latestResponse.id}
+                      />
+                      <select
+                        name="feedback_rating"
+                        required
+                        defaultValue={detail.assistantSnapshot.latestResponse.feedback?.rating ?? ""}
+                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+                      >
+                        <option value="" disabled>
+                          Avaliar utilidade
+                        </option>
+                        <option value="helpful">Ajudou bem</option>
+                        <option value="partially_helpful">Ajudou parcialmente</option>
+                        <option value="not_helpful">Nao ajudou</option>
+                      </select>
+                      <select
+                        name="was_followed"
+                        defaultValue={
+                          detail.assistantSnapshot.latestResponse.feedback?.wasFollowed === true
+                            ? "yes"
+                            : detail.assistantSnapshot.latestResponse.feedback?.wasFollowed === false
+                              ? "no"
+                              : ""
+                        }
+                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+                      >
+                        <option value="">Nao informar se foi seguida</option>
+                        <option value="yes">A sugestao foi seguida</option>
+                        <option value="no">A sugestao nao foi seguida</option>
+                      </select>
+                      <textarea
+                        name="note"
+                        rows={3}
+                        defaultValue={detail.assistantSnapshot.latestResponse.feedback?.note ?? ""}
+                        placeholder="Observacao do tecnico sobre a qualidade da recomendacao"
+                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+                      />
+                      <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
+                        Salvar feedback
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-8 text-sm leading-6 text-[var(--muted)]">
+                Ainda nao existe recomendacao salva para este caso. Gere a primeira leitura para registrar resumo tecnico, hipotese dominante e proximo teste sugerido em `ai_responses`.
+              </div>
+            )}
+          </article>
+
+          <aside className="grid gap-4">
+            <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                    Casos semelhantes
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+                    Memoria recuperada
+                  </h3>
+                </div>
+                <p className="text-xs text-[var(--muted)]">
+                  {detail.assistantSnapshot.similarCases.length} itens
+                </p>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {detail.assistantSnapshot.similarCases.length ? (
+                  detail.assistantSnapshot.similarCases.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={item.href ?? "#"}
+                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(184,109,60,0.3)]"
+                    >
+                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                        {item.sourceType} / {item.similarityLabel}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+                      <p className="mt-2 text-xs text-[var(--muted)]">{item.subtitle}</p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">{item.excerpt}</p>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
+                    A memoria semantica ainda nao encontrou casos proximos o bastante para este contexto.
+                  </div>
+                )}
+              </div>
+            </article>
+
+            <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                    Documentos relacionados
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+                    Apoio tecnico imediato
+                  </h3>
+                </div>
+                <p className="text-xs text-[var(--muted)]">
+                  {detail.assistantSnapshot.relatedDocuments.length} itens
+                </p>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {detail.assistantSnapshot.relatedDocuments.length ? (
+                  detail.assistantSnapshot.relatedDocuments.map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.href ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(184,109,60,0.3)]"
+                    >
+                      <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                        {item.sourceType} / {item.similarityLabel}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+                      <p className="mt-2 text-xs text-[var(--muted)]">{item.subtitle}</p>
+                      <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">{item.excerpt}</p>
+                    </a>
+                  ))
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
+                    Ainda nao ha documento tecnico recuperado para reforcar a proxima decisao.
+                  </div>
+                )}
+              </div>
+            </article>
           </aside>
         </section>
 
@@ -186,20 +483,37 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6">
+          <article
+            id="registrar-teste"
+            className="rounded-[28px] border border-[var(--panel-border)] bg-white/85 p-6"
+          >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Testes
             </p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Fluxo da investigacao
             </h3>
+            {requestedByAiResponseId && detail.assistantSnapshot.latestResponse ? (
+              <div className="mt-4 rounded-[22px] border border-[rgba(184,109,60,0.24)] bg-[rgba(184,109,60,0.08)] p-4 text-sm text-[var(--foreground)]">
+                O formulario esta preparado para registrar a sugestao da IA:
+                {" "}
+                {detail.assistantSnapshot.latestResponse.structured?.recommendedTestName ??
+                  detail.assistantSnapshot.latestResponse.structured?.nextTest ??
+                  "teste recomendado"}.
+              </div>
+            ) : null}
 
             <form action={addDiagnosticTestAction} className="mt-5 grid gap-3">
               <input type="hidden" name="diagnostic_id" value={detail.id} />
+              <input
+                type="hidden"
+                name="requested_by_ai_response_id"
+                value={requestedByAiResponseId}
+              />
               <select
                 required
                 name="test_id"
-                defaultValue=""
+                defaultValue={suggestedTestId || ""}
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               >
                 <option value="" disabled>
@@ -254,12 +568,19 @@ export default async function DiagnosticDetailPage({
                         <p className="mt-1 text-xs text-[var(--muted)]">
                           {item.technician} • {item.performedAt}
                         </p>
+                        {item.requestedByAi ? (
+                          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-copper)]">
+                            Sugerido pela IA
+                          </p>
+                        ) : null}
                       </div>
                       <StatusPill
                         label={
-                          item.resultStatus === "waiting_input"
+                          item.resultStatus === "waiting_input" ||
+                          item.resultStatus === "Aguardando teste"
                             ? "Aguardando teste"
-                            : item.resultStatus === "resolved"
+                            : item.resultStatus === "resolved" ||
+                                item.resultStatus === "Resolvido"
                               ? "Resolvido hoje"
                               : "Ativo"
                         }
