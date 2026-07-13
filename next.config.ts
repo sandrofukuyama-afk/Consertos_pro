@@ -2,8 +2,11 @@ import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverActions: {
-    bodySizeLimit: "10mb",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "25mb",
+    },
+    proxyClientMaxBodySize: "25mb",
   },
   serverExternalPackages: ["pdf-parse"],
   turbopack: {
