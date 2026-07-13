@@ -957,6 +957,131 @@ export async function uploadTechnicalDocumentAction(formData: FormData) {
   redirect(`/biblioteca?message=${encodeURIComponent(message)}`);
 }
 
+export async function createLibraryManufacturerAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const name = String(formData.get("name") ?? "").trim();
+  const country = readOptionalText(formData, "country");
+  const notes = readOptionalText(formData, "notes");
+
+  if (!name) {
+    redirect("/biblioteca?error=Informe o nome do fabricante.");
+  }
+
+  const normalizedName = normalizeText(name);
+  const { data: existing } = await supabase
+    .from("manufacturers")
+    .select("id, name")
+    .eq("normalized_name", normalizedName)
+    .maybeSingle();
+
+  if (existing) {
+    redirect(
+      `/biblioteca?message=${encodeURIComponent("Fabricante já existente selecionado.")}&manufacturer_id=${existing.id}`,
+    );
+  }
+
+  const { data: createdManufacturer, error } = await supabase
+    .from("manufacturers")
+    .insert({
+      name,
+      normalized_name: normalizedName,
+      country,
+      notes,
+    })
+    .select("id, name")
+    .single();
+
+  if (error || !createdManufacturer) {
+    redirect(
+      `/biblioteca?error=${encodeURIComponent(error?.message ?? "Falha ao criar fabricante.")}`,
+    );
+  }
+
+  await supabase.from("change_history").insert({
+    entity_type: "manufacturer",
+    entity_id: createdManufacturer.id,
+    change_type: "create",
+    field_name: "all",
+    new_value_text: createdManufacturer.name,
+    change_reason: "Cadastro rápido de fabricante pela biblioteca",
+    changed_by_user_id: user.id,
+  });
+
+  revalidatePath("/biblioteca");
+  revalidatePath("/catalogo-tecnico");
+  redirect(
+    `/biblioteca?message=${encodeURIComponent("Fabricante criado com sucesso.")}&manufacturer_id=${createdManufacturer.id}`,
+  );
+}
+
+export async function createLibraryModelAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const manufacturerId = String(formData.get("manufacturer_id") ?? "").trim();
+  const categoryId = String(formData.get("equipment_category_id") ?? "").trim();
+  const modelName = String(formData.get("model_name") ?? "").trim();
+  const familyName = readOptionalText(formData, "family_name");
+  const revisionLabel = readOptionalText(formData, "revision_label");
+  const releaseNotes = readOptionalText(formData, "release_notes");
+
+  if (!manufacturerId || !categoryId || !modelName) {
+    redirect("/biblioteca?error=Informe fabricante, categoria e nome do modelo.");
+  }
+
+  const normalizedModelName = normalizeText(modelName);
+  const { data: existing } = await supabase
+    .from("equipment_models")
+    .select("id, model_name")
+    .eq("manufacturer_id", manufacturerId)
+    .eq("normalized_model_name", normalizedModelName)
+    .maybeSingle();
+
+  if (existing) {
+    redirect(
+      `/biblioteca?message=${encodeURIComponent("Modelo já existente selecionado.")}&manufacturer_id=${manufacturerId}&model_id=${existing.id}`,
+    );
+  }
+
+  const { data: createdModel, error } = await supabase
+    .from("equipment_models")
+    .insert({
+      manufacturer_id: manufacturerId,
+      equipment_category_id: categoryId,
+      model_name: modelName,
+      normalized_model_name: normalizedModelName,
+      family_name: familyName,
+      revision_label: revisionLabel,
+      release_notes: releaseNotes,
+    })
+    .select("id, model_name")
+    .single();
+
+  if (error || !createdModel) {
+    redirect(
+      `/biblioteca?error=${encodeURIComponent(error?.message ?? "Falha ao criar modelo.")}`,
+    );
+  }
+
+  await supabase.from("change_history").insert({
+    entity_type: "equipment_model",
+    entity_id: createdModel.id,
+    change_type: "create",
+    field_name: "all",
+    new_value_text: createdModel.model_name,
+    change_reason: "Cadastro rápido de modelo pela biblioteca",
+    changed_by_user_id: user.id,
+  });
+
+  revalidatePath("/biblioteca");
+  revalidatePath("/catalogo-tecnico");
+  redirect(
+    `/biblioteca?message=${encodeURIComponent("Modelo criado com sucesso.")}&manufacturer_id=${manufacturerId}&model_id=${createdModel.id}`,
+  );
+}
+
 export async function syncSemanticMemoryAction() {
   await requireCurrentUser();
 

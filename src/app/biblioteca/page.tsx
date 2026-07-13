@@ -8,6 +8,8 @@ type BibliotecaPageProps = {
   searchParams: Promise<{
     error?: string;
     message?: string;
+    manufacturer_id?: string;
+    model_id?: string;
   }>;
 };
 
@@ -123,10 +125,13 @@ export default async function BibliotecaPage({
             </p>
             <div className="mt-5">
               <TechnicalDocumentUploadForm
+                categories={catalog.categories}
                 manufacturers={catalog.manufacturers}
                 models={catalog.models}
                 boards={catalog.boards}
                 components={catalog.components}
+                selectedManufacturerId={params.manufacturer_id}
+                selectedModelId={params.model_id}
               />
             </div>
           </aside>
