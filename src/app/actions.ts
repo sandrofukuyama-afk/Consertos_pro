@@ -17,6 +17,7 @@ import {
   syncSemanticBacklog,
   syncTechnicalDocumentSemanticSource,
 } from "@/lib/services/semantic";
+import { queueDiagnosticSemanticSync } from "@/lib/services/semantic-sync";
 import { createClient } from "@/lib/supabase/server";
 
 function isRedirectError(error: unknown): error is Error & { digest: string } {
@@ -398,7 +399,7 @@ export async function addDiagnosticSymptomAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
-  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
+  void queueDiagnosticSemanticSync(diagnosticId);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Sintoma registrado.`);
@@ -445,7 +446,7 @@ export async function addDiagnosticTestAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
-  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
+  void queueDiagnosticSemanticSync(diagnosticId);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Teste registrado.`);
@@ -492,7 +493,7 @@ export async function addMeasurementAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
-  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
+  void queueDiagnosticSemanticSync(diagnosticId);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   redirect(`/diagnosticos/${diagnosticId}?message=Medição registrada.`);
@@ -532,7 +533,7 @@ export async function addHypothesisAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
   }
 
-  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
+  void queueDiagnosticSemanticSync(diagnosticId);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   redirect(`/diagnosticos/${diagnosticId}?message=Hipótese registrada.`);
 }

@@ -12,6 +12,7 @@ import { AppShell } from "@/components/app-shell";
 import { AttachmentCard } from "@/components/attachment-card";
 import { BoardMeasurementForm } from "@/components/board-measurement-form";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
+import { FormSubmitButton } from "@/components/form-submit-button";
 import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
 import { requireCurrentUser } from "@/lib/auth";
@@ -443,9 +444,10 @@ export default async function DiagnosticDetailPage({
                         placeholder="Observação do técnico sobre a qualidade da recomendação"
                         className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
                       />
-                      <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                        Salvar feedback
-                      </button>
+                      <FormSubmitButton
+                        idleLabel="Salvar feedback"
+                        pendingLabel="Salvando feedback..."
+                      />
                     </form>
                   </div>
                 </div>
@@ -580,9 +582,10 @@ export default async function DiagnosticDetailPage({
                 <input type="checkbox" name="is_primary" />
                 Sintoma principal
               </label>
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Adicionar sintoma
-              </button>
+              <FormSubmitButton
+                idleLabel="Adicionar sintoma"
+                pendingLabel="Salvando sintoma..."
+              />
             </form>
 
             <div className="mt-5 space-y-3">
@@ -679,9 +682,10 @@ export default async function DiagnosticDetailPage({
                 placeholder="Resultado observado"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Registrar teste
-              </button>
+              <FormSubmitButton
+                idleLabel="Registrar teste"
+                pendingLabel="Salvando teste..."
+              />
             </form>
 
             <div className="mt-5 space-y-3">
@@ -771,9 +775,10 @@ export default async function DiagnosticDetailPage({
                 placeholder="Confiança de 0 a 1"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Registrar hipótese
-              </button>
+              <FormSubmitButton
+                idleLabel="Registrar hipótese"
+                pendingLabel="Salvando hipótese..."
+              />
             </form>
 
             <div className="mt-5 space-y-3">
@@ -995,9 +1000,10 @@ export default async function DiagnosticDetailPage({
                 name="file"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
-              <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                Enviar anexo
-              </button>
+              <FormSubmitButton
+                idleLabel="Enviar anexo"
+                pendingLabel="Enviando anexo..."
+              />
             </form>
 
             <div className="mt-5 space-y-3">
