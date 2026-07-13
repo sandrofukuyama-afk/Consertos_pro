@@ -192,7 +192,7 @@ export function EquipmentIntakeForm({
       <CatalogShortcutLinks
         items={[
           { href: "/catalogo-tecnico?tab=categorias", label: "Cadastrar categoria" },
-          { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar fabricante" },
+          { href: "/catalogo-tecnico?tab=fabricantes", label: "Cadastrar fabricante" },
           { href: "/catalogo-tecnico?tab=modelos", label: "Cadastrar modelo" },
         ]}
       />

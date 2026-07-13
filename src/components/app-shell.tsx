@@ -57,7 +57,7 @@ export function AppShell({
             item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
           const displayDescription =
             item.href === "/catalogo-tecnico"
-              ? "Central para categorias, fabricantes, modelos, placas, componentes, sintomas e testes"
+              ? "Central para categorias, fabricantes, tipos de placa, modelos, placas, componentes, sintomas e testes"
               : item.description;
           const isActive =
             item.href === "/"
@@ -140,7 +140,7 @@ export function AppShell({
                   item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
                 const displayDescription =
                   item.href === "/catalogo-tecnico"
-                    ? "Central para categorias, fabricantes, modelos, placas, componentes, sintomas e testes"
+                    ? "Central para categorias, fabricantes, tipos de placa, modelos, placas, componentes, sintomas e testes"
                     : item.description;
                 const isActive = pathname.startsWith(item.href);
                 return (

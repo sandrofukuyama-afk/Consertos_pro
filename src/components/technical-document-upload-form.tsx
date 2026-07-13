@@ -111,7 +111,9 @@ export function TechnicalDocumentUploadForm({
           items={[
             { href: "/catalogo-tecnico?tab=placas", label: "Cadastrar placa" },
             { href: "/catalogo-tecnico?tab=componentes", label: "Cadastrar componente" },
-            { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar categoria" },
+            { href: "/catalogo-tecnico?tab=categorias", label: "Cadastrar categoria" },
+            { href: "/catalogo-tecnico?tab=fabricantes", label: "Cadastrar fabricante" },
+            { href: "/catalogo-tecnico?tab=tipos-de-placa", label: "Cadastrar tipo de placa" },
           ]}
         />
 

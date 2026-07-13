@@ -594,7 +594,7 @@ export default async function DiagnosticDetailPage({
                 title="Faltou um sintoma?"
                 items={[
                   { href: "/catalogo-tecnico?tab=sintomas", label: "Cadastrar sintoma" },
-                  { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar categoria" },
+                  { href: "/catalogo-tecnico?tab=categorias", label: "Cadastrar categoria" },
                 ]}
               />
             </div>

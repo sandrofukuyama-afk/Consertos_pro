@@ -72,7 +72,7 @@ export async function createManufacturerAction(formData: FormData) {
   const notes = readOptionalText(formData, "notes");
 
   if (!name) {
-    redirect("/catalogo-tecnico?tab=geral&error=Nome é obrigatório.");
+    redirect("/catalogo-tecnico?tab=fabricantes&error=Nome é obrigatório.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -87,7 +87,7 @@ export async function createManufacturerAction(formData: FormData) {
     .single();
 
   if (error) {
-    redirect(`/catalogo-tecnico?tab=geral&error=${encodeURIComponent(error.message)}`);
+    redirect(`/catalogo-tecnico?tab=fabricantes&error=${encodeURIComponent(error.message)}`);
   }
 
   if (createdRow) {
@@ -103,7 +103,49 @@ export async function createManufacturerAction(formData: FormData) {
   }
 
   revalidatePath("/catalogo-tecnico");
-  redirect("/catalogo-tecnico?tab=geral&success=Fabricante criado com sucesso!");
+  redirect("/catalogo-tecnico?tab=fabricantes&success=Fabricante criado com sucesso!");
+}
+
+export async function createBoardTypeAction(formData: FormData) {
+  const currentUser = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const name = String(formData.get("name") ?? "").trim();
+  const slug = normalizeText(name).replace(/\s+/g, "-");
+  const description = readOptionalText(formData, "description");
+
+  if (!name) {
+    redirect("/catalogo-tecnico?tab=tipos-de-placa&error=Nome é obrigatório.");
+  }
+
+  const { data: createdRow, error } = await supabase
+    .from("board_types")
+    .insert({
+      name,
+      slug,
+      description,
+    })
+    .select("id, name")
+    .single();
+
+  if (error) {
+    redirect(`/catalogo-tecnico?tab=tipos-de-placa&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "board_type",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.name,
+      change_reason: "Cadastro de novo tipo de placa",
+      changed_by_user_id: currentUser.id,
+    });
+  }
+
+  revalidatePath("/catalogo-tecnico");
+  redirect("/catalogo-tecnico?tab=tipos-de-placa&success=Tipo de placa criado com sucesso!");
 }
 
 export async function createModelAction(formData: FormData) {

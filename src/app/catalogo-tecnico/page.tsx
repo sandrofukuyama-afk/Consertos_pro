@@ -6,6 +6,7 @@ import { getCatalogDashboardData } from "@/lib/services/catalog";
 import {
   createBoardAction,
   createBoardComponentAction,
+  createBoardTypeAction,
   createCategoryAction,
   createManufacturerAction,
   createModelAction,
@@ -50,6 +51,33 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
   const searchLower = q.toLowerCase();
 
   // Filters
+  const filteredCategories = categories.filter((item: any) => {
+    if (!searchLower) return true;
+    return (
+      item.name.toLowerCase().includes(searchLower) ||
+      (item.slug?.toLowerCase() || "").includes(searchLower) ||
+      (item.description?.toLowerCase() || "").includes(searchLower)
+    );
+  });
+
+  const filteredManufacturers = manufacturers.filter((item: any) => {
+    if (!searchLower) return true;
+    return (
+      item.name.toLowerCase().includes(searchLower) ||
+      (item.country?.toLowerCase() || "").includes(searchLower) ||
+      (item.notes?.toLowerCase() || "").includes(searchLower)
+    );
+  });
+
+  const filteredBoardTypes = boardTypes.filter((item: any) => {
+    if (!searchLower) return true;
+    return (
+      item.name.toLowerCase().includes(searchLower) ||
+      (item.slug?.toLowerCase() || "").includes(searchLower) ||
+      (item.description?.toLowerCase() || "").includes(searchLower)
+    );
+  });
+
   const filteredModels = models.filter((item: any) => {
     if (!searchLower) return true;
     return (
@@ -123,6 +151,8 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
 
   const tabs = [
     { id: "categorias", label: "Categorias" },
+    { id: "fabricantes", label: "Fabricantes" },
+    { id: "tipos-de-placa", label: "Tipos de placa" },
     { id: "modelos", label: "Modelos" },
     { id: "placas", label: "Placas" },
     { id: "componentes", label: "Componentes" },
@@ -130,13 +160,12 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     { id: "testes", label: "Testes" },
     { id: "vinculos-modelo-placa", label: "Modelo ↔ Placa" },
     { id: "componentes-placa", label: "Componentes da Placa" },
-    { id: "geral", label: "Geral" },
   ];
 
   return (
     <AppShell
       title="Central de cadastros"
-      description="Aqui ficam categorias, fabricantes, modelos, placas, componentes, sintomas e testes organizados de forma centralizada."
+      description="Aqui ficam categorias, fabricantes, tipos de placa, modelos, placas, componentes, sintomas e testes organizados de forma centralizada."
       user={user}
     >
       <div className="flex flex-col gap-6">
@@ -485,7 +514,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                       </tr>
                     </thead>
                     <tbody>
-                      {categories.map((item: any) => (
+                      {filteredCategories.map((item: any) => (
                         <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                           <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
                           <td className="px-3 py-2 font-mono text-xs">{item.slug}</td>
@@ -497,7 +526,59 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
               </div>
             )}
 
-            {activeTab === "geral" && (
+            {activeTab === "fabricantes" && (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <h4 className="text-md font-semibold text-white mb-2 font-mono uppercase tracking-wider text-xs">Fabricantes</h4>
+                  <div className="rounded-2xl border border-[var(--panel-border)] overflow-hidden">
+                    <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
+                      <thead>
+                        <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-wider text-[var(--muted)] border-b border-[var(--panel-border)]">
+                          <th className="px-3 py-2">Nome</th>
+                          <th className="px-3 py-2">País</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredManufacturers.map((item: any) => (
+                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                            <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
+                            <td className="px-3 py-2 text-xs">{item.country || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "tipos-de-placa" && (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <h4 className="text-md font-semibold text-white mb-2 font-mono uppercase tracking-wider text-xs">Tipos de placa</h4>
+                  <div className="rounded-2xl border border-[var(--panel-border)] overflow-hidden">
+                    <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
+                      <thead>
+                        <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-wider text-[var(--muted)] border-b border-[var(--panel-border)]">
+                          <th className="px-3 py-2">Nome</th>
+                          <th className="px-3 py-2">Slug</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBoardTypes.map((item: any) => (
+                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                            <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
+                            <td className="px-3 py-2 text-xs font-mono">{item.slug || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "__legacy_removed__" && (
               <div className="grid gap-6 md:grid-cols-2">
                 <div>
                   <h4 className="text-md font-semibold text-white mb-2 font-mono uppercase tracking-wider text-xs">Fabricantes</h4>
@@ -1060,7 +1141,79 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
               </form>
             )}
 
-            {activeTab === "geral" && (
+            {activeTab === "fabricantes" && (
+              <form action={createManufacturerAction} className="flex flex-col gap-4">
+                <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white">Criar Fabricante</h4>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Nome da Marca *</span>
+                  <input
+                    required
+                    type="text"
+                    name="name"
+                    placeholder="Ex.: Sony, Philips"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">País de origem</span>
+                  <input
+                    type="text"
+                    name="country"
+                    placeholder="Ex.: Japão, Holanda"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Observações</span>
+                  <textarea
+                    name="notes"
+                    rows={2}
+                    placeholder="Informações adicionais do fabricante."
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <button className="w-full rounded-full bg-[var(--accent-teal)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
+                  Criar Fabricante
+                </button>
+              </form>
+            )}
+
+            {activeTab === "tipos-de-placa" && (
+              <form action={createBoardTypeAction} className="flex flex-col gap-4">
+                <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white">Criar Tipo de Placa</h4>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Nome do tipo *</span>
+                  <input
+                    required
+                    type="text"
+                    name="name"
+                    placeholder="Ex.: Placa-mãe, Fonte, T-Con"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Descrição</span>
+                  <textarea
+                    name="description"
+                    rows={2}
+                    placeholder="Quando esse tipo deve ser usado no catálogo."
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <button className="w-full rounded-full bg-[var(--accent-teal)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
+                  Criar Tipo de Placa
+                </button>
+              </form>
+            )}
+
+            {activeTab === "__legacy_removed__" && (
               <div className="flex flex-col gap-6">
                 <form action={createManufacturerAction} className="flex flex-col gap-4">
                   <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white">Criar Fabricante</h4>
