@@ -11,6 +11,8 @@ import {
   createModelAction,
   createModelBoardAction,
   createComponentAction,
+  createSymptomAction,
+  createTestAction,
 } from "./actions";
 
 type CatalogoPageProps = {
@@ -32,7 +34,18 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
   const q = params.q || "";
 
   const data = await getCatalogDashboardData();
-  const { categories, manufacturers, boardTypes, models, boards, components, modelBoards, boardComponents } = data;
+  const {
+    categories,
+    manufacturers,
+    boardTypes,
+    models,
+    boards,
+    components,
+    symptoms,
+    tests,
+    modelBoards,
+    boardComponents,
+  } = data;
 
   const searchLower = q.toLowerCase();
 
@@ -88,10 +101,32 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     );
   });
 
+  const filteredSymptoms = symptoms.filter((item: any) => {
+    if (!searchLower) return true;
+    return (
+      item.name.toLowerCase().includes(searchLower) ||
+      (item.symptom_group?.toLowerCase() || "").includes(searchLower) ||
+      (item.description?.toLowerCase() || "").includes(searchLower) ||
+      (item.equipment_categories?.name?.toLowerCase() || "").includes(searchLower)
+    );
+  });
+
+  const filteredTests = tests.filter((item: any) => {
+    if (!searchLower) return true;
+    return (
+      item.name.toLowerCase().includes(searchLower) ||
+      (item.test_group?.toLowerCase() || "").includes(searchLower) ||
+      (item.description?.toLowerCase() || "").includes(searchLower) ||
+      (item.default_unit?.toLowerCase() || "").includes(searchLower)
+    );
+  });
+
   const tabs = [
     { id: "modelos", label: "Modelos" },
     { id: "placas", label: "Placas" },
     { id: "componentes", label: "Componentes" },
+    { id: "sintomas", label: "Sintomas" },
+    { id: "testes", label: "Testes" },
     { id: "vinculos-modelo-placa", label: "Modelo ↔ Placa" },
     { id: "componentes-placa", label: "Componentes da Placa" },
     { id: "geral", label: "Geral" },
@@ -99,8 +134,8 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
 
   return (
     <AppShell
-      title="Catálogo técnico mestre"
-      description="Aqui ficam categorias, fabricantes, modelos, placas e componentes organizados de forma centralizada."
+      title="Central de cadastros"
+      description="Aqui ficam categorias, fabricantes, modelos, placas, componentes, sintomas e testes organizados de forma centralizada."
       user={user}
     >
       <div className="flex flex-col gap-6">
@@ -274,6 +309,72 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)]">
                           Nenhum componente cadastrado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === "sintomas" && (
+              <div className="overflow-x-auto rounded-2xl border border-[var(--panel-border)]">
+                <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
+                  <thead>
+                    <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-[0.18em] text-[var(--muted)] border-b border-[var(--panel-border)]">
+                      <th className="px-4 py-3">Sintoma</th>
+                      <th className="px-4 py-3">Categoria</th>
+                      <th className="px-4 py-3">Grupo</th>
+                      <th className="px-4 py-3">Descrição</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSymptoms.length > 0 ? (
+                      filteredSymptoms.map((item: any) => (
+                        <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                          <td className="px-4 py-3 font-semibold text-white">{item.name}</td>
+                          <td className="px-4 py-3">{item.equipment_categories?.name ?? "N/A"}</td>
+                          <td className="px-4 py-3 text-xs">{item.symptom_group || "-"}</td>
+                          <td className="px-4 py-3 text-xs max-w-xs truncate">{item.description || "-"}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-8 text-center text-[var(--muted)]">
+                          Nenhum sintoma cadastrado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === "testes" && (
+              <div className="overflow-x-auto rounded-2xl border border-[var(--panel-border)]">
+                <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
+                  <thead>
+                    <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-[0.18em] text-[var(--muted)] border-b border-[var(--panel-border)]">
+                      <th className="px-4 py-3">Teste</th>
+                      <th className="px-4 py-3">Grupo</th>
+                      <th className="px-4 py-3">Unidade</th>
+                      <th className="px-4 py-3">Descrição</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTests.length > 0 ? (
+                      filteredTests.map((item: any) => (
+                        <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                          <td className="px-4 py-3 font-semibold text-white">{item.name}</td>
+                          <td className="px-4 py-3 text-xs">{item.test_group || "-"}</td>
+                          <td className="px-4 py-3 text-xs">{item.default_unit || "-"}</td>
+                          <td className="px-4 py-3 text-xs max-w-xs truncate">{item.description || "-"}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-8 text-center text-[var(--muted)]">
+                          Nenhum teste cadastrado.
                         </td>
                       </tr>
                     )}
@@ -664,6 +765,110 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
 
                 <button className="w-full rounded-full bg-[var(--accent-copper)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
                   Cadastrar Componente
+                </button>
+              </form>
+            )}
+
+            {activeTab === "sintomas" && (
+              <form action={createSymptomAction} className="flex flex-col gap-4">
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Categoria *</span>
+                  <select
+                    required
+                    name="equipment_category_id"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  >
+                    <option value="">Selecione</option>
+                    {categories.map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Nome do sintoma *</span>
+                  <input
+                    required
+                    type="text"
+                    name="name"
+                    placeholder="Ex.: Não liga, sem imagem, sem áudio"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Grupo do sintoma</span>
+                  <input
+                    type="text"
+                    name="symptom_group"
+                    placeholder="Ex.: alimentação, vídeo, aquecimento"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Descrição</span>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    placeholder="Detalhes para ajudar a equipe a usar esse sintoma."
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <button className="w-full rounded-full bg-[var(--accent-copper)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
+                  Cadastrar Sintoma
+                </button>
+              </form>
+            )}
+
+            {activeTab === "testes" && (
+              <form action={createTestAction} className="flex flex-col gap-4">
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Nome do teste *</span>
+                  <input
+                    required
+                    type="text"
+                    name="name"
+                    placeholder="Ex.: Medir tensão de standby"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Grupo do teste</span>
+                  <input
+                    type="text"
+                    name="test_group"
+                    placeholder="Ex.: alimentação, vídeo, BIOS"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Unidade padrão</span>
+                  <input
+                    type="text"
+                    name="default_unit"
+                    placeholder="Ex.: V, A, ohm, °C"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Descrição</span>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    placeholder="Passo a passo ou contexto de uso do teste."
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <button className="w-full rounded-full bg-[var(--accent-copper)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
+                  Cadastrar Teste
                 </button>
               </form>
             )}

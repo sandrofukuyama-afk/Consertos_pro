@@ -29,7 +29,7 @@ export async function createCategoryAction(formData: FormData) {
   const description = readOptionalText(formData, "description");
 
   if (!name) {
-    redirect("/catalogo-tecnico?tab=categorias&error=Nome é obrigatório.");
+    redirect("/catalogo-tecnico?tab=geral&error=Nome é obrigatório.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -43,7 +43,7 @@ export async function createCategoryAction(formData: FormData) {
     .single();
 
   if (error) {
-    redirect(`/catalogo-tecnico?tab=categorias&error=${encodeURIComponent(error.message)}`);
+    redirect(`/catalogo-tecnico?tab=geral&error=${encodeURIComponent(error.message)}`);
   }
 
   if (createdRow) {
@@ -59,7 +59,7 @@ export async function createCategoryAction(formData: FormData) {
   }
 
   revalidatePath("/catalogo-tecnico");
-  redirect("/catalogo-tecnico?tab=categorias&success=Categoria criada com sucesso!");
+  redirect("/catalogo-tecnico?tab=geral&success=Categoria criada com sucesso!");
 }
 
 export async function createManufacturerAction(formData: FormData) {
@@ -72,7 +72,7 @@ export async function createManufacturerAction(formData: FormData) {
   const notes = readOptionalText(formData, "notes");
 
   if (!name) {
-    redirect("/catalogo-tecnico?tab=fabricantes&error=Nome é obrigatório.");
+    redirect("/catalogo-tecnico?tab=geral&error=Nome é obrigatório.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -87,7 +87,7 @@ export async function createManufacturerAction(formData: FormData) {
     .single();
 
   if (error) {
-    redirect(`/catalogo-tecnico?tab=fabricantes&error=${encodeURIComponent(error.message)}`);
+    redirect(`/catalogo-tecnico?tab=geral&error=${encodeURIComponent(error.message)}`);
   }
 
   if (createdRow) {
@@ -103,7 +103,7 @@ export async function createManufacturerAction(formData: FormData) {
   }
 
   revalidatePath("/catalogo-tecnico");
-  redirect("/catalogo-tecnico?tab=fabricantes&success=Fabricante criado com sucesso!");
+  redirect("/catalogo-tecnico?tab=geral&success=Fabricante criado com sucesso!");
 }
 
 export async function createModelAction(formData: FormData) {
@@ -118,7 +118,7 @@ export async function createModelAction(formData: FormData) {
   const release_notes = readOptionalText(formData, "release_notes");
 
   if (!manufacturer_id || !equipment_category_id || !model_name) {
-    redirect("/catalogo-tecnico?tab=modelos&error=Fabricante, Categoria e Nome do modelo são obrigatórios.");
+    redirect("/catalogo-tecnico?tab=modelos&error=Fabricante, categoria e nome do modelo são obrigatórios.");
   }
 
   const normalized_model_name = normalizeText(model_name);
@@ -169,7 +169,7 @@ export async function createBoardAction(formData: FormData) {
   const notes = readOptionalText(formData, "notes");
 
   if (!board_type_id || !board_code) {
-    redirect("/catalogo-tecnico?tab=placas&error=Tipo de placa e Código da placa são obrigatórios.");
+    redirect("/catalogo-tecnico?tab=placas&error=Tipo de placa e código da placa são obrigatórios.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -219,7 +219,7 @@ export async function createComponentAction(formData: FormData) {
   const notes = readOptionalText(formData, "notes");
 
   if (!component_ref || !component_type) {
-    redirect("/catalogo-tecnico?tab=componentes&error=Referência e Tipo de componente são obrigatórios.");
+    redirect("/catalogo-tecnico?tab=componentes&error=Referência e tipo de componente são obrigatórios.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -268,7 +268,7 @@ export async function createModelBoardAction(formData: FormData) {
   const notes = readOptionalText(formData, "notes");
 
   if (!equipment_model_id || !board_id || !role_label) {
-    redirect("/catalogo-tecnico?tab=vinculos-modelo-placa&error=Modelo, Placa e Função são obrigatórios.");
+    redirect("/catalogo-tecnico?tab=vinculos-modelo-placa&error=Modelo, placa e função são obrigatórios.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -294,13 +294,13 @@ export async function createModelBoardAction(formData: FormData) {
       change_type: "create",
       field_name: "all",
       new_value_text: createdRow.role_label,
-      change_reason: "Vínculo entre Modelo e Placa no catálogo",
+      change_reason: "Vínculo entre modelo e placa no catálogo",
       changed_by_user_id: currentUser.id,
     });
   }
 
   revalidatePath("/catalogo-tecnico");
-  redirect("/catalogo-tecnico?tab=vinculos-modelo-placa&success=Vínculo entre Modelo e Placa criado com sucesso!");
+  redirect("/catalogo-tecnico?tab=vinculos-modelo-placa&success=Vínculo entre modelo e placa criado com sucesso!");
 }
 
 export async function createBoardComponentAction(formData: FormData) {
@@ -317,7 +317,7 @@ export async function createBoardComponentAction(formData: FormData) {
   const notes = readOptionalText(formData, "notes");
 
   if (!board_id || !component_id || !reference_designator) {
-    redirect("/catalogo-tecnico?tab=componentes-placa&error=Placa, Componente e Designador de referência (ex: U3201) são obrigatórios.");
+    redirect("/catalogo-tecnico?tab=componentes-placa&error=Placa, componente e designador de referência são obrigatórios.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -346,11 +346,105 @@ export async function createBoardComponentAction(formData: FormData) {
       change_type: "create",
       field_name: "all",
       new_value_text: createdRow.reference_designator,
-      change_reason: "Vínculo de Componente à Placa no catálogo",
+      change_reason: "Vínculo de componente à placa no catálogo",
       changed_by_user_id: currentUser.id,
     });
   }
 
   revalidatePath("/catalogo-tecnico");
   redirect("/catalogo-tecnico?tab=componentes-placa&success=Componente vinculado à placa com sucesso!");
+}
+
+export async function createSymptomAction(formData: FormData) {
+  const currentUser = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const equipment_category_id = String(formData.get("equipment_category_id") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const description = readOptionalText(formData, "description");
+  const symptom_group = readOptionalText(formData, "symptom_group");
+
+  if (!equipment_category_id || !name) {
+    redirect("/catalogo-tecnico?tab=sintomas&error=Categoria e nome do sintoma são obrigatórios.");
+  }
+
+  const slug = normalizeText(name).replace(/\s+/g, "-");
+
+  const { data: createdRow, error } = await supabase
+    .from("symptoms")
+    .insert({
+      equipment_category_id,
+      name,
+      slug,
+      description,
+      symptom_group,
+    })
+    .select("id, name")
+    .single();
+
+  if (error) {
+    redirect(`/catalogo-tecnico?tab=sintomas&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "symptom",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.name,
+      change_reason: "Cadastro de novo sintoma no catálogo",
+      changed_by_user_id: currentUser.id,
+    });
+  }
+
+  revalidatePath("/catalogo-tecnico");
+  redirect("/catalogo-tecnico?tab=sintomas&success=Sintoma criado com sucesso!");
+}
+
+export async function createTestAction(formData: FormData) {
+  const currentUser = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const name = String(formData.get("name") ?? "").trim();
+  const test_group = readOptionalText(formData, "test_group");
+  const description = readOptionalText(formData, "description");
+  const default_unit = readOptionalText(formData, "default_unit");
+
+  if (!name) {
+    redirect("/catalogo-tecnico?tab=testes&error=Nome do teste é obrigatório.");
+  }
+
+  const slug = normalizeText(name).replace(/\s+/g, "-");
+
+  const { data: createdRow, error } = await supabase
+    .from("tests")
+    .insert({
+      name,
+      slug,
+      test_group,
+      description,
+      default_unit,
+    })
+    .select("id, name")
+    .single();
+
+  if (error) {
+    redirect(`/catalogo-tecnico?tab=testes&error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (createdRow) {
+    await supabase.from("change_history").insert({
+      entity_type: "test",
+      entity_id: createdRow.id,
+      change_type: "create",
+      field_name: "all",
+      new_value_text: createdRow.name,
+      change_reason: "Cadastro de novo teste no catálogo",
+      changed_by_user_id: currentUser.id,
+    });
+  }
+
+  revalidatePath("/catalogo-tecnico");
+  redirect("/catalogo-tecnico?tab=testes&success=Teste criado com sucesso!");
 }

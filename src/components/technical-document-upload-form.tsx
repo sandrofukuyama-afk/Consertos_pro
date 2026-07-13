@@ -3,6 +3,7 @@ import {
   createLibraryModelAction,
   uploadTechnicalDocumentAction,
 } from "@/app/actions";
+import { CatalogShortcutLinks } from "@/components/catalog-shortcut-links";
 import type {
   CatalogOption,
   EquipmentModelCatalogOption,
@@ -105,6 +106,14 @@ export function TechnicalDocumentUploadForm({
             </button>
           </form>
         </details>
+
+        <CatalogShortcutLinks
+          items={[
+            { href: "/catalogo-tecnico?tab=placas", label: "Cadastrar placa" },
+            { href: "/catalogo-tecnico?tab=componentes", label: "Cadastrar componente" },
+            { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar categoria" },
+          ]}
+        />
 
         <select
           form="upload-technical-document"

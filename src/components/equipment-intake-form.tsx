@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
 
+import { CatalogShortcutLinks } from "@/components/catalog-shortcut-links";
 import type { CatalogOption, EquipmentModelCatalogOption } from "@/types/domain";
 
 type EquipmentIntakeFormProps = {
@@ -187,6 +188,14 @@ export function EquipmentIntakeForm({
           <option value={NEW_OPTION}>Cadastrar novo fabricante</option>
         </SelectField>
       </div>
+
+      <CatalogShortcutLinks
+        items={[
+          { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar categoria" },
+          { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar fabricante" },
+          { href: "/catalogo-tecnico?tab=modelos", label: "Cadastrar modelo" },
+        ]}
+      />
 
       {showNewManufacturer ? (
         <Field

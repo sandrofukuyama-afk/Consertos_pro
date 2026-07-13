@@ -53,6 +53,12 @@ export function AppShell({
 
       <nav className="mt-6 flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
         {navItems.map((item) => {
+          const displayLabel =
+            item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
+          const displayDescription =
+            item.href === "/catalogo-tecnico"
+              ? "Central para categorias, fabricantes, modelos, placas, componentes, sintomas e testes"
+              : item.description;
           const isActive =
             item.href === "/"
               ? pathname === "/"
@@ -70,7 +76,7 @@ export function AppShell({
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-semibold tracking-tight">
-                  {item.label}
+                  {displayLabel}
                 </span>
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
@@ -79,7 +85,7 @@ export function AppShell({
                 />
               </div>
               <p className="mt-1.5 text-xs leading-5 text-[rgba(255,245,236,0.68)]">
-                {item.description}
+                {displayDescription}
               </p>
             </Link>
           );
@@ -130,6 +136,12 @@ export function AppShell({
             <p className="text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)] mb-3">Páginas de Suporte</p>
             <div className="grid gap-2">
               {secondaryItems.map((item) => {
+                const displayLabel =
+                  item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
+                const displayDescription =
+                  item.href === "/catalogo-tecnico"
+                    ? "Central para categorias, fabricantes, modelos, placas, componentes, sintomas e testes"
+                    : item.description;
                 const isActive = pathname.startsWith(item.href);
                 return (
                   <Link
@@ -143,8 +155,8 @@ export function AppShell({
                     }`}
                   >
                     <div className="min-w-0">
-                      <span className="text-sm font-semibold tracking-tight block">{item.label}</span>
-                      <span className="text-xs text-[var(--muted)] mt-1 block truncate">{item.description}</span>
+                      <span className="text-sm font-semibold tracking-tight block">{displayLabel}</span>
+                      <span className="text-xs text-[var(--muted)] mt-1 block truncate">{displayDescription}</span>
                     </div>
                     <span className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-[var(--accent-copper)]" : "bg-white/10"}`} />
                   </Link>

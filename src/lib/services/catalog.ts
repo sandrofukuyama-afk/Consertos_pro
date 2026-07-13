@@ -60,6 +60,8 @@ export async function getCatalogDashboardData() {
     models,
     boards,
     components,
+    symptoms,
+    tests,
     modelBoards,
     boardComponents,
   ] = await Promise.all([
@@ -86,6 +88,15 @@ export async function getCatalogDashboardData() {
       .order("board_code"),
     supabase.from("components").select("*").eq("is_active", true).order("component_ref"),
     supabase
+      .from("symptoms")
+      .select(`
+        *,
+        equipment_categories(name)
+      `)
+      .eq("is_active", true)
+      .order("name"),
+    supabase.from("tests").select("*").eq("is_active", true).order("name"),
+    supabase
       .from("model_boards")
       .select(`
         *,
@@ -110,6 +121,8 @@ export async function getCatalogDashboardData() {
     models: models.data ?? [],
     boards: boards.data ?? [],
     components: components.data ?? [],
+    symptoms: symptoms.data ?? [],
+    tests: tests.data ?? [],
     modelBoards: modelBoards.data ?? [],
     boardComponents: boardComponents.data ?? [],
   };

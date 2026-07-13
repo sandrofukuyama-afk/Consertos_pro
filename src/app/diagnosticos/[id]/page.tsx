@@ -11,6 +11,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { AttachmentCard } from "@/components/attachment-card";
 import { BoardMeasurementForm } from "@/components/board-measurement-form";
+import { CatalogShortcutLinks } from "@/components/catalog-shortcut-links";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { MeasurementForm } from "@/components/measurement-form";
@@ -588,6 +589,16 @@ export default async function DiagnosticDetailPage({
               />
             </form>
 
+            <div className="mt-3">
+              <CatalogShortcutLinks
+                title="Faltou um sintoma?"
+                items={[
+                  { href: "/catalogo-tecnico?tab=sintomas", label: "Cadastrar sintoma" },
+                  { href: "/catalogo-tecnico?tab=geral", label: "Cadastrar categoria" },
+                ]}
+              />
+            </div>
+
             <div className="mt-5 space-y-3">
               {detail.symptoms.length ? (
                 detail.symptoms.map((item) => (
@@ -687,6 +698,16 @@ export default async function DiagnosticDetailPage({
                 pendingLabel="Salvando teste..."
               />
             </form>
+
+            <div className="mt-3">
+              <CatalogShortcutLinks
+                title="Faltou um teste?"
+                items={[
+                  { href: "/catalogo-tecnico?tab=testes", label: "Cadastrar teste" },
+                  { href: "/catalogo-tecnico?tab=componentes", label: "Cadastrar componente" },
+                ]}
+              />
+            </div>
 
             <div className="mt-5 space-y-3">
               {detail.tests.length ? (
