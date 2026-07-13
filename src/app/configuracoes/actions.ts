@@ -83,13 +83,20 @@ export async function deleteTechnicianProfileAction(formData: FormData) {
     );
   }
 
-  const { error } = await supabase
+  const { data: deletedProfiles, error } = await supabase
     .from("technician_profiles")
     .delete()
+    .select("id")
     .eq("id", profileId);
 
   if (error) {
     redirect(`/configuracoes?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (!deletedProfiles?.length) {
+    redirect(
+      "/configuracoes?error=O banco bloqueou a exclusao deste perfil. Verifique a policy de delete do technician_profiles no Supabase.",
+    );
   }
 
   await supabase.from("change_history").insert({
