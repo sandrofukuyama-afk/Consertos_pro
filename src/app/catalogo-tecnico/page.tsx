@@ -122,6 +122,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
   });
 
   const tabs = [
+    { id: "categorias", label: "Categorias" },
     { id: "modelos", label: "Modelos" },
     { id: "placas", label: "Placas" },
     { id: "componentes", label: "Componentes" },
@@ -472,30 +473,32 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
             )}
 
             {/* Tab: Categories & Manufacturers */}
+            {activeTab === "categorias" && (
+              <div>
+                <h4 className="text-md font-semibold text-white mb-2 font-mono uppercase tracking-wider text-xs">Categorias</h4>
+                <div className="rounded-2xl border border-[var(--panel-border)] overflow-hidden">
+                  <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
+                    <thead>
+                      <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-wider text-[var(--muted)] border-b border-[var(--panel-border)]">
+                        <th className="px-3 py-2">Nome</th>
+                        <th className="px-3 py-2">Slug</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categories.map((item: any) => (
+                        <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                          <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
+                          <td className="px-3 py-2 font-mono text-xs">{item.slug}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {activeTab === "geral" && (
               <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <h4 className="text-md font-semibold text-white mb-2 font-mono uppercase tracking-wider text-xs">Categorias</h4>
-                  <div className="rounded-2xl border border-[var(--panel-border)] overflow-hidden">
-                    <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
-                      <thead>
-                        <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-wider text-[var(--muted)] border-b border-[var(--panel-border)]">
-                          <th className="px-3 py-2">Nome</th>
-                          <th className="px-3 py-2">Slug</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {categories.map((item: any) => (
-                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
-                            <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
-                            <td className="px-3 py-2 font-mono text-xs">{item.slug}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
                 <div>
                   <h4 className="text-md font-semibold text-white mb-2 font-mono uppercase tracking-wider text-xs">Fabricantes</h4>
                   <div className="rounded-2xl border border-[var(--panel-border)] overflow-hidden">
@@ -1026,39 +1029,39 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
             )}
 
             {/* Form: General Parameters (Categories & Manufacturers) */}
+            {activeTab === "categorias" && (
+              <form action={createCategoryAction} className="flex flex-col gap-4">
+                <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white">Criar Categoria</h4>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Nome da Categoria *</span>
+                  <input
+                    required
+                    type="text"
+                    name="name"
+                    placeholder="Ex.: Game Console, Projetor"
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-sm">
+                  <span className="font-medium">Descrição</span>
+                  <textarea
+                    name="description"
+                    rows={2}
+                    placeholder="Contexto geral da categoria."
+                    className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <button className="w-full rounded-full bg-[var(--accent-teal)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
+                  Criar Categoria
+                </button>
+              </form>
+            )}
+
             {activeTab === "geral" && (
               <div className="flex flex-col gap-6">
-                {/* Category Form */}
-                <form action={createCategoryAction} className="flex flex-col gap-4 border-b border-white/10 pb-6">
-                  <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white">Criar Categoria</h4>
-
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">Nome da Categoria *</span>
-                    <input
-                      required
-                      type="text"
-                      name="name"
-                      placeholder="Ex.: Game Console, Projetor"
-                      className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
-                    />
-                  </label>
-
-                  <label className="grid gap-2 text-sm">
-                    <span className="font-medium">Descrição</span>
-                    <textarea
-                      name="description"
-                      rows={2}
-                      placeholder="Contexto geral da categoria."
-                      className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
-                    />
-                  </label>
-
-                  <button className="w-full rounded-full bg-[var(--accent-teal)] py-3 text-sm font-semibold text-white shadow-md hover:-translate-y-0.5 transition">
-                    Criar Categoria
-                  </button>
-                </form>
-
-                {/* Manufacturer Form */}
                 <form action={createManufacturerAction} className="flex flex-col gap-4">
                   <h4 className="text-sm font-bold font-mono uppercase tracking-wider text-white">Criar Fabricante</h4>
 

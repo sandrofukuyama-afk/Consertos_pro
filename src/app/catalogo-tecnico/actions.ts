@@ -29,7 +29,7 @@ export async function createCategoryAction(formData: FormData) {
   const description = readOptionalText(formData, "description");
 
   if (!name) {
-    redirect("/catalogo-tecnico?tab=geral&error=Nome é obrigatório.");
+    redirect("/catalogo-tecnico?tab=categorias&error=Nome é obrigatório.");
   }
 
   const { data: createdRow, error } = await supabase
@@ -43,7 +43,7 @@ export async function createCategoryAction(formData: FormData) {
     .single();
 
   if (error) {
-    redirect(`/catalogo-tecnico?tab=geral&error=${encodeURIComponent(error.message)}`);
+    redirect(`/catalogo-tecnico?tab=categorias&error=${encodeURIComponent(error.message)}`);
   }
 
   if (createdRow) {
@@ -59,7 +59,7 @@ export async function createCategoryAction(formData: FormData) {
   }
 
   revalidatePath("/catalogo-tecnico");
-  redirect("/catalogo-tecnico?tab=geral&success=Categoria criada com sucesso!");
+  redirect("/catalogo-tecnico?tab=categorias&success=Categoria criada com sucesso!");
 }
 
 export async function createManufacturerAction(formData: FormData) {
