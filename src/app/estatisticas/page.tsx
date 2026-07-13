@@ -239,12 +239,12 @@ export default async function EstatisticasPage() {
                 Por finalidade
               </p>
               <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
-                Onde os tokens estao indo
+                Onde os tokens estão indo
               </h4>
               <div className="mt-4">
                 <StatBarChart
                   accent="teal"
-                  emptyLabel="Ainda nao ha consumo de API suficiente para exibir este corte."
+                  emptyLabel="Ainda não há consumo de API suficiente para exibir este corte."
                   items={stats.apiUsage.byPurpose.map((item) => ({
                     key: item.purpose,
                     label: item.purpose,
@@ -261,7 +261,7 @@ export default async function EstatisticasPage() {
                 Por modelo
               </p>
               <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
-                Distribuicao entre motores
+                Distribuição entre motores
               </h4>
               <div className="mt-4 space-y-3">
                 {stats.apiUsage.byModel.length ? (
@@ -292,7 +292,7 @@ export default async function EstatisticasPage() {
                   ))
                 ) : (
                   <div className="rounded-[20px] border border-dashed border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-6 text-sm text-[var(--muted)]">
-                    Ainda nao ha chamadas registradas.
+                    Ainda não há chamadas registradas.
                   </div>
                 )}
               </div>
@@ -301,15 +301,15 @@ export default async function EstatisticasPage() {
 
           <div className="mt-6 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-              Ultimos 7 dias
+              Últimos 7 dias
             </p>
             <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
-              Evolucao diaria do consumo
+              Evolução diária do consumo
             </h4>
             <div className="mt-4">
               <StatBarChart
                 accent="copper"
-                emptyLabel="Ainda nao ha historico recente de consumo."
+                emptyLabel="Ainda não há histórico recente de consumo."
                 items={stats.apiUsage.recentDaily.map((item) => ({
                   key: item.dayLabel,
                   label: item.dayLabel,

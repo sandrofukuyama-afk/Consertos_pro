@@ -719,7 +719,7 @@ export async function extractAttachmentComponentRefAction(
   const supabase = await createClient();
 
   if (!diagnosticId || !attachmentId) {
-    throw new Error("Anexo invalido para OCR.");
+    throw new Error("Anexo inválido para OCR.");
   }
 
   const { data: attachment } = await supabase
@@ -729,7 +729,7 @@ export async function extractAttachmentComponentRefAction(
     .maybeSingle();
 
   if (!attachment || !attachment.mime_type.startsWith("image/")) {
-    throw new Error("Este anexo nao e uma imagem utilizavel para OCR.");
+    throw new Error("Este anexo não é uma imagem utilizável para OCR.");
   }
 
   const { data: signed } = await supabase.storage
@@ -737,13 +737,13 @@ export async function extractAttachmentComponentRefAction(
     .createSignedUrl(attachment.storage_path, 300);
 
   if (!signed?.signedUrl) {
-    throw new Error("Nao foi possivel gerar acesso temporario a imagem.");
+    throw new Error("Não foi possível gerar acesso temporário à imagem.");
   }
 
   const result = await extractComponentReferenceFromImage(signed.signedUrl);
 
   if (!result) {
-    throw new Error("OCR de componentes nao esta configurado.");
+    throw new Error("OCR de componentes não está configurado.");
   }
 
   return result;

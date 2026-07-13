@@ -19,7 +19,6 @@ export async function updateTechnicianProfileAction(formData: FormData) {
     redirect("/configuracoes?error=ID do perfil não fornecido.");
   }
 
-  // Update the technician profile
   const { error } = await supabase
     .from("technician_profiles")
     .update({
@@ -33,7 +32,6 @@ export async function updateTechnicianProfileAction(formData: FormData) {
     redirect(`/configuracoes?error=${encodeURIComponent(error.message)}`);
   }
 
-  // Record change history manually since it's a manual edit in settings
   await supabase.from("change_history").insert({
     entity_type: "technician_profile",
     entity_id: profileId,
@@ -55,7 +53,7 @@ export async function deleteTechnicianProfileAction(formData: FormData) {
   const profileId = String(formData.get("profile_id") ?? "").trim();
 
   if (!profileId) {
-    redirect("/configuracoes?error=ID do perfil nao fornecido.");
+    redirect("/configuracoes?error=ID do perfil não fornecido.");
   }
 
   const { data: profile } = await supabase
@@ -65,11 +63,11 @@ export async function deleteTechnicianProfileAction(formData: FormData) {
     .maybeSingle();
 
   if (!profile) {
-    redirect("/configuracoes?error=Perfil nao encontrado.");
+    redirect("/configuracoes?error=Perfil não encontrado.");
   }
 
   if (profile.user_id === currentUser.id) {
-    redirect("/configuracoes?error=Voce nao pode excluir o proprio perfil.");
+    redirect("/configuracoes?error=Você não pode excluir o próprio perfil.");
   }
 
   const { count: assignedDiagnosticsCount } = await supabase
@@ -79,7 +77,7 @@ export async function deleteTechnicianProfileAction(formData: FormData) {
 
   if ((assignedDiagnosticsCount ?? 0) > 0) {
     redirect(
-      "/configuracoes?error=Este tecnico ainda esta vinculado a diagnosticos atribuidos. Reatribua os casos antes de excluir o perfil.",
+      "/configuracoes?error=Este técnico ainda está vinculado a diagnósticos atribuídos. Reatribua os casos antes de excluir o perfil.",
     );
   }
 
@@ -95,7 +93,7 @@ export async function deleteTechnicianProfileAction(formData: FormData) {
 
   if (!deletedProfiles?.length) {
     redirect(
-      "/configuracoes?error=O banco bloqueou a exclusao deste perfil. Verifique a policy de delete do technician_profiles no Supabase.",
+      "/configuracoes?error=O banco bloqueou a exclusão deste perfil. Verifique a policy de delete do technician_profiles no Supabase.",
     );
   }
 
@@ -105,10 +103,10 @@ export async function deleteTechnicianProfileAction(formData: FormData) {
     change_type: "delete",
     field_name: "display_name",
     old_value_text: profile.display_name,
-    change_reason: "Exclusao de perfil nas configuracoes",
+    change_reason: "Exclusão de perfil nas configurações",
     changed_by_user_id: currentUser.id,
   });
 
   revalidatePath("/configuracoes");
-  redirect("/configuracoes?success=Perfil excluido com sucesso.");
+  redirect("/configuracoes?success=Perfil excluído com sucesso.");
 }

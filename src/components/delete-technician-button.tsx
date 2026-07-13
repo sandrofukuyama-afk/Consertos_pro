@@ -24,7 +24,7 @@ export function DeleteTechnicianButton({ profileId }: { profileId: string }) {
       action={deleteTechnicianProfileAction}
       onSubmit={(event) => {
         const confirmed = window.confirm(
-          "Excluir este perfil de tecnico? Esta acao remove o perfil operacional da lista.",
+          "Excluir este perfil de técnico? Esta ação remove o perfil operacional da lista.",
         );
 
         if (!confirmed) {

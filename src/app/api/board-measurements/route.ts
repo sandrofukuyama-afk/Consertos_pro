@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     if (!boardId || !componentRef || !measurementPoint || !expectedValue) {
       return NextResponse.json(
-        { error: "Preencha todos os campos obrigatorios para salvar a medicao." },
+        { error: "Preencha todos os campos obrigatórios para salvar a medição." },
         { status: 400 },
       );
     }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json(
-        { error: `Falha ao registrar medicao de referencia: ${error.message}` },
+        { error: `Falha ao registrar medição de referência: ${error.message}` },
         { status: 400 },
       );
     }
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Falha ao registrar medicao de referencia.",
+            : "Falha ao registrar medição de referência.",
       },
       { status: 500 },
     );

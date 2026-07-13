@@ -12,7 +12,7 @@ import type {
 export const navItems: NavItem[] = [
   {
     href: "/",
-    label: "Diagnosticos",
+    label: "Diagnósticos",
     description: "Casos, timeline e próximos testes",
   },
   {

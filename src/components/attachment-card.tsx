@@ -71,7 +71,7 @@ export function AttachmentCard({
       formData.append("attachment_id", item.id);
       await analyzeAttachmentImageAction(formData);
     } catch (error) {
-      console.error("Erro na analise:", error);
+      console.error("Erro na análise:", error);
     } finally {
       setIsAnalyzing(false);
     }
@@ -195,7 +195,7 @@ export function AttachmentCard({
           {item.imageAnalysis ? (
             <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4 text-xs text-[rgba(255,245,236,0.85)]">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-teal)]">
-                Analise de imagem por IA • confianca {item.imageAnalysis.confidence} •{" "}
+                Análise de imagem por IA • confiança {item.imageAnalysis.confidence} •{" "}
                 {item.imageAnalysis.analyzedAt}
               </p>
               <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -210,7 +210,7 @@ export function AttachmentCard({
               ) : null}
               {item.imageAnalysis.recommendation ? (
                 <p className="mt-2 text-[rgba(255,245,236,0.6)]">
-                  Recomendacao: {item.imageAnalysis.recommendation}
+                  Recomendação: {item.imageAnalysis.recommendation}
                 </p>
               ) : null}
             </div>
@@ -234,7 +234,7 @@ export function AttachmentCard({
             OCR assistido de componente
           </p>
           <p className="mt-1 text-xs text-[rgba(255,245,236,0.62)]">
-            Le a serigrafia visivel da foto e cruza com a base de medicao desta placa.
+            Lê a serigrafia visível da foto e cruza com a base de medição desta placa.
           </p>
 
           {ocrError ? (
@@ -250,10 +250,10 @@ export function AttachmentCard({
                   Leitura atual
                 </p>
                 <p className="mt-2 text-base font-semibold text-white">
-                  {ocrResult.componentRef ?? "Sem referencia confiavel"}
+                  {ocrResult.componentRef ?? "Sem referência confiável"}
                 </p>
                 <p className="mt-1 text-xs text-[rgba(255,245,236,0.62)]">
-                  Confianca {ocrResult.confidence}
+                  Confiança {ocrResult.confidence}
                 </p>
                 <p className="mt-2 text-xs leading-5 text-[rgba(255,245,236,0.72)]">
                   {ocrResult.rationale}
@@ -264,7 +264,7 @@ export function AttachmentCard({
                 matchedMeasurements.length ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-teal)]">
-                      Medicoes de referencia encontradas
+                      Medições de referência encontradas
                     </p>
                     {matchedMeasurements.map((measurement) => (
                       <div
@@ -292,7 +292,7 @@ export function AttachmentCard({
                   </div>
                 ) : (
                   <p className="rounded-[16px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-3 py-3 text-xs text-[var(--muted)]">
-                    A referencia foi lida, mas ainda nao existe medicao cadastrada para{" "}
+                    A referência foi lida, mas ainda não existe medição cadastrada para{" "}
                     {ocrResult.componentRef} nesta placa.
                   </p>
                 )

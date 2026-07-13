@@ -81,7 +81,7 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Falha ao sincronizar medicao offline.");
+        throw new Error(payload?.error ?? "Falha ao sincronizar medição offline.");
       }
 
       await removeOfflineRecord(record.id);
@@ -90,7 +90,7 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
 
     await loadPendingItems();
     if (syncedCount > 0) {
-      setSyncMessage(`${syncedCount} medicao(oes) offline sincronizada(s).`);
+      setSyncMessage(`${syncedCount} medição(ões) offline sincronizada(s).`);
       setSyncError(null);
       router.refresh();
     }
@@ -139,7 +139,7 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
       return null;
     }
 
-    return `${pendingItems.length} medicao(oes) aguardando sincronizacao`;
+    return `${pendingItems.length} medição(ões) aguardando sincronização`;
   }, [pendingItems.length]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -153,7 +153,7 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
         await enqueueOfflineRecord("measurements", form);
         await loadPendingItems();
         resetForm();
-        setSyncMessage("Sem conexao: a medicao foi guardada no aparelho e sera enviada quando a internet voltar.");
+        setSyncMessage("Sem conexão: a medição foi guardada no aparelho e será enviada quando a internet voltar.");
         return;
       }
 
@@ -167,14 +167,14 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Falha ao registrar medicao.");
+        throw new Error(payload?.error ?? "Falha ao registrar medição.");
       }
 
       resetForm();
-      setSyncMessage("Medicao registrada com sucesso.");
+      setSyncMessage("Medição registrada com sucesso.");
       router.refresh();
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Falha ao registrar medicao.");
+      setSyncError(error instanceof Error ? error.message : "Falha ao registrar medição.");
     } finally {
       setIsSubmitting(false);
     }
@@ -198,14 +198,14 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
           className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
         >
           <option value="" disabled>
-            Tipo de medicao
+            Tipo de medição
           </option>
-          <option value="voltage">Tensao</option>
+          <option value="voltage">Tensão</option>
           <option value="current">Corrente</option>
-          <option value="resistance">Resistencia</option>
+          <option value="resistance">Resistência</option>
           <option value="temperature">Temperatura</option>
           <option value="consumption">Consumo</option>
-          <option value="frequency">Frequencia</option>
+          <option value="frequency">Frequência</option>
           <option value="continuity">Continuidade</option>
           <option value="other">Outra</option>
         </select>
@@ -224,7 +224,7 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
             onChange={(event) =>
               setForm((current) => ({ ...current, measuredValueNumeric: event.target.value }))
             }
-            placeholder="Valor numerico"
+            placeholder="Valor numérico"
             className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
           />
           <input
@@ -254,7 +254,7 @@ export function MeasurementForm({ diagnosticId }: { diagnosticId: string }) {
           disabled={isSubmitting}
           className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {isSubmitting ? "Salvando..." : isOnline ? "Registrar medicao" : "Guardar offline"}
+          {isSubmitting ? "Salvando..." : isOnline ? "Registrar medição" : "Salvar offline"}
         </button>
       </form>
     </div>

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const measuredValueNumeric = measuredValueNumericRaw ? Number(measuredValueNumericRaw) : null;
 
     if (!diagnosticId || !measurementType) {
-      return NextResponse.json({ error: "Medicao invalida." }, { status: 400 });
+      return NextResponse.json({ error: "Medição inválida." }, { status: 400 });
     }
 
     const { error } = await supabase.from("measurements").insert({
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Falha ao registrar medicao." },
+      { error: error instanceof Error ? error.message : "Falha ao registrar medição." },
       { status: 500 },
     );
   }

@@ -99,7 +99,7 @@ export function BoardMeasurementForm({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Falha ao sincronizar medicao de referencia offline.");
+        throw new Error(payload?.error ?? "Falha ao sincronizar medição de referência offline.");
       }
 
       await removeOfflineRecord(record.id);
@@ -108,7 +108,7 @@ export function BoardMeasurementForm({
 
     await loadPendingItems();
     if (syncedCount > 0) {
-      setSyncMessage(`${syncedCount} medicao(oes) de referencia sincronizada(s).`);
+      setSyncMessage(`${syncedCount} medição(ões) de referência sincronizada(s).`);
       setSyncError(null);
       router.refresh();
     }
@@ -135,7 +135,7 @@ export function BoardMeasurementForm({
       setIsOnline(true);
       syncPendingItems().catch((error) => {
         setSyncError(
-          error instanceof Error ? error.message : "Falha ao sincronizar fila de referencia.",
+          error instanceof Error ? error.message : "Falha ao sincronizar fila de referência.",
         );
       });
     };
@@ -159,7 +159,7 @@ export function BoardMeasurementForm({
       return null;
     }
 
-    return `${pendingItems.length} medicao(oes) de referencia aguardando sincronizacao`;
+    return `${pendingItems.length} medição(ões) de referência aguardando sincronização`;
   }, [pendingItems.length]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -173,7 +173,7 @@ export function BoardMeasurementForm({
         await enqueueOfflineRecord("board-measurements", form);
         await loadPendingItems();
         resetForm();
-        setSyncMessage("Sem conexao: a medicao de referencia foi salva no aparelho e sera enviada depois.");
+        setSyncMessage("Sem conexão: a medição de referência foi salva no aparelho e será enviada depois.");
         return;
       }
 
@@ -187,15 +187,15 @@ export function BoardMeasurementForm({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Falha ao registrar medicao de referencia.");
+        throw new Error(payload?.error ?? "Falha ao registrar medição de referência.");
       }
 
       resetForm();
-      setSyncMessage("Medicao de referencia registrada com sucesso.");
+      setSyncMessage("Medição de referência registrada com sucesso.");
       router.refresh();
     } catch (error) {
       setSyncError(
-        error instanceof Error ? error.message : "Falha ao registrar medicao de referencia.",
+        error instanceof Error ? error.message : "Falha ao registrar medição de referência.",
       );
     } finally {
       setIsSubmitting(false);
@@ -231,7 +231,7 @@ export function BoardMeasurementForm({
             type="text"
             value={form.componentRef}
             onChange={(event) => setForm((current) => ({ ...current, componentRef: event.target.value }))}
-            placeholder="Ex: PL401, C2800"
+            placeholder="Ex.: PL401, C2800"
             className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-white outline-none"
           />
           <input
@@ -241,7 +241,7 @@ export function BoardMeasurementForm({
             onChange={(event) =>
               setForm((current) => ({ ...current, measurementPoint: event.target.value }))
             }
-            placeholder="Ex: Pin 1, Output"
+            placeholder="Ex.: pino 1, saída"
             className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-white outline-none"
           />
         </div>
@@ -253,7 +253,7 @@ export function BoardMeasurementForm({
             onChange={(event) =>
               setForm((current) => ({ ...current, expectedValue: event.target.value }))
             }
-            placeholder="Ex: 3.3V, 450R"
+            placeholder="Ex.: 3,3 V, 450 R"
             className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-white outline-none"
           />
           <select
@@ -261,16 +261,16 @@ export function BoardMeasurementForm({
             onChange={(event) => setForm((current) => ({ ...current, condition: event.target.value }))}
             className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-white outline-none"
           >
-            <option value="power_off">Sem Alimentacao</option>
-            <option value="power_on">Placa Ligada</option>
-            <option value="diode_mode">Escala de Diodo</option>
+            <option value="power_off">Sem alimentação</option>
+            <option value="power_on">Placa ligada</option>
+            <option value="diode_mode">Escala de diodo</option>
           </select>
         </div>
         <textarea
           rows={2}
           value={form.notes}
           onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-          placeholder="Macetes adicionais da medicao (Opcional)"
+          placeholder="Observações adicionais da medição (opcional)"
           className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-white outline-none"
         />
         <button
@@ -278,11 +278,7 @@ export function BoardMeasurementForm({
           disabled={isSubmitting || !boards.length || !form.boardId}
           className="w-full rounded-full bg-[var(--accent-teal)] px-5 py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
         >
-          {isSubmitting
-            ? "Salvando..."
-            : isOnline
-              ? "Registrar na base"
-              : "Guardar offline"}
+          {isSubmitting ? "Salvando..." : isOnline ? "Registrar na base" : "Salvar offline"}
         </button>
       </form>
     </div>

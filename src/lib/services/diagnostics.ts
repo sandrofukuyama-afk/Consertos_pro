@@ -27,7 +27,7 @@ function prettifyStatus(value: string) {
 
 function formatEquipmentDetailValue(value: string | number | boolean) {
   if (typeof value === "boolean") {
-    return value ? "Sim" : "Nao";
+    return value ? "Sim" : "Não";
   }
 
   return String(value);
