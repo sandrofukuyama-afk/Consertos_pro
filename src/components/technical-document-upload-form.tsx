@@ -21,13 +21,13 @@ export function TechnicalDocumentUploadForm({
         type="text"
         name="title"
         placeholder="Título do documento"
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       />
       <select
         required
         name="document_type"
         defaultValue=""
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       >
         <option value="" disabled>
           Tipo do documento
@@ -45,7 +45,7 @@ export function TechnicalDocumentUploadForm({
       <select
         name="manufacturer_id"
         defaultValue=""
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       >
         <option value="">
           Fabricante (Opcional se houver outro vínculo)
@@ -60,7 +60,7 @@ export function TechnicalDocumentUploadForm({
       <select
         name="equipment_model_id"
         defaultValue=""
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       >
         <option value="">
           Modelo do equipamento (Opcional)
@@ -75,7 +75,7 @@ export function TechnicalDocumentUploadForm({
       <select
         name="board_id"
         defaultValue=""
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       >
         <option value="">
           Placa de circuito (Opcional)
@@ -90,7 +90,7 @@ export function TechnicalDocumentUploadForm({
       <select
         name="component_id"
         defaultValue=""
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       >
         <option value="">
           Componente específico (Opcional)
@@ -106,15 +106,15 @@ export function TechnicalDocumentUploadForm({
         name="notes"
         rows={3}
         placeholder="Observações ou contexto técnico"
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       />
       <input
         required
         type="file"
         name="file"
-        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
       />
-      <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white hover:brightness-110 active:scale-98 transition-all">
+      <button className="w-full rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white hover:brightness-110 active:scale-98 transition-all">
         Enviar documento
       </button>
     </form>
