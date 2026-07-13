@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import type { CatalogOption, EquipmentModelCatalogOption } from "@/types/domain";
 
@@ -114,6 +114,7 @@ export function EquipmentIntakeForm({
   const [categoryId, setCategoryId] = useState("");
   const [manufacturerId, setManufacturerId] = useState("");
   const [modelId, setModelId] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   const selectedCategory = categories.find((item) => item.id === categoryId) ?? null;
   const categorySlug = normalizeCategoryName(selectedCategory?.name ?? "");
@@ -131,8 +132,17 @@ export function EquipmentIntakeForm({
   const showNewModel =
     modelId === NEW_OPTION || (showNewManufacturer && categoryId.length > 0);
 
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    startTransition(async () => {
+      await action(formData);
+    });
+  };
+
   return (
-    <form action={action} className="mt-6 grid gap-5">
+    <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
       {error ? (
         <div className="rounded-2xl border border-[rgba(202,106,85,0.28)] bg-[rgba(202,106,85,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
           {error}
@@ -431,8 +441,11 @@ export function EquipmentIntakeForm({
       </label>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-          Cadastrar equipamento
+        <button 
+          disabled={isPending}
+          className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {isPending ? "Cadastrando..." : "Cadastrar equipamento"}
         </button>
         <Link
           href="/"
