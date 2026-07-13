@@ -47,3 +47,61 @@ export async function updateTechnicianProfileAction(formData: FormData) {
   revalidatePath("/configuracoes");
   redirect("/configuracoes?success=Perfil atualizado com sucesso!");
 }
+
+export async function deleteTechnicianProfileAction(formData: FormData) {
+  const currentUser = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const profileId = String(formData.get("profile_id") ?? "").trim();
+
+  if (!profileId) {
+    redirect("/configuracoes?error=ID do perfil nao fornecido.");
+  }
+
+  const { data: profile } = await supabase
+    .from("technician_profiles")
+    .select("id, user_id, display_name")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  if (!profile) {
+    redirect("/configuracoes?error=Perfil nao encontrado.");
+  }
+
+  if (profile.user_id === currentUser.id) {
+    redirect("/configuracoes?error=Voce nao pode excluir o proprio perfil.");
+  }
+
+  const { count: assignedDiagnosticsCount } = await supabase
+    .from("diagnostics")
+    .select("id", { count: "exact", head: true })
+    .eq("assigned_technician_id", profileId);
+
+  if ((assignedDiagnosticsCount ?? 0) > 0) {
+    redirect(
+      "/configuracoes?error=Este tecnico ainda esta vinculado a diagnosticos atribuidos. Reatribua os casos antes de excluir o perfil.",
+    );
+  }
+
+  const { error } = await supabase
+    .from("technician_profiles")
+    .delete()
+    .eq("id", profileId);
+
+  if (error) {
+    redirect(`/configuracoes?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await supabase.from("change_history").insert({
+    entity_type: "technician_profile",
+    entity_id: profileId,
+    change_type: "delete",
+    field_name: "display_name",
+    old_value_text: profile.display_name,
+    change_reason: "Exclusao de perfil nas configuracoes",
+    changed_by_user_id: currentUser.id,
+  });
+
+  revalidatePath("/configuracoes");
+  redirect("/configuracoes?success=Perfil excluido com sucesso.");
+}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
+import { DeleteTechnicianButton } from "@/components/delete-technician-button";
 import { requireCurrentUser } from "@/lib/auth";
 import { getSettingsDashboardData } from "@/lib/services/settings";
 import { formatRelativeTime } from "@/lib/utils";
@@ -141,7 +142,8 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                             )}
                           </div>
 
-                          <div className="pt-2 border-t border-white/5 flex justify-end">
+                          <div className="pt-2 border-t border-white/5 flex items-center justify-end gap-4">
+                            <DeleteTechnicianButton profileId={profile.id} />
                             <Link
                               href={`/configuracoes?tab=tecnicos&editProfileId=${profile.id}`}
                               className="text-xs font-semibold text-[var(--accent-copper)] hover:text-white transition"
@@ -379,6 +381,10 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                     >
                       Cancelar
                     </Link>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-4">
+                    <DeleteTechnicianButton profileId={profileToEdit.id} />
                   </div>
                 </form>
               </div>
