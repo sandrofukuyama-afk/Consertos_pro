@@ -162,7 +162,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           board_id,
           role_label,
           is_primary,
-          boards(board_code, name)
+          boards(board_code, description)
         )
       `,
     )
@@ -298,7 +298,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       roleLabel: item.role_label,
       isPrimary: item.is_primary,
       boardCode: board?.board_code ?? null,
-      name: board?.name ?? null,
+      name: board?.description ?? board?.board_code ?? null,
     };
   });
 
