@@ -484,7 +484,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
 
                     <button
                       type="submit"
-                      className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5"
+                      className="rounded-full border border-[rgba(255,248,240,0.12)] bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold tracking-[0.01em] text-white shadow-lg shadow-[rgba(184,109,60,0.24)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-[rgba(184,109,60,0.5)] disabled:text-white disabled:opacity-100"
                     >
                       Criar novo usuário
                     </button>
