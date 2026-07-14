@@ -47,7 +47,7 @@ export function ModulePage({
         </section>
 
         <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
             Checklist do MVP
           </p>
           <div className="mt-5 space-y-4">
@@ -59,7 +59,7 @@ export function ModulePage({
             ].map((item) => (
               <div
                 key={item}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-[rgba(255,245,236,0.8)]"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-[rgba(230,228,245,0.8)]"
               >
                 {item}
               </div>

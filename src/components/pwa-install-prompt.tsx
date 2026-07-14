@@ -76,14 +76,14 @@ export function PwaInstallPrompt() {
 
   return (
     <div className="fixed inset-x-3 bottom-22 z-50 md:inset-x-auto md:right-6 md:bottom-6 md:w-[360px]">
-      <section className="rounded-[28px] border border-[rgba(109, 94, 242,0.34)] bg-[rgba(16,13,11,0.96)] p-4 text-white shadow-[0_18px_48px_rgba(0,0,0,0.42)] backdrop-blur">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)]">
+      <section className="rounded-[28px] border border-[rgba(109,94,242,0.34)] bg-[rgba(16,15,22,0.96)] p-4 text-white shadow-[0_18px_48px_rgba(0,0,0,0.42)] backdrop-blur">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(230,228,245,0.58)]">
           Instalar aplicativo
         </p>
         <h2 className="mt-2 font-[family-name:var(--font-heading)] text-xl font-semibold tracking-tight">
           Leve o ConsertosPro para a bancada
         </h2>
-        <p className="mt-2 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
+        <p className="mt-2 text-sm leading-6 text-[rgba(230,228,245,0.76)]">
           Instale o app para abrir em tela cheia, fixar no aparelho e ganhar acesso mais rápido no dia a dia.
         </p>
         <div className="mt-4 flex gap-3">
@@ -97,7 +97,7 @@ export function PwaInstallPrompt() {
           <button
             type="button"
             onClick={dismissPrompt}
-            className="rounded-full border border-white/10 px-4 py-2 text-sm text-[rgba(255,245,236,0.76)] hover:bg-white/5"
+            className="rounded-full border border-white/10 px-4 py-2 text-sm text-[rgba(230,228,245,0.76)] hover:bg-white/5"
           >
             Agora não
           </button>

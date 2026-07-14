@@ -40,7 +40,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           className={`rounded-[26px] border p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)] ${
             supabaseReady
               ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)]"
-              : "border-[rgba(109, 94, 242,0.24)] bg-[rgba(109, 94, 242,0.08)]"
+              : "border-[rgba(109,94,242,0.24)] bg-[rgba(109,94,242,0.08)]"
           }`}
         >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -63,7 +63,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
                 supabaseReady
                   ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
-                  : "bg-[rgba(109, 94, 242,0.14)] text-[var(--accent-copper)]"
+                  : "bg-[rgba(109,94,242,0.14)] text-[var(--accent-copper)]"
               }`}
             >
               {supabaseReady ? "Configurado" : "Pendente"}
@@ -89,7 +89,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                     item.tone === "teal"
                       ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
                       : item.tone === "copper"
-                        ? "bg-[rgba(109, 94, 242,0.14)] text-[var(--accent-copper)]"
+                        ? "bg-[rgba(109,94,242,0.14)] text-[var(--accent-copper)]"
                         : "bg-[rgba(216,166,84,0.18)] text-[var(--accent-amber)]"
                   }`}
                 >
@@ -185,16 +185,16 @@ export default async function Home({ searchParams }: HomePageProps) {
 
           <div className="grid min-w-0 gap-4">
             <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-white shadow-[0_20px_52px_rgba(29,36,36,0.18)]">
-              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
                 Próximo passo sugerido
               </p>
               <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
                 Isolar a linha LCD_VDD antes de regravar BIOS
               </h3>
-              <p className="mt-3 break-words text-sm leading-7 text-[rgba(255,245,236,0.76)]">
+              <p className="mt-3 break-words text-sm leading-7 text-[rgba(230,228,245,0.76)]">
                 A ideia aqui é mostrar um teste por vez. Esta área exibe a sugestão da IA com um motivo simples para ajudar na decisão.
               </p>
-              <div className="mt-5 break-words rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(255,245,236,0.84)]">
+              <div className="mt-5 break-words rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(230,228,245,0.84)]">
                 Justificativa: há medição estável de 19V, consumo inicial coerente e histórico recente de casos semelhantes com falha no circuito de imagem. A regravação agora teria custo maior e menor poder de isolamento.
               </div>
             </article>
@@ -295,7 +295,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           </article>
 
           <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-white">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
               Causas confirmadas
             </p>
             <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
@@ -315,7 +315,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                       {item.incidence}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(255,245,236,0.74)]">
+                  <p className="mt-2 text-sm leading-6 text-[rgba(230,228,245,0.74)]">
                     {item.note}
                   </p>
                 </div>

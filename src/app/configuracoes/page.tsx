@@ -94,7 +94,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                       return (
                         <article
                           key={profile.id}
-                          className="flex flex-col justify-between gap-3 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5 transition hover:border-[rgba(109, 94, 242,0.3)]"
+                          className="flex flex-col justify-between gap-3 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5 transition hover:border-[rgba(109,94,242,0.3)]"
                         >
                           <div className="flex items-start gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent-copper)] text-sm font-semibold text-white shadow-sm">
@@ -114,7 +114,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                                     profile.is_reviewer
                                       ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
-                                      : "bg-[rgba(109, 94, 242,0.14)] text-[var(--accent-copper)]"
+                                      : "bg-[rgba(109,94,242,0.14)] text-[var(--accent-copper)]"
                                   }`}
                                 >
                                   {profile.is_reviewer ? "Revisor técnico" : "Técnico"}
@@ -281,7 +281,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                                 Notas: {review.review_notes || "Sem observações registradas."}
                               </p>
                               <p className="mt-2 text-right text-[10px] text-[var(--muted)]">
-                                Por {review.users?.full_name ?? "Revisor"} • {dateLabel}
+                                Por {review.users?.full_name ?? "Revisor"} ⬢ {dateLabel}
                               </p>
                             </div>
                           </article>
@@ -484,7 +484,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
 
                     <button
                       type="submit"
-                      className="rounded-full border border-[rgba(255,248,240,0.12)] bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold tracking-[0.01em] text-white shadow-lg shadow-[rgba(109, 94, 242,0.24)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-[rgba(109, 94, 242,0.5)] disabled:text-white disabled:opacity-100"
+                      className="rounded-full border border-[rgba(230,228,245,0.12)] bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold tracking-[0.01em] text-white shadow-lg shadow-[rgba(109,94,242,0.24)] transition hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-[rgba(109,94,242,0.5)] disabled:text-white disabled:opacity-100"
                     >
                       Criar novo usuário
                     </button>
@@ -502,7 +502,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-[rgba(109, 94, 242,0.22)] bg-[rgba(109, 94, 242,0.06)] p-4 text-xs leading-5 text-[rgba(255,245,236,0.72)]">
+                  <div className="rounded-2xl border border-[rgba(109,94,242,0.22)] bg-[rgba(109,94,242,0.06)] p-4 text-xs leading-5 text-[rgba(230,228,245,0.72)]">
                     <strong className="text-white">Fluxo esperado:</strong> após criar o usuário,
                     o técnico deve confirmar o e-mail recebido antes do primeiro login. Se o Supabase
                     responder com limite de envio, aguarde alguns minutos e tente novamente.
@@ -514,7 +514,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
             {activeTab === "auditoria" ? (
               <div className="flex flex-col gap-4">
                 <div>
-                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+                  <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
                     Resumo do sistema
                   </p>
                   <h3 className="mt-1 text-2xl font-semibold tracking-tight text-white">
@@ -561,7 +561,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-[rgba(45,139,130,0.22)] bg-[rgba(45,139,130,0.06)] p-4 text-xs leading-5 text-[rgba(255,245,236,0.72)]">
+                <div className="rounded-2xl border border-[rgba(45,139,130,0.22)] bg-[rgba(45,139,130,0.06)] p-4 text-xs leading-5 text-[rgba(230,228,245,0.72)]">
                   <strong className="text-white">Segurança:</strong> o registro de alterações é
                   imutável e acompanha inserções, edições e exclusões feitas nos dados operacionais
                   e no catálogo técnico.

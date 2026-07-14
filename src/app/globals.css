@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1a1613;
-  --background-strong: #120f0d;
-  --foreground: #f3efe7;
-  --muted: #a79c8f;
-  --panel: #100d0b;
-  --panel-soft: rgba(255, 248, 240, 0.06);
-  --panel-border: rgba(255, 248, 240, 0.18);
+  --background: #16151d;
+  --background-strong: #100f16;
+  --foreground: #eeedf5;
+  --muted: #9c98ab;
+  --panel: #100f16;
+  --panel-soft: rgba(230,228,245, 0.06);
+  --panel-border: rgba(230,228,245, 0.16);
   --card-surface: #211f2b;
   --card-surface-soft: #1a1822;
   --accent-copper: #6d5ef2;
@@ -31,7 +31,7 @@
 
 html {
   background:
-    radial-gradient(circle at top left, rgba(109, 94, 242, 0.18), transparent 28%),
+    radial-gradient(circle at top left, rgba(109,94,242, 0.18), transparent 28%),
     radial-gradient(circle at bottom right, rgba(45, 139, 130, 0.2), transparent 26%),
     var(--background);
 }
@@ -61,8 +61,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255, 248, 240, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 248, 240, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(230,228,245, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230,228,245, 0.035) 1px, transparent 1px);
   background-size: 36px 36px;
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 90%);
 }
@@ -78,7 +78,7 @@ button {
 }
 
 ::selection {
-  background: rgba(109, 94, 242, 0.24);
+  background: rgba(109,94,242, 0.24);
 }
 
 .text-balance {
@@ -91,8 +91,8 @@ button {
 
 .form-assist-voice-button {
   width: fit-content;
-  border: 1px solid rgba(255, 248, 240, 0.14);
-  background: rgba(16, 13, 11, 0.9);
+  border: 1px solid rgba(230,228,245, 0.14);
+  background: rgba(16,15,22, 0.9);
   color: var(--foreground);
   border-radius: 999px;
   padding: 0.5rem 0.85rem;
@@ -104,8 +104,8 @@ button {
 }
 
 .form-assist-voice-button:hover {
-  border-color: rgba(109, 94, 242, 0.4);
-  background: rgba(109, 94, 242, 0.12);
+  border-color: rgba(109,94,242, 0.4);
+  background: rgba(109,94,242, 0.12);
 }
 
 .form-assist-voice-button[data-listening="true"] {

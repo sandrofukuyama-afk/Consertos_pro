@@ -104,7 +104,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                   <Link
                     key={item.id}
                     href={item.href}
-                    className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109, 94, 242,0.3)]"
+                    className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109,94,242,0.3)]"
                   >
                     <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
                       {item.sourceType} / {item.similarityLabel}
@@ -165,7 +165,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
                   <Link
                     key={item.id}
                     href={`/diagnosticos/${item.id}`}
-                    className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109, 94, 242,0.3)]"
+                    className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109,94,242,0.3)]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

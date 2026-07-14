@@ -374,13 +374,13 @@ export function EquipmentIntakeForm({
         </div>
 
         {captureFeedback ? (
-          <div className="mt-4 rounded-2xl border border-[rgba(45,139,130,0.24)] bg-[rgba(16,13,11,0.35)] px-4 py-3 text-sm text-[var(--foreground)]">
+          <div className="mt-4 rounded-2xl border border-[rgba(45,139,130,0.24)] bg-[rgba(16,15,22,0.35)] px-4 py-3 text-sm text-[var(--foreground)]">
             {captureFeedback}
           </div>
         ) : null}
 
         {capturedCategoryName ? (
-          <div className="mt-3 rounded-2xl border border-[rgba(109, 94, 242,0.24)] bg-[rgba(109, 94, 242,0.08)] px-4 py-3 text-sm text-[var(--foreground)]">
+          <div className="mt-3 rounded-2xl border border-[rgba(109,94,242,0.24)] bg-[rgba(109,94,242,0.08)] px-4 py-3 text-sm text-[var(--foreground)]">
             Categoria nova detectada: <strong>{capturedCategoryName}</strong>. Ela será cadastrada automaticamente no envio.
           </div>
         ) : null}

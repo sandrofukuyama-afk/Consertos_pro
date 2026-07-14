@@ -112,10 +112,10 @@ export function AttachmentCard({
         <div className="min-w-0">
           <p className="text-sm font-semibold text-white">{item.title}</p>
           {item.description ? (
-            <p className="mt-1 text-sm text-[rgba(255,245,236,0.7)]">{item.description}</p>
+            <p className="mt-1 text-sm text-[rgba(230,228,245,0.7)]">{item.description}</p>
           ) : null}
-          <p className="mt-2 text-xs text-[rgba(255,245,236,0.5)]">
-            {item.attachmentType} • {item.uploadedAt}
+          <p className="mt-2 text-xs text-[rgba(230,228,245,0.5)]">
+            {item.attachmentType} ⬢ {item.uploadedAt}
           </p>
         </div>
         {item.signedUrl && !isImage ? (
@@ -193,9 +193,9 @@ export function AttachmentCard({
       {isImage ? (
         <div className="mt-4">
           {item.imageAnalysis ? (
-            <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4 text-xs text-[rgba(255,245,236,0.85)]">
+            <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4 text-xs text-[rgba(230,228,245,0.85)]">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-teal)]">
-                Análise de imagem por IA • confiança {item.imageAnalysis.confidence} •{" "}
+                Análise de imagem por IA ⬢ confiança {item.imageAnalysis.confidence} ⬢{" "}
                 {item.imageAnalysis.analyzedAt}
               </p>
               <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -209,7 +209,7 @@ export function AttachmentCard({
                 </p>
               ) : null}
               {item.imageAnalysis.recommendation ? (
-                <p className="mt-2 text-[rgba(255,245,236,0.6)]">
+                <p className="mt-2 text-[rgba(230,228,245,0.6)]">
                   Recomendação: {item.imageAnalysis.recommendation}
                 </p>
               ) : null}
@@ -229,11 +229,11 @@ export function AttachmentCard({
       ) : null}
 
       {isImage ? (
-        <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4 text-sm text-[rgba(255,245,236,0.85)]">
+        <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4 text-sm text-[rgba(230,228,245,0.85)]">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent-amber)]">
             OCR assistido de componente
           </p>
-          <p className="mt-1 text-xs text-[rgba(255,245,236,0.62)]">
+          <p className="mt-1 text-xs text-[rgba(230,228,245,0.62)]">
             Lê a serigrafia visível da foto e cruza com a base de medição desta placa.
           </p>
 
@@ -252,10 +252,10 @@ export function AttachmentCard({
                 <p className="mt-2 text-base font-semibold text-white">
                   {ocrResult.componentRef ?? "Sem referência confiável"}
                 </p>
-                <p className="mt-1 text-xs text-[rgba(255,245,236,0.62)]">
+                <p className="mt-1 text-xs text-[rgba(230,228,245,0.62)]">
                   Confiança {ocrResult.confidence}
                 </p>
-                <p className="mt-2 text-xs leading-5 text-[rgba(255,245,236,0.72)]">
+                <p className="mt-2 text-xs leading-5 text-[rgba(230,228,245,0.72)]">
                   {ocrResult.rationale}
                 </p>
               </div>
@@ -273,9 +273,9 @@ export function AttachmentCard({
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-sm font-semibold text-white">
-                            {measurement.componentRef} • {measurement.measurementPoint}
+                            {measurement.componentRef} ⬢ {measurement.measurementPoint}
                           </p>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase text-[rgba(255,245,236,0.62)]">
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase text-[rgba(230,228,245,0.62)]">
                             {measurement.condition}
                           </span>
                         </div>
@@ -283,7 +283,7 @@ export function AttachmentCard({
                           Valor esperado: {measurement.expectedValue}
                         </p>
                         {measurement.notes ? (
-                          <p className="mt-1 text-xs text-[rgba(255,245,236,0.62)]">
+                          <p className="mt-1 text-xs text-[rgba(230,228,245,0.62)]">
                             {measurement.notes}
                           </p>
                         ) : null}

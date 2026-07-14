@@ -106,13 +106,13 @@ export default async function ConhecimentoPage({
           </article>
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
               Sincronização
             </p>
             <h3 className="mt-3 text-2xl font-semibold tracking-tight">
               Atualizar dados da busca
             </h3>
-            <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
+            <p className="mt-3 text-sm leading-6 text-[rgba(230,228,245,0.76)]">
               Atualiza documentos, diagnósticos e casos resolvidos para a busca usar os dados mais recentes.
             </p>
             <form action={syncSemanticMemoryAction} className="mt-5">
@@ -375,7 +375,7 @@ export default async function ConhecimentoPage({
                             Revisado
                           </span>
                         ) : (
-                          <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-[rgba(255,245,236,0.5)] uppercase">
+                          <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-[rgba(230,228,245,0.5)] uppercase">
                             Pendente
                           </span>
                         )}
@@ -384,7 +384,7 @@ export default async function ConhecimentoPage({
                       <h4 className="mt-3 text-base font-semibold text-white tracking-tight">
                         {item.label}
                       </h4>
-                      <p className="mt-2 text-sm leading-relaxed text-[rgba(255,245,236,0.8)]">
+                      <p className="mt-2 text-sm leading-relaxed text-[rgba(230,228,245,0.8)]">
                         {item.summary}
                       </p>
                       <p className="mt-3 text-[10px] text-[var(--muted)]">{item.createdAt}</p>

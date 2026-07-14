@@ -114,13 +114,13 @@ export default async function BibliotecaPage({
           </section>
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
               Novo upload
             </p>
             <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
               Adicionar arquivo
             </h3>
-            <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
+            <p className="mt-3 text-sm leading-6 text-[rgba(230,228,245,0.76)]">
               Use esta area para subir esquemas, boardviews, BIOS e outros arquivos que ajudam no reparo.
             </p>
             <div className="mt-5">

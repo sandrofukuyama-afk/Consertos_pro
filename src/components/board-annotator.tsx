@@ -73,7 +73,7 @@ export function BoardAnnotator({
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div>
             <h3 className="text-xl font-bold text-white">Anotar Placa de Circuito</h3>
-            <p className="text-sm text-[rgba(255,245,236,0.6)]">
+            <p className="text-sm text-[rgba(230,228,245,0.6)]">
               Clique em qualquer ponto da placa na imagem para inserir uma anotação técnica.
             </p>
           </div>
@@ -81,7 +81,7 @@ export function BoardAnnotator({
             onClick={onClose}
             className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition"
           >
-            ✕
+            ✕"
           </button>
         </div>
 
@@ -144,10 +144,10 @@ export function BoardAnnotator({
           <div className="flex flex-col gap-4">
             {/* Formulário do marcador temporário */}
             {tempPin ? (
-              <div className="rounded-[22px] border border-[var(--accent-copper)]/30 bg-[rgba(109, 94, 242,0.08)] p-4">
+              <div className="rounded-[22px] border border-[var(--accent-copper)]/30 bg-[rgba(109,94,242,0.08)] p-4">
                 <h4 className="text-sm font-bold text-[var(--accent-copper)]">Novo Ponto Técnico</h4>
                 <div className="mt-3">
-                  <label className="text-xs text-[rgba(255,245,236,0.6)]">Nota do problema</label>
+                  <label className="text-xs text-[rgba(230,228,245,0.6)]">Nota do problema</label>
                   <input
                     type="text"
                     value={tempPin.note}
@@ -159,7 +159,7 @@ export function BoardAnnotator({
                 </div>
 
                 <div className="mt-3">
-                  <label className="text-xs text-[rgba(255,245,236,0.6)]">Cor da marcação</label>
+                  <label className="text-xs text-[rgba(230,228,245,0.6)]">Cor da marcação</label>
                   <select
                     value={tempPin.color}
                     onChange={(e) => setTempPin({ ...tempPin, color: e.target.value as any })}
@@ -189,7 +189,7 @@ export function BoardAnnotator({
               </div>
             ) : (
               <div className="rounded-[22px] border border-white/5 bg-white/5 p-4 text-center">
-                <p className="text-sm text-[rgba(255,245,236,0.7)]">
+                <p className="text-sm text-[rgba(230,228,245,0.7)]">
                   Clique na placa para registrar um ponto de atenção.
                 </p>
               </div>
@@ -214,7 +214,7 @@ export function BoardAnnotator({
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorDot}`} />
-                        <span className="truncate text-[rgba(255,245,236,0.9)]" title={pin.note}>
+                        <span className="truncate text-[rgba(230,228,245,0.9)]" title={pin.note}>
                           {pin.note}
                         </span>
                       </div>
@@ -228,7 +228,7 @@ export function BoardAnnotator({
                   );
                 })}
                 {pins.length === 0 && (
-                  <p className="text-center text-xs text-[rgba(255,245,236,0.4)] mt-4">
+                  <p className="text-center text-xs text-[rgba(230,228,245,0.4)] mt-4">
                     Nenhum ponto marcado nesta imagem.
                   </p>
                 )}
@@ -249,7 +249,7 @@ export function BoardAnnotator({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50 shadow-lg shadow-[rgba(109, 94, 242,0.2)]"
+            className="flex items-center gap-2 rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50 shadow-lg shadow-[rgba(109,94,242,0.2)]"
           >
             {isSaving ? (
               <>

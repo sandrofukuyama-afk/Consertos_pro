@@ -1,7 +1,7 @@
 export default function OfflinePage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <section className="w-full max-w-xl rounded-[32px] border border-[var(--panel-border)] bg-[rgba(16,13,11,0.92)] p-8 shadow-[0_24px_64px_rgba(0,0,0,0.35)]">
+      <section className="w-full max-w-xl rounded-[32px] border border-[var(--panel-border)] bg-[rgba(16,15,22,0.92)] p-8 shadow-[0_24px_64px_rgba(0,0,0,0.35)]">
         <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--accent-teal)]">
           Modo offline
         </p>

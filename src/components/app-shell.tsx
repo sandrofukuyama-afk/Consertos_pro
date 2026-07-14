@@ -40,13 +40,13 @@ export function AppShell({
   const renderSidebarContent = () => (
     <div className="relative flex h-full flex-col p-6">
       <div className="border-b border-white/10 pb-5">
-        <p className="font-mono text-xs uppercase tracking-[0.28em] text-[rgba(255,245,236,0.68)]">
+        <p className="font-mono text-xs uppercase tracking-[0.28em] text-[rgba(230,228,245,0.68)]">
           ConsertosPro
         </p>
         <h1 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-white">
           Bancada com memória técnica
         </h1>
-        <p className="mt-3 max-w-xs text-sm leading-6 text-[rgba(255,245,236,0.72)]">
+        <p className="mt-3 max-w-xs text-sm leading-6 text-[rgba(230,228,245,0.72)]">
           Fundação do MVP orientada pelo plano do projeto, pronta para ganhar dados reais e integração com Supabase.
         </p>
       </div>
@@ -70,7 +70,7 @@ export function AppShell({
               href={item.href}
               className={`rounded-2xl border px-4 py-3 transition ${
                 isActive
-                  ? "border-[rgba(109, 94, 242,0.55)] bg-[rgba(109, 94, 242,0.16)] text-white"
+                  ? "border-[rgba(109,94,242,0.55)] bg-[rgba(109,94,242,0.16)] text-white"
                   : "border-transparent text-white/80 hover:border-white/10 hover:bg-white/5 hover:text-white"
               }`}
             >
@@ -84,7 +84,7 @@ export function AppShell({
                   }`}
                 />
               </div>
-              <p className="mt-1.5 text-xs leading-5 text-[rgba(255,245,236,0.68)]">
+              <p className="mt-1.5 text-xs leading-5 text-[rgba(230,228,245,0.68)]">
                 {displayDescription}
               </p>
             </Link>
@@ -94,10 +94,10 @@ export function AppShell({
 
       <div className="mt-auto pt-6">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)]">
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(230,228,245,0.58)]">
             Próxima fase
           </p>
-          <p className="mt-2 text-sm leading-6 text-[rgba(255,245,236,0.82)]">
+          <p className="mt-2 text-sm leading-6 text-[rgba(230,228,245,0.82)]">
             Formulários operacionais, timeline real, anexos e busca integrada.
           </p>
         </div>
@@ -114,7 +114,7 @@ export function AppShell({
       <div className="relative p-6 pb-12 text-white">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(255,245,236,0.58)]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(230,228,245,0.58)]">
               ConsertosPro
             </p>
             <h3 className="mt-1 font-[family-name:var(--font-heading)] text-lg font-semibold">
@@ -154,7 +154,7 @@ export function AppShell({
                     onClick={onClose}
                     className={`flex items-center justify-between rounded-2xl border px-4 py-3.5 transition ${
                       isActive
-                        ? "border-[rgba(109, 94, 242,0.55)] bg-[rgba(109, 94, 242,0.16)] text-white"
+                        ? "border-[rgba(109,94,242,0.55)] bg-[rgba(109,94,242,0.16)] text-white"
                         : "border-white/5 bg-white/3 text-white/80 hover:bg-white/5"
                     }`}
                   >
@@ -184,8 +184,8 @@ export function AppShell({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-[rgba(255,245,236,0.68)]">
-            <p className="mb-1 font-mono uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)]">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-[rgba(230,228,245,0.68)]">
+            <p className="mb-1 font-mono uppercase tracking-[0.22em] text-[rgba(230,228,245,0.58)]">
               Próxima fase
             </p>
             Formulários operacionais, timeline real, anexos e busca integrada.
@@ -214,7 +214,7 @@ export function AppShell({
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 lg:grid lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="relative hidden overflow-hidden rounded-[30px] border border-white/10 bg-[var(--panel)] text-white shadow-[0_28px_80px_rgba(25,30,31,0.28)] lg:block">
-          <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-br from-[rgba(109, 94, 242,0.24)] to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-br from-[rgba(109,94,242,0.24)] to-transparent" />
           {renderSidebarContent()}
         </aside>
 
@@ -247,13 +247,13 @@ export function AppShell({
             <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
               <Link
                 href="/busca"
-                className="flex w-full min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2.5 text-sm text-[var(--muted)] transition hover:border-[rgba(109, 94, 242,0.3)] sm:w-auto sm:min-w-[240px]"
+                className="flex w-full min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2.5 text-sm text-[var(--muted)] transition hover:border-[rgba(109,94,242,0.3)] sm:w-auto sm:min-w-[240px]"
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
               <Link
                 href={actionHref}
-                className="rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109, 94, 242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]"
+                className="rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]"
               >
                 {actionLabel}
               </Link>

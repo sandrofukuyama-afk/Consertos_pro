@@ -608,7 +608,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
           {/* Form Section (Register New) */}
           <aside className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-6 text-white shadow-xl flex flex-col gap-4 self-start">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
                 Gerenciamento
               </p>
               <h3 className="mt-1 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
