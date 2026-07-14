@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { getGuidedFlowForCategory } from "@/lib/domain/guided-flows";
-import { getGuidedTreeForCategory } from "@/lib/domain/guided-tree";
+import { getGuidedTreeForCategory, type GuidedTreeNode } from "@/lib/domain/guided-tree";
 import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
@@ -91,7 +91,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         physical_condition_notes,
         created_at,
         equipment_model_id,
-        equipment_categories(name),
+        equipment_categories(name, slug),
         manufacturers(name),
         equipment_models(model_name),
         users!diagnostics_opened_by_user_id_fkey(full_name),
@@ -185,7 +185,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     [manufacturer?.name, category?.name].filter(Boolean).join(" ") || "Equipamento sem nome";
   const label = model?.model_name ?? data.equipment_label ?? fallbackLabel;
 
-  const categorySlug = (category as any)?.slug ?? category?.name ?? "desktop";
+  const categorySlug = category?.slug ?? category?.name ?? "desktop";
   const tree = getGuidedTreeForCategory(categorySlug);
 
   const testRuns = [...(data.diagnostic_test_runs ?? [])].sort(
@@ -211,7 +211,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     }
     visited.add(currentNodeId);
 
-    const node = tree[currentNodeId] as any;
+    const node: GuidedTreeNode = tree[currentNodeId];
     
     const matchingRun = testRuns.find((run) => {
       const test = pickRelation(run.tests);

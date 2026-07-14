@@ -33,6 +33,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const { data: board } = await supabase
+      .from("boards")
+      .select("id")
+      .eq("id", boardId)
+      .maybeSingle();
+
+    if (!board) {
+      return NextResponse.json(
+        { error: "Placa não encontrada. Atualize a tela e tente novamente." },
+        { status: 400 },
+      );
+    }
+
     const { error } = await supabase.from("board_measurements").insert({
       board_id: boardId,
       component_ref: componentRef,

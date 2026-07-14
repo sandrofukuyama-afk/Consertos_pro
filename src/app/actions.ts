@@ -119,6 +119,18 @@ async function resolveCategoryForDiagnostic(
     .single();
 
   if (error || !createdCategory) {
+    if (error?.code === "23505") {
+      const { data: existingAfterConflict } = await supabase
+        .from("equipment_categories")
+        .select("id, name")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (existingAfterConflict) {
+        return existingAfterConflict;
+      }
+    }
+
     throw new Error(error?.message ?? "Falha ao criar categoria automaticamente.");
   }
 
@@ -279,11 +291,15 @@ export async function createDiagnosticAction(formData: FormData) {
   } else if (manufacturerId) {
     const { data: manufacturer } = await supabase
       .from("manufacturers")
-      .select("name")
+      .select("id, name")
       .eq("id", manufacturerId)
       .maybeSingle();
 
-    manufacturerName = manufacturer?.name ?? null;
+    if (!manufacturer) {
+      redirect("/diagnosticos/novo?error=Fabricante inválido. Atualize a tela e tente novamente.");
+    }
+
+    manufacturerName = manufacturer.name;
   }
 
   let equipmentModelId = selectedModelId;
@@ -301,12 +317,16 @@ export async function createDiagnosticAction(formData: FormData) {
     const normalizedModelName = normalizeText(newModelName);
     const { data: existingModel } = await supabase
       .from("equipment_models")
-      .select("id, model_name")
+      .select("id, model_name, equipment_category_id")
       .eq("manufacturer_id", manufacturerId)
       .eq("normalized_model_name", normalizedModelName)
       .maybeSingle();
 
     if (existingModel) {
+      if (existingModel.equipment_category_id !== categoryId) {
+        redirect("/diagnosticos/novo?error=Já existe um modelo com esse nome em outra categoria para esse fabricante.");
+      }
+
       equipmentModelId = existingModel.id;
       modelName = existingModel.model_name;
     } else {
@@ -333,11 +353,24 @@ export async function createDiagnosticAction(formData: FormData) {
   } else if (equipmentModelId) {
     const { data: model } = await supabase
       .from("equipment_models")
-      .select("model_name")
+      .select("id, model_name, manufacturer_id, equipment_category_id")
       .eq("id", equipmentModelId)
       .maybeSingle();
 
-    modelName = model?.model_name ?? null;
+    if (!model) {
+      redirect("/diagnosticos/novo?error=Modelo inválido. Atualize a tela e tente novamente.");
+    }
+
+    if (model.equipment_category_id !== categoryId) {
+      redirect("/diagnosticos/novo?error=O modelo selecionado não pertence à categoria informada.");
+    }
+
+    if (manufacturerId && model.manufacturer_id !== manufacturerId) {
+      redirect("/diagnosticos/novo?error=O modelo selecionado não pertence ao fabricante informado.");
+    }
+
+    manufacturerId = manufacturerId ?? model.manufacturer_id ?? null;
+    modelName = model.model_name;
   }
 
   const equipmentDetails = compactDetails({
@@ -457,6 +490,18 @@ export async function addDiagnosticSymptomAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=Sintoma inválido.`);
   }
 
+  const { data: existingSymptomLink } = await supabase
+    .from("diagnostic_symptoms")
+    .select("id")
+    .eq("diagnostic_id", diagnosticId)
+    .eq("symptom_id", symptomId)
+    .eq("is_primary", isPrimary)
+    .maybeSingle();
+
+  if (existingSymptomLink) {
+    redirect(`/diagnosticos/${diagnosticId}?message=Sintoma já registrado para este diagnóstico.`);
+  }
+
   const { error } = await supabase.from("diagnostic_symptoms").insert({
     diagnostic_id: diagnosticId,
     symptom_id: symptomId,
@@ -543,6 +588,16 @@ export async function addMeasurementAction(formData: FormData) {
 
   if (!diagnosticId || !measurementType) {
     redirect(`/diagnosticos/${diagnosticId}?error=Medição inválida.`);
+  }
+
+  const { data: diagnostic } = await supabase
+    .from("diagnostics")
+    .select("id")
+    .eq("id", diagnosticId)
+    .maybeSingle();
+
+  if (!diagnostic) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Diagnóstico não encontrado. Atualize a tela e tente novamente.`);
   }
 
   const { error } = await supabase.from("measurements").insert({
@@ -1277,6 +1332,16 @@ export async function addBoardMeasurementAction(formData: FormData) {
 
   if (!boardId || !componentRef || !measurementPoint || !expectedValue) {
     throw new Error("Preencha todos os campos obrigatórios para salvar a medição.");
+  }
+
+  const { data: board } = await supabase
+    .from("boards")
+    .select("id")
+    .eq("id", boardId)
+    .maybeSingle();
+
+  if (!board) {
+    throw new Error("Placa não encontrada. Atualize a tela e tente novamente.");
   }
 
   const { error } = await supabase

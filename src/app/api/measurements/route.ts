@@ -32,6 +32,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Medição inválida." }, { status: 400 });
     }
 
+    const { data: diagnostic } = await supabase
+      .from("diagnostics")
+      .select("id")
+      .eq("id", diagnosticId)
+      .maybeSingle();
+
+    if (!diagnostic) {
+      return NextResponse.json(
+        { error: "Diagnóstico não encontrado. Atualize a tela e tente novamente." },
+        { status: 400 },
+      );
+    }
+
     const { error } = await supabase.from("measurements").insert({
       diagnostic_id: diagnosticId,
       measurement_type: measurementType,
