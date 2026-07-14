@@ -18,6 +18,7 @@ import {
   syncTechnicalDocumentSemanticSource,
 } from "@/lib/services/semantic";
 import { queueDiagnosticSemanticSync } from "@/lib/services/semantic-sync";
+import { mapSupabaseAuthErrorMessage } from "@/lib/auth-messages";
 import { createClient } from "@/lib/supabase/server";
 
 function isRedirectError(error: unknown): error is Error & { digest: string } {
@@ -161,7 +162,7 @@ export async function signInAction(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(mapSupabaseAuthErrorMessage(error.message))}`);
   }
 
   redirect("/");
@@ -185,17 +186,17 @@ export async function signUpAction(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    redirect(`/login?error=${encodeURIComponent(mapSupabaseAuthErrorMessage(error.message))}`);
   }
 
-  redirect("/login?message=Conta criada. Agora faça login.");
+  redirect("/login?message=Conta criada. Verifique seu e-mail para confirmar o acesso antes de entrar.");
 }
 
 export async function requestPasswordResetAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
 
   if (!email) {
-    redirect("/login?error=Informe um email válido para recuperar a senha.");
+    redirect("/login?error=Informe um e-mail válido para recuperar a senha.");
   }
 
   const headerList = await headers();

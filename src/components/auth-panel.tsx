@@ -16,7 +16,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
           Acesse a bancada técnica
         </h2>
         <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-          Use seu email e senha do Supabase Auth para entrar no ambiente interno.
+          Use seu e-mail e senha do Supabase Auth para entrar no ambiente interno.
         </p>
 
         {error ? (
@@ -33,11 +33,12 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
 
         <form action={signInAction} className="mt-6 grid gap-4">
           <label className="grid gap-2 text-sm text-[var(--foreground)]">
-            <span className="font-medium">Email</span>
+            <span className="font-medium">E-mail</span>
             <input
               required
               type="email"
               name="email"
+              autoComplete="email"
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
             />
           </label>
@@ -47,6 +48,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
               required
               type="password"
               name="password"
+              autoComplete="current-password"
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
             />
           </label>
@@ -61,11 +63,12 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
           </summary>
           <form action={requestPasswordResetAction} className="mt-3 grid gap-3">
             <label className="grid gap-2 text-sm text-[var(--foreground)]">
-              <span className="font-medium">Email cadastrado</span>
+              <span className="font-medium">E-mail cadastrado</span>
               <input
                 required
                 type="email"
                 name="email"
+                autoComplete="email"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
               />
             </label>
@@ -94,15 +97,19 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
               required
               type="text"
               name="full_name"
+              autoComplete="name"
+              autoCorrect="on"
+              spellCheck
               className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 outline-none"
             />
           </label>
           <label className="grid gap-2 text-sm text-white">
-            <span className="font-medium">Email</span>
+            <span className="font-medium">E-mail</span>
             <input
               required
               type="email"
               name="email"
+              autoComplete="email"
               className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 outline-none"
             />
           </label>
@@ -113,6 +120,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
               type="password"
               name="password"
               minLength={6}
+              autoComplete="new-password"
               className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 outline-none"
             />
           </label>
