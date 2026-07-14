@@ -1,4 +1,4 @@
-import { requestPasswordResetAction, signInAction, signUpAction } from "@/app/actions";
+import { requestPasswordResetAction, signInAction } from "@/app/actions";
 
 type AuthPanelProps = {
   error?: string;
@@ -7,8 +7,8 @@ type AuthPanelProps = {
 
 export function AuthPanel({ error, message }: AuthPanelProps) {
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+    <div className="mx-auto w-full max-w-[560px]">
+      <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(72,62,49,0.06)] sm:p-6">
         <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
           Entrar
         </p>
@@ -16,7 +16,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
           Acesse a bancada técnica
         </h2>
         <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-          Use seu e-mail e senha do Supabase Auth para entrar no ambiente interno.
+          Use seu e-mail e senha para entrar no ambiente interno da oficina.
         </p>
 
         {error ? (
@@ -42,6 +42,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
             />
           </label>
+
           <label className="grid gap-2 text-sm text-[var(--foreground)]">
             <span className="font-medium">Senha</span>
             <input
@@ -52,6 +53,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
             />
           </label>
+
           <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
             Entrar
           </button>
@@ -77,57 +79,10 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
             </button>
           </form>
         </details>
-      </section>
 
-      <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
-        <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-          Primeiro acesso
-        </p>
-        <h2 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight">
-          Crie seu usuário técnico
-        </h2>
-        <p className="mt-3 text-sm leading-6 text-[rgba(255,245,236,0.74)]">
-          O cadastro cria a conta no Supabase Auth e a sincronização do perfil técnico acontece automaticamente pela trigger do banco.
-        </p>
-
-        <form action={signUpAction} className="mt-6 grid gap-4">
-          <label className="grid gap-2 text-sm text-white">
-            <span className="font-medium">Nome completo</span>
-            <input
-              required
-              type="text"
-              name="full_name"
-              autoComplete="name"
-              autoCorrect="on"
-              spellCheck
-              className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 outline-none"
-            />
-          </label>
-          <label className="grid gap-2 text-sm text-white">
-            <span className="font-medium">E-mail</span>
-            <input
-              required
-              type="email"
-              name="email"
-              autoComplete="email"
-              className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 outline-none"
-            />
-          </label>
-          <label className="grid gap-2 text-sm text-white">
-            <span className="font-medium">Senha</span>
-            <input
-              required
-              type="password"
-              name="password"
-              minLength={6}
-              autoComplete="new-password"
-              className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 outline-none"
-            />
-          </label>
-          <button className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)]">
-            Criar conta
-          </button>
-        </form>
+        <div className="mt-6 rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm leading-6 text-[var(--muted)]">
+          Primeiro acesso: o cadastro de novos técnicos agora deve ser feito dentro do sistema, na área de configurações, por um usuário já autorizado.
+        </div>
       </section>
     </div>
   );
