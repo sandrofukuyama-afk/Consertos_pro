@@ -126,7 +126,6 @@ export function FormAssistProvider() {
     let recognition: SpeechRecognitionInstance | null = null;
     let activeField: HTMLInputElement | HTMLTextAreaElement | null = null;
     let activeButton: HTMLButtonElement | null = null;
-
     const stopListening = () => {
       if (recognition) {
         recognition.stop();
@@ -228,25 +227,18 @@ export function FormAssistProvider() {
       field.dataset.voiceEnhanced = "true";
     };
 
-    const enhanceAllFields = () => {
-      document
-        .querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
-        .forEach(enhanceField);
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      enhanceField(event.target);
     };
 
-    enhanceAllFields();
-
-    const observer = new MutationObserver(() => {
-      enhanceAllFields();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    document.addEventListener("focusin", handleFocusIn);
 
     return () => {
-      observer.disconnect();
+      document.removeEventListener("focusin", handleFocusIn);
       stopListening();
     };
   }, []);
