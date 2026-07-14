@@ -8,11 +8,11 @@
   --panel: #100d0b;
   --panel-soft: rgba(255, 248, 240, 0.06);
   --panel-border: rgba(255, 248, 240, 0.18);
-  --card-surface: #2c251d;
-  --card-surface-soft: #221c16;
-  --accent-copper: #b86d3c;
+  --card-surface: #211f2b;
+  --card-surface-soft: #1a1822;
+  --accent-copper: #6d5ef2;
   --accent-teal: #289b8d;
-  --accent-amber: #b8853f;
+  --accent-amber: #f2a33e;
   --success: #3e9e72;
   --danger: #ca6a55;
 }
@@ -31,7 +31,7 @@
 
 html {
   background:
-    radial-gradient(circle at top left, rgba(184, 109, 60, 0.18), transparent 28%),
+    radial-gradient(circle at top left, rgba(109, 94, 242, 0.18), transparent 28%),
     radial-gradient(circle at bottom right, rgba(45, 139, 130, 0.2), transparent 26%),
     var(--background);
 }
@@ -78,7 +78,7 @@ button {
 }
 
 ::selection {
-  background: rgba(184, 109, 60, 0.24);
+  background: rgba(109, 94, 242, 0.24);
 }
 
 .text-balance {
@@ -104,8 +104,8 @@ button {
 }
 
 .form-assist-voice-button:hover {
-  border-color: rgba(184, 109, 60, 0.4);
-  background: rgba(184, 109, 60, 0.12);
+  border-color: rgba(109, 94, 242, 0.4);
+  background: rgba(109, 94, 242, 0.12);
 }
 
 .form-assist-voice-button[data-listening="true"] {

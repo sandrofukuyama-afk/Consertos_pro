@@ -51,8 +51,8 @@ export default async function DiagnosticDetailPage({
 
   return (
     <AppShell
-      title={`Diagnóstico ${detail.label}`}
-      description="Veja os detalhes do caso com sintomas, testes, medições e anexos."
+      title={`DiagnÃ³stico ${detail.label}`}
+      description="Veja os detalhes do caso com sintomas, testes, mediÃ§Ãµes e anexos."
       user={user}
       actionLabel="Voltar para dashboard"
       actionHref="/"
@@ -73,7 +73,7 @@ export default async function DiagnosticDetailPage({
         {detail.preventiveInsight ? (
           <section className="rounded-[26px] border border-[rgba(216,166,84,0.32)] bg-[rgba(216,166,84,0.1)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-amber)]">
-              Recomendação preventiva
+              RecomendaÃ§Ã£o preventiva
             </p>
             <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
               {detail.preventiveInsight.occurrences} de {detail.preventiveInsight.totalCases} casos anteriores
@@ -125,7 +125,7 @@ export default async function DiagnosticDetailPage({
                       target="_blank"
                       className="rounded-full bg-[rgba(202,106,85,0.15)] hover:bg-[rgba(202,106,85,0.25)] border border-[var(--accent-copper)]/30 px-3 py-1 text-[11px] font-semibold text-[var(--accent-copper)] tracking-tight transition-all"
                     >
-                      🖨️ Imprimir Laudo
+                      ðŸ–¨ï¸ Imprimir Laudo
                     </Link>
                   </div>
                   <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--foreground)]">
@@ -160,7 +160,7 @@ export default async function DiagnosticDetailPage({
 
               <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Condição física
+                  CondiÃ§Ã£o fÃ­sica
                 </p>
                 <p className="mt-3 text-sm leading-7 text-[var(--foreground)]">
                   {detail.physicalNotes}
@@ -180,10 +180,10 @@ export default async function DiagnosticDetailPage({
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(255,245,236,0.56)]">
-              Árvore de investigação · {detail.category}
+              Ãrvore de investigaÃ§Ã£o Â· {detail.category}
             </p>
             <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Fluxo dinâmico de bancada
+              Fluxo dinÃ¢mico de bancada
             </h3>
             <ol className="mt-4 space-y-2">
               {detail.guidedFlow.map((step) => {
@@ -199,19 +199,19 @@ export default async function DiagnosticDetailPage({
 
                 if (isSuccess) {
                   bulletClass = "bg-[var(--accent-teal)] text-white";
-                  bulletContent = "✓";
+                  bulletContent = "âœ“";
                   titleClass = "text-[rgba(255,245,236,0.6)] line-through";
                 } else if (isFailed) {
                   bulletClass = "bg-[var(--danger)] text-white";
-                  bulletContent = "✗";
+                  bulletContent = "âœ—";
                   titleClass = "text-[rgba(255,245,236,0.6)] line-through font-medium";
                 } else if (isInconclusive) {
                   bulletClass = "bg-[var(--accent-amber)] text-white";
                   bulletContent = "-";
                   titleClass = "text-[rgba(255,245,236,0.6)] line-through";
                 } else if (isCurrent) {
-                  bulletClass = "bg-[var(--accent-copper)] text-white animate-pulse shadow-[0_0_12px_rgba(184,109,60,0.5)]";
-                  bulletContent = "➔";
+                  bulletClass = "bg-[var(--accent-copper)] text-white animate-pulse shadow-[0_0_12px_rgba(109, 94, 242,0.5)]";
+                  bulletContent = "âž”";
                   titleClass = "text-white font-bold text-[15px]";
                 } else if (isPending) {
                   bulletClass = "border border-[rgba(255,245,236,0.2)] text-[rgba(255,245,236,0.4)]";
@@ -232,7 +232,7 @@ export default async function DiagnosticDetailPage({
                           {step.label}
                         </p>
                         {isCurrent && (
-                          <span className="shrink-0 rounded-md bg-[rgba(184,109,60,0.14)] px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[var(--accent-copper)] border border-[rgba(184,109,60,0.25)]">
+                          <span className="shrink-0 rounded-md bg-[rgba(109, 94, 242,0.14)] px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[var(--accent-copper)] border border-[rgba(109, 94, 242,0.25)]">
                             Recomendado
                           </span>
                         )}
@@ -253,13 +253,13 @@ export default async function DiagnosticDetailPage({
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                  Assistente técnico
+                  Assistente tÃ©cnico
                 </p>
                 <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                  Próximo passo guiado por contexto
+                  PrÃ³ximo passo guiado por contexto
                 </h3>
                 <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
-                  Usa o histórico do caso, memória inteligente e documentos relacionados para sugerir um único passo objetivo por vez.
+                  Usa o histÃ³rico do caso, memÃ³ria inteligente e documentos relacionados para sugerir um Ãºnico passo objetivo por vez.
                 </p>
 
                 {/* Agente de IA Especialista Ativo */}
@@ -278,7 +278,7 @@ export default async function DiagnosticDetailPage({
               <form action={generateDiagnosticAssistantAction}>
                 <input type="hidden" name="diagnostic_id" value={detail.id} />
                 <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                  {detail.assistantSnapshot.latestResponse ? "Atualizar recomendação" : "Gerar recomendação"}
+                  {detail.assistantSnapshot.latestResponse ? "Atualizar recomendaÃ§Ã£o" : "Gerar recomendaÃ§Ã£o"}
                 </button>
               </form>
             </div>
@@ -289,56 +289,56 @@ export default async function DiagnosticDetailPage({
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
-                        Última leitura registrada
+                        Ãšltima leitura registrada
                       </p>
                       <p className="mt-2 text-sm text-[var(--muted)]">
                         Motor {formatProviderLabel(detail.assistantSnapshot.provider)} - {detail.assistantSnapshot.latestResponse.createdAt}
                       </p>
                     </div>
-                    <StatusPill label={`Confiança ${detail.assistantSnapshot.latestResponse.confidenceScore}`} />
+                    <StatusPill label={`ConfianÃ§a ${detail.assistantSnapshot.latestResponse.confidenceScore}`} />
                   </div>
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">Resumo técnico</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">Resumo tÃ©cnico</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                         {detail.assistantSnapshot.latestResponse.structured?.technicalSummary ?? detail.assistantSnapshot.latestResponse.reasoningSummary}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">Hipótese principal</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">HipÃ³tese principal</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        {detail.assistantSnapshot.latestResponse.structured?.mainHypothesis ?? "Sem hipótese consolidada na última resposta."}
+                        {detail.assistantSnapshot.latestResponse.structured?.mainHypothesis ?? "Sem hipÃ³tese consolidada na Ãºltima resposta."}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-[22px] border border-[rgba(184,109,60,0.18)] bg-[var(--card-surface-soft)] p-4">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">Próximo teste recomendado</p>
+                  <div className="mt-4 rounded-[22px] border border-[rgba(109, 94, 242,0.18)] bg-[var(--card-surface-soft)] p-4">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">PrÃ³ximo teste recomendado</p>
                     <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                       {detail.assistantSnapshot.latestResponse.structured?.nextTest ?? detail.assistantSnapshot.latestResponse.recommendedNextStep}
                     </p>
                     <p className="mt-2 text-sm text-[var(--muted)]">
-                      {detail.assistantSnapshot.latestResponse.structured?.validationGoal ?? "Sem objetivo de validação detalhado."}
+                      {detail.assistantSnapshot.latestResponse.structured?.validationGoal ?? "Sem objetivo de validaÃ§Ã£o detalhado."}
                     </p>
                     {detail.assistantSnapshot.latestResponse.structured?.categoryStrategy ? (
                       <p className="mt-3 text-sm text-[var(--muted)]">
-                        Estratégia da categoria: {detail.assistantSnapshot.latestResponse.structured.categoryStrategy}
+                        EstratÃ©gia da categoria: {detail.assistantSnapshot.latestResponse.structured.categoryStrategy}
                       </p>
                     ) : null}
                     {detail.assistantSnapshot.latestResponse.structured?.recommendedTestId ? (
                       <Link
                         href={`/diagnosticos/${detail.id}?ai_response_id=${detail.assistantSnapshot.latestResponse.id}&suggested_test_id=${detail.assistantSnapshot.latestResponse.structured.recommendedTestId}#registrar-teste`}
-                        className="mt-4 inline-flex rounded-full border border-[rgba(184,109,60,0.24)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
+                        className="mt-4 inline-flex rounded-full border border-[rgba(109, 94, 242,0.24)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
                       >
-                        Usar sugestão no formulário
+                        Usar sugestÃ£o no formulÃ¡rio
                       </Link>
                     ) : null}
                   </div>
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">Evidências consideradas</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">EvidÃªncias consideradas</p>
                       <div className="mt-2 space-y-2">
                         {(detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).length ? (
                           (detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).map((item) => (
@@ -350,20 +350,20 @@ export default async function DiagnosticDetailPage({
                             </p>
                           ))
                         ) : (
-                          <p className="text-sm text-[var(--muted)]">Nenhuma evidência estruturada foi salva na última rodada.</p>
+                          <p className="text-sm text-[var(--muted)]">Nenhuma evidÃªncia estruturada foi salva na Ãºltima rodada.</p>
                         )}
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">Observação de segurança</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">ObservaÃ§Ã£o de seguranÃ§a</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        {detail.assistantSnapshot.latestResponse.structured?.safetyNote ?? "Sem observação de segurança registrada."}
+                        {detail.assistantSnapshot.latestResponse.structured?.safetyNote ?? "Sem observaÃ§Ã£o de seguranÃ§a registrada."}
                       </p>
                       <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">Modo atual</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                         {detail.assistantSnapshot.externalProviderConfigured
-                          ? "IA externa ativa para recuperar memória com mais precisão."
-                          : "Modo local ativo para manter a recomendação auditável mesmo sem provedor externo configurado."}
+                          ? "IA externa ativa para recuperar memÃ³ria com mais precisÃ£o."
+                          : "Modo local ativo para manter a recomendaÃ§Ã£o auditÃ¡vel mesmo sem provedor externo configurado."}
                       </p>
                     </div>
                   </div>
@@ -372,10 +372,10 @@ export default async function DiagnosticDetailPage({
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Feedback do técnico
+                          Feedback do tÃ©cnico
                         </p>
                         <p className="mt-2 text-sm text-[var(--muted)]">
-                          Salve se a recomendação ajudou e se ela foi seguida de fato na bancada.
+                          Salve se a recomendaÃ§Ã£o ajudou e se ela foi seguida de fato na bancada.
                         </p>
                       </div>
                       {detail.assistantSnapshot.latestResponse.feedback ? (
@@ -388,17 +388,17 @@ export default async function DiagnosticDetailPage({
                     {detail.assistantSnapshot.latestResponse.feedback ? (
                       <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] p-4 text-sm text-[var(--foreground)]">
                         <p>
-                          Último feedback: {detail.assistantSnapshot.latestResponse.feedback.submittedBy} • {detail.assistantSnapshot.latestResponse.feedback.createdAt}
+                          Ãšltimo feedback: {detail.assistantSnapshot.latestResponse.feedback.submittedBy} â€¢ {detail.assistantSnapshot.latestResponse.feedback.createdAt}
                         </p>
                         <p className="mt-2 text-[var(--muted)]">
                           {detail.assistantSnapshot.latestResponse.feedback.wasFollowed === true
-                            ? "A sugestão foi seguida."
+                            ? "A sugestÃ£o foi seguida."
                             : detail.assistantSnapshot.latestResponse.feedback.wasFollowed === false
-                              ? "A sugestão não foi seguida."
-                              : "Não foi informado se a sugestão foi seguida."}
+                              ? "A sugestÃ£o nÃ£o foi seguida."
+                              : "NÃ£o foi informado se a sugestÃ£o foi seguida."}
                         </p>
                         <p className="mt-2 text-[var(--muted)]">
-                          {detail.assistantSnapshot.latestResponse.feedback.note || "Sem observação adicional."}
+                          {detail.assistantSnapshot.latestResponse.feedback.note || "Sem observaÃ§Ã£o adicional."}
                         </p>
                       </div>
                     ) : null}
@@ -421,7 +421,7 @@ export default async function DiagnosticDetailPage({
                         </option>
                         <option value="helpful">Ajudou bem</option>
                         <option value="partially_helpful">Ajudou parcialmente</option>
-                        <option value="not_helpful">Não ajudou</option>
+                        <option value="not_helpful">NÃ£o ajudou</option>
                       </select>
                       <select
                         name="was_followed"
@@ -434,15 +434,15 @@ export default async function DiagnosticDetailPage({
                         }
                         className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
                       >
-                        <option value="">Não informar se foi seguida</option>
-                        <option value="yes">A sugestão foi seguida</option>
-                        <option value="no">A sugestão não foi seguida</option>
+                        <option value="">NÃ£o informar se foi seguida</option>
+                        <option value="yes">A sugestÃ£o foi seguida</option>
+                        <option value="no">A sugestÃ£o nÃ£o foi seguida</option>
                       </select>
                       <textarea
                         name="note"
                         rows={3}
                         defaultValue={detail.assistantSnapshot.latestResponse.feedback?.note ?? ""}
-                        placeholder="Observação do técnico sobre a qualidade da recomendação"
+                        placeholder="ObservaÃ§Ã£o do tÃ©cnico sobre a qualidade da recomendaÃ§Ã£o"
                         className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
                       />
                       <FormSubmitButton
@@ -455,7 +455,7 @@ export default async function DiagnosticDetailPage({
               </div>
             ) : (
               <div className="mt-5 rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-8 text-sm leading-6 text-[var(--muted)]">
-                Ainda não existe recomendação salva para este caso. Gere a primeira leitura para registrar resumo técnico, hipótese dominante e próximo teste sugerido em `ai_responses`.
+                Ainda nÃ£o existe recomendaÃ§Ã£o salva para este caso. Gere a primeira leitura para registrar resumo tÃ©cnico, hipÃ³tese dominante e prÃ³ximo teste sugerido em `ai_responses`.
               </div>
             )}
           </article>
@@ -468,7 +468,7 @@ export default async function DiagnosticDetailPage({
                     Casos semelhantes
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
-                    Memória recuperada
+                    MemÃ³ria recuperada
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--muted)]">
@@ -482,7 +482,7 @@ export default async function DiagnosticDetailPage({
                     <Link
                       key={item.id}
                       href={item.href ?? "#"}
-                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(184,109,60,0.3)]"
+                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109, 94, 242,0.3)]"
                     >
                       <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
                         {item.sourceType} / {item.similarityLabel}
@@ -494,7 +494,7 @@ export default async function DiagnosticDetailPage({
                   ))
                 ) : (
                   <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
-                    A busca inteligente ainda não encontrou casos próximos o bastante para este contexto.
+                    A busca inteligente ainda nÃ£o encontrou casos prÃ³ximos o bastante para este contexto.
                   </div>
                 )}
               </div>
@@ -507,7 +507,7 @@ export default async function DiagnosticDetailPage({
                     Documentos relacionados
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
-                    Apoio técnico imediato
+                    Apoio tÃ©cnico imediato
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--muted)]">
@@ -523,7 +523,7 @@ export default async function DiagnosticDetailPage({
                       href={item.href ?? "#"}
                       target="_blank"
                       rel="noreferrer"
-                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(184,109,60,0.3)]"
+                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109, 94, 242,0.3)]"
                     >
                       <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
                         {item.sourceType} / {item.similarityLabel}
@@ -535,7 +535,7 @@ export default async function DiagnosticDetailPage({
                   ))
                 ) : (
                   <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
-                    Ainda não há documento técnico recuperado para reforçar a próxima decisão.
+                    Ainda nÃ£o hÃ¡ documento tÃ©cnico recuperado para reforÃ§ar a prÃ³xima decisÃ£o.
                   </div>
                 )}
               </div>
@@ -616,7 +616,7 @@ export default async function DiagnosticDetailPage({
                       Severidade: {item.severity}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
-                      {item.sourceType} • {item.capturedAt}
+                      {item.sourceType} â€¢ {item.capturedAt}
                     </p>
                   </div>
                 ))
@@ -636,11 +636,11 @@ export default async function DiagnosticDetailPage({
               Testes
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Fluxo da investigação
+              Fluxo da investigaÃ§Ã£o
             </h3>
             {requestedByAiResponseId && detail.assistantSnapshot.latestResponse ? (
-              <div className="mt-4 rounded-[22px] border border-[rgba(184,109,60,0.24)] bg-[rgba(184,109,60,0.08)] p-4 text-sm text-[var(--foreground)]">
-                O formulário está preparado para registrar a sugestão da IA:
+              <div className="mt-4 rounded-[22px] border border-[rgba(109, 94, 242,0.24)] bg-[rgba(109, 94, 242,0.08)] p-4 text-sm text-[var(--foreground)]">
+                O formulÃ¡rio estÃ¡ preparado para registrar a sugestÃ£o da IA:
                 {" "}
                 {detail.assistantSnapshot.latestResponse.structured?.recommendedTestName ??
                   detail.assistantSnapshot.latestResponse.structured?.nextTest ??
@@ -679,7 +679,7 @@ export default async function DiagnosticDetailPage({
                 <option value="passed">Passou</option>
                 <option value="failed">Falhou</option>
                 <option value="inconclusive">Inconclusivo</option>
-                <option value="not_applicable">Não aplicável</option>
+                <option value="not_applicable">NÃ£o aplicÃ¡vel</option>
               </select>
               <textarea
                 name="procedure_notes"
@@ -719,10 +719,10 @@ export default async function DiagnosticDetailPage({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--foreground)] break-words">
-                          Etapa {item.stepOrder} • {item.testName}
+                          Etapa {item.stepOrder} â€¢ {item.testName}
                         </p>
                         <p className="mt-1 text-xs text-[var(--muted)] break-words">
-                          {item.technician} • {item.performedAt}
+                          {item.technician} â€¢ {item.performedAt}
                         </p>
                         {item.requestedByAi ? (
                           <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-copper)]">
@@ -760,10 +760,10 @@ export default async function DiagnosticDetailPage({
 
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Hipóteses
+              HipÃ³teses
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Linhas de investigação
+              Linhas de investigaÃ§Ã£o
             </h3>
 
             <form action={addHypothesisAction} className="mt-5 grid gap-3">
@@ -772,19 +772,19 @@ export default async function DiagnosticDetailPage({
                 required
                 type="text"
                 name="title"
-                placeholder="Título da hipótese"
+                placeholder="TÃ­tulo da hipÃ³tese"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <textarea
                 name="description"
                 rows={3}
-                placeholder="Descrição da suspeita técnica"
+                placeholder="DescriÃ§Ã£o da suspeita tÃ©cnica"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <textarea
                 name="evidence_summary"
                 rows={3}
-                placeholder="Evidências observadas"
+                placeholder="EvidÃªncias observadas"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <input
@@ -793,12 +793,12 @@ export default async function DiagnosticDetailPage({
                 min="0"
                 max="1"
                 name="confidence_score"
-                placeholder="Confiança de 0 a 1"
+                placeholder="ConfianÃ§a de 0 a 1"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <FormSubmitButton
-                idleLabel="Registrar hipótese"
-                pendingLabel="Salvando hipótese..."
+                idleLabel="Registrar hipÃ³tese"
+                pendingLabel="Salvando hipÃ³tese..."
               />
             </form>
 
@@ -819,16 +819,16 @@ export default async function DiagnosticDetailPage({
                       {item.description}
                     </p>
                     <p className="mt-2 text-sm text-[var(--muted)]">
-                      Evidência: {item.evidence}
+                      EvidÃªncia: {item.evidence}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
-                      Confiança {item.confidence} • {item.createdAt}
+                      ConfianÃ§a {item.confidence} â€¢ {item.createdAt}
                     </p>
                   </div>
                 ))
               ) : (
                 <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">
-                  Nenhuma hipótese registrada ainda.
+                  Nenhuma hipÃ³tese registrada ainda.
                 </p>
               )}
             </div>
@@ -836,7 +836,7 @@ export default async function DiagnosticDetailPage({
 
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Medições
+              MediÃ§Ãµes
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Leituras da bancada
@@ -853,7 +853,7 @@ export default async function DiagnosticDetailPage({
                     className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   >
                     <p className="text-sm font-semibold text-[var(--foreground)]">
-                      {item.measurementType} • {item.pointLabel}
+                      {item.measurementType} â€¢ {item.pointLabel}
                     </p>
                     <p className="mt-2 text-sm text-[var(--foreground)]">
                       Medido: {item.measuredValue}
@@ -862,34 +862,34 @@ export default async function DiagnosticDetailPage({
                       Esperado: {item.expectedValue}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
-                      {item.technician} • {item.measuredAt}
+                      {item.technician} â€¢ {item.measuredAt}
                     </p>
                   </div>
                 ))
               ) : (
                 <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">
-                  Nenhuma medição registrada ainda.
+                  Nenhuma mediÃ§Ã£o registrada ainda.
                 </p>
               )}
             </div>
           </article>
         </section>
 
-        {/* Medições de Referência de Bancada */}
+        {/* MediÃ§Ãµes de ReferÃªncia de Bancada */}
         {detail.boards.length > 0 && (
           <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Valores de Referência
+              Valores de ReferÃªncia
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Banco de Medições de Placa
+              Banco de MediÃ§Ãµes de Placa
             </h3>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Valores esperados (tensão, resistência, impedância) para comparação rápida.
+              Valores esperados (tensÃ£o, resistÃªncia, impedÃ¢ncia) para comparaÃ§Ã£o rÃ¡pida.
             </p>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
-              {/* Tabela de Medições existentes */}
+              {/* Tabela de MediÃ§Ãµes existentes */}
               <div>
                 {detail.referenceMeasurements.length > 0 ? (
                   <div className="overflow-x-auto animate-fadeIn">
@@ -911,12 +911,12 @@ export default async function DiagnosticDetailPage({
                             <td className="py-3 px-2 font-mono text-[var(--accent-teal)] font-semibold">{m.expectedValue}</td>
                             <td className="py-3 px-2">
                               <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] uppercase font-semibold text-[rgba(255,245,236,0.6)]">
-                                {m.condition === "power_off" ? "Sem Alimentação" : m.condition === "power_on" ? "Placa Ligada" : "Escala de Diodo"}
+                                {m.condition === "power_off" ? "Sem AlimentaÃ§Ã£o" : m.condition === "power_on" ? "Placa Ligada" : "Escala de Diodo"}
                               </span>
                             </td>
                             <td className="py-3 px-2 text-xs text-[var(--muted)]">
                               {m.notes && <span className="block italic text-[var(--foreground)] mb-0.5">{m.notes}</span>}
-                              Por {m.userName} • {m.createdAt}
+                              Por {m.userName} â€¢ {m.createdAt}
                             </td>
                           </tr>
                         ))}
@@ -925,15 +925,15 @@ export default async function DiagnosticDetailPage({
                   </div>
                 ) : (
                   <p className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-5 text-sm text-[var(--muted)]">
-                    Nenhuma medição de referência registrada para esta placa ainda. Seja o primeiro a registrar!
+                    Nenhuma mediÃ§Ã£o de referÃªncia registrada para esta placa ainda. Seja o primeiro a registrar!
                   </p>
                 )}
               </div>
 
-              {/* Formulário para Adicionar Medição */}
+              {/* FormulÃ¡rio para Adicionar MediÃ§Ã£o */}
               <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-                  Nova Medição de Referência
+                  Nova MediÃ§Ã£o de ReferÃªncia
                 </p>
                 <div className="mt-3.5">
                   <BoardMeasurementForm diagnosticId={detail.id} boards={detail.boards} />
@@ -949,7 +949,7 @@ export default async function DiagnosticDetailPage({
               Linha do tempo
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Histórico unificado do caso
+              HistÃ³rico unificado do caso
             </h3>
 
             <div className="mt-5 space-y-3">
@@ -975,7 +975,7 @@ export default async function DiagnosticDetailPage({
                 ))
               ) : (
                 <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Ainda não há eventos no histórico.
+                  Ainda nÃ£o hÃ¡ eventos no histÃ³rico.
                 </div>
               )}
             </div>
@@ -983,7 +983,7 @@ export default async function DiagnosticDetailPage({
 
           <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Evidências
+              EvidÃªncias
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
               Anexos do caso
@@ -995,7 +995,7 @@ export default async function DiagnosticDetailPage({
                 required
                 type="text"
                 name="title"
-                placeholder="Título do anexo"
+                placeholder="TÃ­tulo do anexo"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <select
@@ -1004,15 +1004,15 @@ export default async function DiagnosticDetailPage({
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               >
                 <option value="photo">Foto</option>
-                <option value="video">Vídeo</option>
+                <option value="video">VÃ­deo</option>
                 <option value="screenshot">Captura</option>
                 <option value="waveform">Waveform</option>
-                <option value="report">Relatório</option>
+                <option value="report">RelatÃ³rio</option>
               </select>
               <textarea
                 name="description"
                 rows={3}
-                placeholder="Descrição do arquivo"
+                placeholder="DescriÃ§Ã£o do arquivo"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <input
@@ -1050,7 +1050,7 @@ export default async function DiagnosticDetailPage({
               Encerramento
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Consolidar causa e solução
+              Consolidar causa e soluÃ§Ã£o
             </h3>
 
             {detail.resolvedCase ? (
@@ -1076,7 +1076,7 @@ export default async function DiagnosticDetailPage({
             href="/diagnosticos/novo"
             className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
           >
-            Abrir outro diagnóstico
+            Abrir outro diagnÃ³stico
           </Link>
         </section>
       </div>

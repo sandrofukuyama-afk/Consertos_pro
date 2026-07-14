@@ -144,7 +144,7 @@ export function BoardAnnotator({
           <div className="flex flex-col gap-4">
             {/* Formulário do marcador temporário */}
             {tempPin ? (
-              <div className="rounded-[22px] border border-[var(--accent-copper)]/30 bg-[rgba(184,109,60,0.08)] p-4">
+              <div className="rounded-[22px] border border-[var(--accent-copper)]/30 bg-[rgba(109, 94, 242,0.08)] p-4">
                 <h4 className="text-sm font-bold text-[var(--accent-copper)]">Novo Ponto Técnico</h4>
                 <div className="mt-3">
                   <label className="text-xs text-[rgba(255,245,236,0.6)]">Nota do problema</label>
@@ -249,7 +249,7 @@ export function BoardAnnotator({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50 shadow-lg shadow-[rgba(184,109,60,0.2)]"
+            className="flex items-center gap-2 rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50 shadow-lg shadow-[rgba(109, 94, 242,0.2)]"
           >
             {isSaving ? (
               <>

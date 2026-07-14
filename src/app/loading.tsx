@@ -3,7 +3,7 @@ export default function Loading() {
     <div className="min-h-screen w-full px-4 py-4 md:px-5 flex flex-col justify-center items-center bg-[var(--background)]">
       <div className="relative flex flex-col items-center p-8 rounded-[30px] border border-white/10 bg-[var(--panel)]/60 backdrop-blur-md shadow-[0_24px_64px_rgba(0,0,0,0.35)] max-w-sm w-full">
         {/* Subtle glowing background effect */}
-        <div className="absolute inset-0 rounded-[30px] bg-linear-to-br from-[rgba(184,109,60,0.12)] to-transparent pointer-events-none" />
+        <div className="absolute inset-0 rounded-[30px] bg-linear-to-br from-[rgba(109, 94, 242,0.12)] to-transparent pointer-events-none" />
         
         {/* Animated Glowing Ring */}
         <div className="relative flex items-center justify-center h-16 w-16">

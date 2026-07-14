@@ -76,7 +76,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div className="fixed inset-x-3 bottom-22 z-50 md:inset-x-auto md:right-6 md:bottom-6 md:w-[360px]">
-      <section className="rounded-[28px] border border-[rgba(184,109,60,0.34)] bg-[rgba(16,13,11,0.96)] p-4 text-white shadow-[0_18px_48px_rgba(0,0,0,0.42)] backdrop-blur">
+      <section className="rounded-[28px] border border-[rgba(109, 94, 242,0.34)] bg-[rgba(16,13,11,0.96)] p-4 text-white shadow-[0_18px_48px_rgba(0,0,0,0.42)] backdrop-blur">
         <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)]">
           Instalar aplicativo
         </p>
@@ -90,7 +90,7 @@ export function PwaInstallPrompt() {
           <button
             type="button"
             onClick={installApp}
-            className="rounded-full bg-[var(--accent-copper)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#a95f31]"
+            className="rounded-full bg-[var(--accent-copper)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5b4ed9]"
           >
             Instalar
           </button>

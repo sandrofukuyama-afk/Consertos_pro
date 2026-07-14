@@ -10,8 +10,8 @@ export function AppIcon({
       style={{
         alignItems: "center",
         background: maskable
-          ? "radial-gradient(circle at top left, #edb277 0%, #b86d3c 30%, #120f0d 100%)"
-          : "radial-gradient(circle at top left, #d8955f 0%, #b86d3c 35%, #1a1613 100%)",
+          ? "radial-gradient(circle at top left, #b3a8fb 0%, #6d5ef2 30%, #120f0d 100%)"
+          : "radial-gradient(circle at top left, #9c8ef5 0%, #6d5ef2 35%, #1a1613 100%)",
         display: "flex",
         height: "100%",
         justifyContent: "center",

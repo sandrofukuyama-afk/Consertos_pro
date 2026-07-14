@@ -40,7 +40,7 @@ export default async function Home({ searchParams }: HomePageProps) {
           className={`rounded-[26px] border p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)] ${
             supabaseReady
               ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)]"
-              : "border-[rgba(184,109,60,0.24)] bg-[rgba(184,109,60,0.08)]"
+              : "border-[rgba(109, 94, 242,0.24)] bg-[rgba(109, 94, 242,0.08)]"
           }`}
         >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -63,7 +63,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
                 supabaseReady
                   ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
-                  : "bg-[rgba(184,109,60,0.14)] text-[var(--accent-copper)]"
+                  : "bg-[rgba(109, 94, 242,0.14)] text-[var(--accent-copper)]"
               }`}
             >
               {supabaseReady ? "Configurado" : "Pendente"}
@@ -89,7 +89,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                     item.tone === "teal"
                       ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
                       : item.tone === "copper"
-                        ? "bg-[rgba(184,109,60,0.14)] text-[var(--accent-copper)]"
+                        ? "bg-[rgba(109, 94, 242,0.14)] text-[var(--accent-copper)]"
                         : "bg-[rgba(216,166,84,0.18)] text-[var(--accent-amber)]"
                   }`}
                 >

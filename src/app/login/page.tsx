@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </p>
             </div>
 
-            <div className="rounded-full border border-[rgba(184,109,60,0.28)] bg-[rgba(184,109,60,0.08)] px-4 py-2 text-xs font-medium text-[rgba(255,245,236,0.82)]">
+            <div className="rounded-full border border-[rgba(109, 94, 242,0.28)] bg-[rgba(109, 94, 242,0.08)] px-4 py-2 text-xs font-medium text-[rgba(255,245,236,0.82)]">
               Auth e banco integrados
             </div>
           </div>

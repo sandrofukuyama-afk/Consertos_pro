@@ -380,7 +380,7 @@ export function EquipmentIntakeForm({
         ) : null}
 
         {capturedCategoryName ? (
-          <div className="mt-3 rounded-2xl border border-[rgba(184,109,60,0.24)] bg-[rgba(184,109,60,0.08)] px-4 py-3 text-sm text-[var(--foreground)]">
+          <div className="mt-3 rounded-2xl border border-[rgba(109, 94, 242,0.24)] bg-[rgba(109, 94, 242,0.08)] px-4 py-3 text-sm text-[var(--foreground)]">
             Categoria nova detectada: <strong>{capturedCategoryName}</strong>. Ela será cadastrada automaticamente no envio.
           </div>
         ) : null}
