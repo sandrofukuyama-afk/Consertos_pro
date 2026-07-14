@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Sora } from "next/font/google";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { PwaProvider } from "@/components/pwa-provider";
 import "./globals.css";
 
 const sora = Sora({
@@ -20,9 +22,25 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  applicationName: "ConsertosPro",
   title: "ConsertosPro",
-  description: "Sistema da oficina para acompanhar casos e guardar o que foi aprendido.",
-  manifest: "/manifest.json",
+  description: "Sistema da oficina para acompanhar casos, registrar testes e guardar o que foi aprendido.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "ConsertosPro",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    apple: "/apple-icon",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -36,12 +54,13 @@ export default function RootLayout({
       className={`${sora.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <head>
-        <link rel="apple-touch-icon" href="/favicon.ico" />
         <meta name="theme-color" content="#ca6a55" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <PwaProvider />
+        {children}
+        <PwaInstallPrompt />
+      </body>
     </html>
   );
 }
