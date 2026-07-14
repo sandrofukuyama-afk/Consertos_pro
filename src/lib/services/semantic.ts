@@ -175,7 +175,7 @@ export async function syncDiagnosticEmbeddingSource(
     `Prioridade ${data.priority}.`,
     `Resumo ${data.current_summary ?? data.initial_problem_report}.`,
     data.physical_condition_notes
-      ? `Observacoes fisicas ${data.physical_condition_notes}.`
+      ? `Observações físicas ${data.physical_condition_notes}.`
       : "",
   ]
     .filter(Boolean)

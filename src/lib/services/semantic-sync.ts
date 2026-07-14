@@ -8,7 +8,7 @@ export function queueDiagnosticSemanticSync(diagnosticId: string) {
       const supabase = await createClient();
       await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
     } catch (error) {
-      console.error("Falha ao sincronizar embedding do diagnostico", {
+      console.error("Falha ao sincronizar embedding do diagnóstico", {
         diagnosticId,
         error,
       });
