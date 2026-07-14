@@ -27,7 +27,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
       user={user}
     >
       <div className="grid gap-4">
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)]">
+        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
           <form className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_220px_220px_220px_auto]">
             <input
               type="text"

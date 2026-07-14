@@ -204,7 +204,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
         {/* Dashboard layout */}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.85fr)]">
           {/* List Section */}
-          <section className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(72,62,49,0.06)] flex flex-col gap-4 self-start">
+          <section className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)] flex flex-col gap-4 self-start">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[var(--panel-border)]">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">

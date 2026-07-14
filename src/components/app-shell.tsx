@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
+import { Logo } from "@/components/logo";
 import { LogoutButton } from "@/components/logout-button";
 import { navItems } from "@/lib/mock-data";
 import type { AppUser } from "@/types/domain";
@@ -40,9 +41,12 @@ export function AppShell({
   const renderSidebarContent = () => (
     <div className="relative flex h-full flex-col p-6">
       <div className="border-b border-white/10 pb-5">
-        <p className="font-mono text-xs uppercase tracking-[0.28em] text-[rgba(230,228,245,0.68)]">
-          ConsertosPro
-        </p>
+        <div className="flex items-center gap-2.5">
+          <Logo size={32} />
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-[rgba(230,228,245,0.68)]">
+            ConsertosPro
+          </p>
+        </div>
         <h1 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-white">
           Bancada com memória técnica
         </h1>
@@ -213,13 +217,14 @@ export function AppShell({
       </div>
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 lg:grid lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="relative hidden overflow-hidden rounded-[30px] border border-white/10 bg-[var(--panel)] text-white shadow-[0_28px_80px_rgba(25,30,31,0.28)] lg:block">
+        <aside className="relative hidden overflow-hidden rounded-[30px] border border-white/10 bg-[var(--panel)] text-white shadow-[0_28px_80px_rgba(12,11,18,0.28)] lg:block">
           <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-br from-[rgba(109,94,242,0.24)] to-transparent" />
           {renderSidebarContent()}
         </aside>
 
         <header className="flex items-center justify-between rounded-[24px] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-3.5 shadow-md lg:hidden">
-          <Link href="/" className="font-mono text-sm font-semibold uppercase tracking-[0.2em] text-white">
+          <Link href="/" className="flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-[0.2em] text-white">
+            <Logo size={26} />
             ConsertosPro
           </Link>
           <div
@@ -230,7 +235,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(26,22,19,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
+        <main className="min-w-0 flex-1 overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
           <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-8 md:py-5">
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">

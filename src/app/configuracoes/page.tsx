@@ -76,7 +76,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
         ) : null}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
-          <section className="flex flex-col gap-4 self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[0_18px_44px_rgba(72,62,49,0.06)] sm:p-6">
+          <section className="flex flex-col gap-4 self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-6">
             {activeTab === "tecnicos" ? (
               <div className="flex flex-col gap-4">
                 <div className="border-b border-[var(--panel-border)] pb-3">

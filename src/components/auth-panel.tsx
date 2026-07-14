@@ -8,7 +8,7 @@ type AuthPanelProps = {
 export function AuthPanel({ error, message }: AuthPanelProps) {
   return (
     <div className="mx-auto w-full max-w-[560px]">
-      <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(72,62,49,0.06)] sm:p-6">
+      <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-6">
         <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
           Entrar
         </p>

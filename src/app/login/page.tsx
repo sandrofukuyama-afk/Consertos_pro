@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AuthPanel } from "@/components/auth-panel";
+import { Logo } from "@/components/logo";
 import { getCurrentUser } from "@/lib/auth";
 
 type LoginPageProps = {
@@ -22,12 +23,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="min-h-screen px-4 py-5 md:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-[1120px] items-center justify-center">
-        <section className="w-full rounded-[34px] border border-white/10 bg-[var(--panel)] p-5 shadow-[0_28px_80px_rgba(25,30,31,0.28)] sm:p-7 lg:p-8">
+        <section className="w-full rounded-[34px] border border-white/10 bg-[var(--panel)] p-5 shadow-[0_28px_80px_rgba(12,11,18,0.28)] sm:p-7 lg:p-8">
           <div className="mb-6 flex flex-col gap-3 border-b border-white/8 pb-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.28em] text-[rgba(230,228,245,0.68)]">
-                ConsertosPro
-              </p>
+              <div className="flex items-center gap-2.5">
+                <Logo size={32} />
+                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[rgba(230,228,245,0.68)]">
+                  ConsertosPro
+                </p>
+              </div>
               <h1 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 Acesso técnico
               </h1>

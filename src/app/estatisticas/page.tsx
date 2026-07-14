@@ -44,7 +44,7 @@ export default async function EstatisticasPage() {
     >
       <div className="grid gap-4">
         <section className="grid gap-4 md:grid-cols-2">
-          <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
               Casos resolvidos
             </p>
@@ -52,7 +52,7 @@ export default async function EstatisticasPage() {
               {stats.totalResolvedCases}
             </p>
           </article>
-          <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(72,62,49,0.06)]">
+          <article className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
               Tempo médio de resolução
             </p>
