@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FormAssistProvider } from "@/components/form-assist-provider";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Sora } from "next/font/google";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { PwaProvider } from "@/components/pwa-provider";
@@ -57,6 +58,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#ca6a55" />
       </head>
       <body className="min-h-full flex flex-col">
+        <FormAssistProvider />
         <PwaProvider />
         {children}
         <PwaInstallPrompt />

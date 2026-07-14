@@ -88,3 +88,28 @@ button {
 .pb-safe {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
 }
+
+.form-assist-voice-button {
+  width: fit-content;
+  border: 1px solid rgba(255, 248, 240, 0.14);
+  background: rgba(16, 13, 11, 0.9);
+  color: var(--foreground);
+  border-radius: 999px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: 0.6rem;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.form-assist-voice-button:hover {
+  border-color: rgba(184, 109, 60, 0.4);
+  background: rgba(184, 109, 60, 0.12);
+}
+
+.form-assist-voice-button[data-listening="true"] {
+  border-color: rgba(45, 139, 130, 0.42);
+  background: rgba(45, 139, 130, 0.16);
+  color: #dff8f4;
+}
