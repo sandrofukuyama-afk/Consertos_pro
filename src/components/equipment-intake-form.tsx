@@ -291,7 +291,7 @@ export function EquipmentIntakeForm({
           </StaticSelectField>
           <div className="md:col-span-2">
             <Field
-              label="Codigo do painel"
+              label="Código do painel"
               name="tv_panel_code"
               placeholder="Ex.: CY-GK050HGLV1H"
             />
@@ -307,7 +307,7 @@ export function EquipmentIntakeForm({
             placeholder="Ex.: Ryzen 5 5500U"
           />
           <Field
-          label="Memória RAM (GB)"
+            label="Memória RAM (GB)"
             name="notebook_ram_gb"
             placeholder="Ex.: 8"
             type="number"
@@ -383,7 +383,7 @@ export function EquipmentIntakeForm({
             placeholder="Ex.: Core i5 10400"
           />
           <Field
-          label="Memória RAM (GB)"
+            label="Memória RAM (GB)"
             name="desktop_ram_gb"
             placeholder="Ex.: 16"
             type="number"
@@ -430,7 +430,7 @@ export function EquipmentIntakeForm({
         <textarea
           name="physical_condition_notes"
           rows={4}
-          placeholder="Oxidacao, marcas, trincas, sinais de reparo, faltando pecas, etc."
+          placeholder="Oxidação, marcas, trincas, sinais de reparo, faltando peças, etc."
           className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
         />
       </label>
@@ -450,9 +450,9 @@ export function EquipmentIntakeForm({
       </label>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button 
+        <button
           disabled={isPending}
-          className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed"
+          className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? "Cadastrando..." : "Cadastrar equipamento"}
         </button>

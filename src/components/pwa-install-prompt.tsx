@@ -84,7 +84,7 @@ export function PwaInstallPrompt() {
           Leve o ConsertosPro para a bancada
         </h2>
         <p className="mt-2 text-sm leading-6 text-[rgba(255,245,236,0.76)]">
-          Instale o app para abrir em tela cheia, fixar no aparelho e ganhar acesso mais rapido no dia a dia.
+          Instale o app para abrir em tela cheia, fixar no aparelho e ganhar acesso mais rápido no dia a dia.
         </p>
         <div className="mt-4 flex gap-3">
           <button
@@ -99,7 +99,7 @@ export function PwaInstallPrompt() {
             onClick={dismissPrompt}
             className="rounded-full border border-white/10 px-4 py-2 text-sm text-[rgba(255,245,236,0.76)] hover:bg-white/5"
           >
-            Agora nao
+            Agora não
           </button>
         </div>
       </section>

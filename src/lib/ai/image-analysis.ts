@@ -71,14 +71,14 @@ const OCR_SCHEMA = {
 };
 
 const OCR_SYSTEM_PROMPT = [
-  "Voce esta olhando uma foto macro de uma placa eletronica.",
-  "Sua tarefa e identificar a serigrafia principal de componente visivel na imagem,",
+  "Você está olhando uma foto macro de uma placa eletrônica.",
+  "Sua tarefa é identificar a serigrafia principal de componente visível na imagem,",
   "como C2800, PL401, U12, Q45, R210 ou F1.",
-  "Retorne somente uma referencia quando houver leitura visual plausivel.",
-  "Nao invente caracteres ocultos nem chute referencias longas sem base visual.",
-  "Se a foto nao permitir leitura confiavel, retorne componentRef como null.",
-  "Padronize a referencia em letras maiusculas sem espacos.",
-  "Explique em rationale, em portugues do Brasil, o que sustentou a leitura ou por que ela ficou inconclusiva.",
+  "Retorne somente uma referência quando houver leitura visual plausível.",
+  "Não invente caracteres ocultos nem chute referências longas sem base visual.",
+  "Se a foto não permitir leitura confiável, retorne componentRef como null.",
+  "Padronize a referência em letras maiúsculas sem espaços.",
+  "Explique em rationale, em português do Brasil, o que sustentou a leitura ou por que ela ficou inconclusiva.",
 ].join(" ");
 
 export function isVisionConfigured() {

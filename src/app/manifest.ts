@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ConsertosPro - Diagnostico Inteligente de Bancada",
+    name: "ConsertosPro - Diagnóstico Inteligente de Bancada",
     short_name: "ConsertosPro",
-    description: "Sistema da oficina para acompanhar casos, registrar testes e manter memoria tecnica.",
+    description: "Sistema da oficina para acompanhar casos, registrar testes e manter memória técnica.",
     start_url: "/",
     scope: "/",
     display: "standalone",

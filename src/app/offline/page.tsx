@@ -6,14 +6,14 @@ export default function OfflinePage() {
           Modo offline
         </p>
         <h1 className="mt-4 font-[family-name:var(--font-heading)] text-4xl font-semibold tracking-tight text-[var(--foreground)]">
-          A conexao caiu, mas o app continua com voce.
+          A conexão caiu, mas o app continua com você.
         </h1>
         <p className="mt-4 text-sm leading-7 text-[var(--muted)]">
-          Assim que a internet voltar, recarregue a pagina para sincronizar os dados mais recentes.
-          Os registros locais do fluxo offline continuam disponiveis no aparelho.
+          Assim que a internet voltar, recarregue a página para sincronizar os dados mais recentes.
+          Os registros locais do fluxo offline continuam disponíveis no aparelho.
         </p>
         <div className="mt-6 rounded-[24px] border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] p-4 text-sm leading-6 text-[var(--foreground)]">
-          Dica: se voce instalou o ConsertosPro, abra pelo icone do app para uma experiencia mais estavel na bancada.
+          Dica: se você instalou o ConsertosPro, abra pelo ícone do app para uma experiência mais estável na bancada.
         </div>
       </section>
     </main>

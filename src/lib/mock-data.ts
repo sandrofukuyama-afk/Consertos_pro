@@ -17,7 +17,7 @@ export const navItems: NavItem[] = [
   },
   {
     href: "/catalogo-tecnico",
-    label: "Catálogo Técnico",
+    label: "Catálogo técnico",
     description: "Marcas, modelos, placas e componentes",
   },
   {
@@ -38,7 +38,7 @@ export const navItems: NavItem[] = [
   {
     href: "/estatisticas",
     label: "Estatísticas",
-    description: "Problemas que mais aparecem e tempo medio",
+    description: "Problemas que mais aparecem e tempo médio",
   },
   {
     href: "/configuracoes",
@@ -177,7 +177,7 @@ export const knowledgeItems: KnowledgeItem[] = [
   {
     cause: "EEPROM corrompida após queda de energia",
     incidence: "7 casos",
-    note: "Regravacao resolveu 5 casos neste trimestre.",
+    note: "Regravação resolveu 5 casos neste trimestre.",
   },
   {
     cause: "MOSFET aquecendo na linha de carga",
@@ -210,7 +210,7 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
   conhecimento: [
     {
       title: "Separar suspeita de certeza",
-      description: "Guardar como confirmado so o que ja foi revisado e validado.",
+      description: "Guardar como confirmado só o que já foi revisado e validado.",
     },
     {
       title: "Salvar o que deu certo",
@@ -224,7 +224,7 @@ export const moduleTasks: Record<string, ModuleTask[]> = {
     },
     {
       title: "Busca mais parecida",
-      description: "Mostrar tambem casos e documentos parecidos com o que foi digitado.",
+      description: "Mostrar também casos e documentos parecidos com o que foi digitado.",
     },
   ],
   configuracoes: [

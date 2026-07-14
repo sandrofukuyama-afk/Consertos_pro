@@ -106,9 +106,8 @@ export function AppShell({
   );
 
   const renderBottomSheetContent = (onClose: () => void) => {
-    // Secondary pages that are not on the primary bottom bar
-    const secondaryItems = navItems.filter(item => 
-      !["/", "/biblioteca", "/conhecimento", "/busca"].includes(item.href)
+    const secondaryItems = navItems.filter((item) =>
+      !["/", "/biblioteca", "/conhecimento", "/busca"].includes(item.href),
     );
 
     return (
@@ -118,11 +117,13 @@ export function AppShell({
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[rgba(255,245,236,0.58)]">
               ConsertosPro
             </p>
-            <h3 className="font-[family-name:var(--font-heading)] text-lg font-semibold mt-1">Menu Adicional</h3>
+            <h3 className="mt-1 font-[family-name:var(--font-heading)] text-lg font-semibold">
+              Menu adicional
+            </h3>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-2 bg-white/5 hover:bg-white/10 text-white transition focus:outline-none"
+            className="rounded-full bg-white/5 p-2 text-white transition hover:bg-white/10 focus:outline-none"
             aria-label="Fechar menu"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -133,7 +134,9 @@ export function AppShell({
 
         <div className="mt-6 space-y-6">
           <div>
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)] mb-3">Páginas de Suporte</p>
+            <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)]">
+              Páginas de suporte
+            </p>
             <div className="grid gap-2">
               {secondaryItems.map((item) => {
                 const displayLabel =
@@ -143,22 +146,25 @@ export function AppShell({
                     ? "Central para categorias, fabricantes, tipos de placa, modelos, placas, componentes, sintomas e testes"
                     : item.description;
                 const isActive = pathname.startsWith(item.href);
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    className={`rounded-2xl border px-4 py-3.5 transition flex items-center justify-between ${
+                    className={`flex items-center justify-between rounded-2xl border px-4 py-3.5 transition ${
                       isActive
                         ? "border-[rgba(184,109,60,0.55)] bg-[rgba(184,109,60,0.16)] text-white"
-                        : "border-white/5 bg-white/3 hover:bg-white/5 text-white/80"
+                        : "border-white/5 bg-white/3 text-white/80 hover:bg-white/5"
                     }`}
                   >
                     <div className="min-w-0">
-                      <span className="text-sm font-semibold tracking-tight block">{displayLabel}</span>
-                      <span className="text-xs text-[var(--muted)] mt-1 block truncate">{displayDescription}</span>
+                      <span className="block text-sm font-semibold tracking-tight">{displayLabel}</span>
+                      <span className="mt-1 block truncate text-xs text-[var(--muted)]">{displayDescription}</span>
                     </div>
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-[var(--accent-copper)]" : "bg-white/10"}`} />
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-[var(--accent-copper)]" : "bg-white/10"}`}
+                    />
                   </Link>
                 );
               })}
@@ -166,18 +172,20 @@ export function AppShell({
           </div>
 
           <div className="border-t border-white/10 pt-4">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)] mb-3">Perfil do Técnico</p>
-            <div className="flex items-center justify-between rounded-2xl bg-white/5 p-4 gap-3">
+            <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)]">
+              Perfil do técnico
+            </p>
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/5 p-4">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white truncate">{user.fullName}</p>
-                <p className="text-xs text-[var(--muted)] truncate">{user.email}</p>
+                <p className="truncate text-sm font-semibold text-white">{user.fullName}</p>
+                <p className="truncate text-xs text-[var(--muted)]">{user.email}</p>
               </div>
               <LogoutButton />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-[rgba(255,245,236,0.68)] leading-5">
-            <p className="font-mono uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)] mb-1">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-[rgba(255,245,236,0.68)]">
+            <p className="mb-1 font-mono uppercase tracking-[0.22em] text-[rgba(255,245,236,0.58)]">
               Próxima fase
             </p>
             Formulários operacionais, timeline real, anexos e busca integrada.
@@ -188,47 +196,45 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen w-full px-3 py-3 md:px-5 md:py-4 overflow-x-hidden flex flex-col">
-      {/* Mobile Bottom Sheet Backdrop */}
+    <div className="flex min-h-screen w-full flex-col overflow-x-hidden px-3 py-3 md:px-5 md:py-4">
       <div
         className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-300 lg:hidden ${
-          isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          isMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={() => setIsMenuOpen(false)}
       />
 
-      {/* Mobile Drawer (Bottom Sheet) */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 rounded-t-[30px] border-t border-white/10 bg-[var(--panel)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out lg:hidden max-h-[85vh] overflow-y-auto ${
+        className={`fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-[30px] border-t border-white/10 bg-[var(--panel)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out lg:hidden ${
           isMenuOpen ? "translate-y-0" : "translate-y-full"
         }`}
       >
         {renderBottomSheetContent(() => setIsMenuOpen(false))}
       </div>
 
-      <div className="mx-auto w-full max-w-[1600px] flex flex-col gap-4 flex-1 lg:grid lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[280px_minmax(0,1fr)]">
-        {/* Desktop Sidebar */}
+      <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 lg:grid lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="relative hidden overflow-hidden rounded-[30px] border border-white/10 bg-[var(--panel)] text-white shadow-[0_28px_80px_rgba(25,30,31,0.28)] lg:block">
           <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-br from-[rgba(184,109,60,0.24)] to-transparent" />
           {renderSidebarContent()}
         </aside>
 
-        {/* Mobile Header Bar */}
         <header className="flex items-center justify-between rounded-[24px] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-3.5 shadow-md lg:hidden">
           <Link href="/" className="font-mono text-sm font-semibold uppercase tracking-[0.2em] text-white">
             ConsertosPro
           </Link>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-copper)] text-xs font-semibold text-white shadow-sm" title={user.fullName}>
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-copper)] text-xs font-semibold text-white shadow-sm"
+            title={user.fullName}
+          >
             {userInitials}
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="min-w-0 overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(26,22,19,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur flex-1">
+        <main className="min-w-0 flex-1 overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(26,22,19,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
           <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-8 md:py-5">
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Central de Diagnósticos
+                Central de diagnósticos
               </p>
               <h2 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)] md:text-3xl">
                 {title}
@@ -241,13 +247,13 @@ export function AppShell({
             <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
               <Link
                 href="/busca"
-                className="flex w-full min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2.5 text-sm text-[var(--muted)] sm:w-auto sm:min-w-[240px] hover:border-[rgba(184,109,60,0.3)] transition"
+                className="flex w-full min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2.5 text-sm text-[var(--muted)] transition hover:border-[rgba(184,109,60,0.3)] sm:w-auto sm:min-w-[240px]"
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
               <Link
                 href={actionHref}
-                className="rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(184,109,60,0.28)] hover:-translate-y-0.5 hover:bg-[#a95f31] transition"
+                className="rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(184,109,60,0.28)] transition hover:-translate-y-0.5 hover:bg-[#a95f31]"
               >
                 {actionLabel}
               </Link>
@@ -257,24 +263,22 @@ export function AppShell({
               <div className="hidden sm:block">
                 <LogoutButton />
               </div>
-              <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1 sm:hidden">
+              <div className="mt-1 flex items-center justify-between border-t border-white/5 pt-2 sm:hidden">
                 <span className="text-xs text-[var(--muted)]">{user.fullName}</span>
                 <LogoutButton />
               </div>
             </div>
           </header>
 
-          <div className="px-4 py-4 md:px-8 md:py-7 pb-24 lg:pb-7">{children}</div>
+          <div className="px-4 py-4 pb-24 md:px-8 md:py-7 lg:pb-7">{children}</div>
         </main>
 
-        {/* Mobile Bottom Tab Bar */}
-        <nav className="fixed bottom-0 inset-x-0 z-40 bg-[var(--panel)]/90 backdrop-blur-md border-t border-white/10 px-2 py-2 flex items-center justify-around lg:hidden pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
-          {/* Tab 1: Diagnósticos */}
+        <nav className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-around border-t border-white/10 bg-[var(--panel)]/90 px-2 py-2 pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md lg:hidden">
           <Link
             href="/"
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname === "/"
-                ? "text-[var(--accent-copper)] font-semibold"
+                ? "font-semibold text-[var(--accent-copper)]"
                 : "text-[var(--muted)] hover:text-white"
             }`}
           >
@@ -284,12 +288,11 @@ export function AppShell({
             <span className="text-[10px] tracking-tight">Casos</span>
           </Link>
 
-          {/* Tab 2: Biblioteca */}
           <Link
             href="/biblioteca"
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname.startsWith("/biblioteca")
-                ? "text-[var(--accent-copper)] font-semibold"
+                ? "font-semibold text-[var(--accent-copper)]"
                 : "text-[var(--muted)] hover:text-white"
             }`}
           >
@@ -299,12 +302,11 @@ export function AppShell({
             <span className="text-[10px] tracking-tight">Biblioteca</span>
           </Link>
 
-          {/* Tab 3: Conhecimento */}
           <Link
             href="/conhecimento"
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname.startsWith("/conhecimento")
-                ? "text-[var(--accent-copper)] font-semibold"
+                ? "font-semibold text-[var(--accent-copper)]"
                 : "text-[var(--muted)] hover:text-white"
             }`}
           >
@@ -314,12 +316,11 @@ export function AppShell({
             <span className="text-[10px] tracking-tight">Memória</span>
           </Link>
 
-          {/* Tab 4: Busca */}
           <Link
             href="/busca"
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
               pathname.startsWith("/busca")
-                ? "text-[var(--accent-copper)] font-semibold"
+                ? "font-semibold text-[var(--accent-copper)]"
                 : "text-[var(--muted)] hover:text-white"
             }`}
           >
@@ -329,7 +330,6 @@ export function AppShell({
             <span className="text-[10px] tracking-tight">Busca</span>
           </Link>
 
-          {/* Tab 5: Mais (Menu Trigger) */}
           <button
             onClick={() => setIsMenuOpen(true)}
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition focus:outline-none ${

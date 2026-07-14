@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AppShell } from "@/components/app-shell";
 import { DashboardEmptyState } from "@/components/dashboard-empty-state";
 import { StatusPill } from "@/components/status-pill";
@@ -5,7 +7,6 @@ import { requireCurrentUser } from "@/lib/auth";
 import { hypotheses, timeline } from "@/lib/mock-data";
 import { getDashboardData } from "@/lib/services/dashboard";
 import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
-import Link from "next/link";
 
 type HomePageProps = {
   searchParams: Promise<{
@@ -128,18 +129,18 @@ export default async function Home({ searchParams }: HomePageProps) {
                   <Link
                     key={diagnostic.id}
                     href={`/diagnosticos/${diagnostic.recordId}`}
-                    className="flex flex-col gap-3 border-t border-[var(--panel-border)] px-4 py-4 md:grid md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] hover:bg-white/2 transition"
+                    className="flex flex-col gap-3 border-t border-[var(--panel-border)] px-4 py-4 transition hover:bg-white/2 md:grid md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center justify-between md:block">
-                        <p className="text-sm font-semibold text-[var(--foreground)] break-words">
+                        <p className="break-words text-sm font-semibold text-[var(--foreground)]">
                           {diagnostic.category}
                         </p>
                         <div className="md:hidden">
                           <StatusPill label={diagnostic.status} />
                         </div>
                       </div>
-                      <p className="mt-1 text-sm text-[var(--muted)] break-words">
+                      <p className="mt-1 break-words text-sm text-[var(--muted)]">
                         {diagnostic.equipment}
                       </p>
                       <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
@@ -147,23 +148,29 @@ export default async function Home({ searchParams }: HomePageProps) {
                       </p>
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[var(--foreground)] break-words">
-                        <span className="text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] mr-1 md:hidden">Sintoma:</span>
+                      <p className="break-words text-sm font-medium text-[var(--foreground)]">
+                        <span className="mr-1 text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] md:hidden">
+                          Sintoma:
+                        </span>
                         {diagnostic.symptom}
                       </p>
                       <p className="mt-2 text-xs text-[var(--muted)]">
                         Atualizado {diagnostic.updatedAt}
                       </p>
                     </div>
-                    <p className="min-w-0 text-sm leading-6 text-[var(--foreground)] break-words">
-                      <span className="text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] mr-1 md:hidden">Placa:</span>
+                    <p className="min-w-0 break-words text-sm leading-6 text-[var(--foreground)]">
+                      <span className="mr-1 text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] md:hidden">
+                        Placa:
+                      </span>
                       {diagnostic.board}
                     </p>
-                    <p className="min-w-0 text-sm leading-6 text-[var(--foreground)] break-words">
-                      <span className="text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] mr-1 md:hidden">Técnico:</span>
+                    <p className="min-w-0 break-words text-sm leading-6 text-[var(--foreground)]">
+                      <span className="mr-1 text-xs font-mono uppercase tracking-[0.1em] text-[var(--muted)] md:hidden">
+                        Técnico:
+                      </span>
                       {diagnostic.technician}
                     </p>
-                    <div className="hidden md:flex items-start">
+                    <div className="hidden items-start md:flex">
                       <StatusPill label={diagnostic.status} />
                     </div>
                   </Link>
@@ -185,7 +192,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                 Isolar a linha LCD_VDD antes de regravar BIOS
               </h3>
               <p className="mt-3 break-words text-sm leading-7 text-[rgba(255,245,236,0.76)]">
-                A ideia aqui e mostrar um teste por vez. Esta area exibe a sugestao da IA com um motivo simples para ajudar na decisao.
+                A ideia aqui é mostrar um teste por vez. Esta área exibe a sugestão da IA com um motivo simples para ajudar na decisão.
               </p>
               <div className="mt-5 break-words rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(255,245,236,0.84)]">
                 Justificativa: há medição estável de 19V, consumo inicial coerente e histórico recente de casos semelhantes com falha no circuito de imagem. A regravação agora teria custo maior e menor poder de isolamento.
@@ -206,10 +213,10 @@ export default async function Home({ searchParams }: HomePageProps) {
                       {item.time}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--foreground)] break-words">
+                      <p className="break-words text-sm font-semibold text-[var(--foreground)]">
                         {item.title}
                       </p>
-                      <p className="mt-1 text-sm leading-6 text-[var(--muted)] break-words">
+                      <p className="mt-1 break-words text-sm leading-6 text-[var(--muted)]">
                         {item.description}
                       </p>
                     </div>
@@ -262,7 +269,9 @@ export default async function Home({ searchParams }: HomePageProps) {
                   Documentos recentes
                 </h3>
               </div>
-              <p className="break-words text-sm text-[var(--muted)]">PDFs, esquemas, mapas e firmwares</p>
+              <p className="break-words text-sm text-[var(--muted)]">
+                PDFs, esquemas, mapas e firmwares
+              </p>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -290,7 +299,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               Causas confirmadas
             </p>
             <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
-              Casos que viraram referencia
+              Casos que viraram referência
             </h3>
             <div className="mt-4 space-y-3">
               {dashboard.knowledgeItems.map((item) => (
