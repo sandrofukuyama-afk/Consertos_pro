@@ -73,6 +73,68 @@ function readOptionalBoolean(formData: FormData, field: string) {
   return null;
 }
 
+function toSlug(value: string) {
+  return normalizeText(value).replace(/\s+/g, "-");
+}
+
+async function resolveCategoryForDiagnostic(
+  categoryId: string,
+  capturedCategoryName: string | null,
+  userId: string,
+) {
+  const supabase = await createClient();
+
+  if (categoryId) {
+    const { data: existing } = await supabase
+      .from("equipment_categories")
+      .select("id, name")
+      .eq("id", categoryId)
+      .maybeSingle();
+
+    return existing ?? null;
+  }
+
+  if (!capturedCategoryName) {
+    return null;
+  }
+
+  const slug = toSlug(capturedCategoryName);
+  const { data: existingBySlug } = await supabase
+    .from("equipment_categories")
+    .select("id, name")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (existingBySlug) {
+    return existingBySlug;
+  }
+
+  const { data: createdCategory, error } = await supabase
+    .from("equipment_categories")
+    .insert({
+      name: capturedCategoryName,
+      slug,
+    })
+    .select("id, name")
+    .single();
+
+  if (error || !createdCategory) {
+    throw new Error(error?.message ?? "Falha ao criar categoria automaticamente.");
+  }
+
+  await supabase.from("change_history").insert({
+    entity_type: "equipment_category",
+    entity_id: createdCategory.id,
+    change_type: "create",
+    field_name: "all",
+    new_value_text: createdCategory.name,
+    change_reason: "Cadastro automático de categoria pelo capturador do equipamento",
+    changed_by_user_id: userId,
+  });
+
+  return createdCategory;
+}
+
 function compactDetails(value: Record<string, string | number | boolean | null>) {
   return Object.fromEntries(
     Object.entries(value).filter(([, entry]) => entry !== null && entry !== ""),
@@ -149,7 +211,8 @@ export async function createDiagnosticAction(formData: FormData) {
   const user = await requireCurrentUser();
   const supabase = await createClient();
 
-  const categoryId = String(formData.get("equipment_category_id") ?? "").trim();
+  const selectedCategoryId = String(formData.get("equipment_category_id") ?? "").trim();
+  const capturedCategoryName = readOptionalText(formData, "captured_category_name");
   const selectedManufacturerId =
     String(formData.get("manufacturer_id") ?? "").trim() || null;
   const selectedModelId =
@@ -165,7 +228,14 @@ export async function createDiagnosticAction(formData: FormData) {
     .getAll("equipment_photos")
     .filter((item): item is File => item instanceof File && item.size > 0);
 
-  if (!categoryId || !problemReport) {
+  const resolvedCategory = await resolveCategoryForDiagnostic(
+    selectedCategoryId,
+    capturedCategoryName,
+    user.id,
+  );
+  const categoryId = resolvedCategory?.id ?? "";
+
+  if (!resolvedCategory?.id || !problemReport) {
     redirect("/diagnosticos/novo?error=Categoria e relato inicial são obrigatórios.");
   }
 

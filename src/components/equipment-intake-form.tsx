@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 import { CatalogShortcutLinks } from "@/components/catalog-shortcut-links";
+import {
+  matchCatalogOption,
+  matchEquipmentModel,
+  parseEquipmentCapture,
+  type ParsedEquipmentCapture,
+} from "@/lib/equipment-capture";
 import type { CatalogOption, EquipmentModelCatalogOption } from "@/types/domain";
 
 type EquipmentIntakeFormProps = {
@@ -30,12 +36,16 @@ function Field({
   placeholder,
   type = "text",
   step,
+  value,
+  onChange,
 }: {
   label: string;
   name: string;
   placeholder?: string;
   type?: string;
   step?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <label className="grid gap-2 text-sm text-[var(--foreground)]">
@@ -45,6 +55,8 @@ function Field({
         name={name}
         placeholder={placeholder}
         step={step}
+        value={value}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
       />
     </label>
@@ -105,6 +117,54 @@ function StaticSelectField({
   );
 }
 
+function TextareaField({
+  label,
+  name,
+  rows,
+  placeholder,
+  value,
+  onChange,
+  required = false,
+}: {
+  label: string;
+  name: string;
+  rows: number;
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <label className="grid gap-2 text-sm text-[var(--foreground)]">
+      <span className="font-medium">{label}</span>
+      <textarea
+        required={required}
+        name={name}
+        rows={rows}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+      />
+    </label>
+  );
+}
+
+function buildCaptureSummary(parsed: ParsedEquipmentCapture) {
+  const entries = [
+    parsed.category ? `Categoria: ${parsed.category}` : null,
+    parsed.manufacturer ? `Fabricante: ${parsed.manufacturer}` : null,
+    parsed.model ? `Modelo: ${parsed.model}` : null,
+    parsed.serialNumber ? `Série: ${parsed.serialNumber}` : null,
+    parsed.manufacturingYear ? `Ano: ${parsed.manufacturingYear}` : null,
+    parsed.accessoriesIncluded ? `Acessórios: ${parsed.accessoriesIncluded}` : null,
+    parsed.initialProblemReport ? `Relato: ${parsed.initialProblemReport}` : null,
+    parsed.physicalConditionNotes ? `Condição física: ${parsed.physicalConditionNotes}` : null,
+  ].filter(Boolean);
+
+  return entries;
+}
+
 export function EquipmentIntakeForm({
   action,
   categories,
@@ -112,26 +172,144 @@ export function EquipmentIntakeForm({
   models,
   error,
 }: EquipmentIntakeFormProps) {
+  const [captureText, setCaptureText] = useState("");
+  const [captureFeedback, setCaptureFeedback] = useState<string | null>(null);
+  const [capturedCategoryName, setCapturedCategoryName] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [manufacturerId, setManufacturerId] = useState("");
   const [modelId, setModelId] = useState("");
+  const [newManufacturerName, setNewManufacturerName] = useState("");
+  const [newModelName, setNewModelName] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
+  const [manufacturingYear, setManufacturingYear] = useState("");
+  const [accessoriesIncluded, setAccessoriesIncluded] = useState("");
+  const [initialProblemReport, setInitialProblemReport] = useState("");
+  const [physicalConditionNotes, setPhysicalConditionNotes] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const selectedCategory = categories.find((item) => item.id === categoryId) ?? null;
-  const categorySlug = normalizeCategoryName(selectedCategory?.name ?? "");
+  const categorySlug = normalizeCategoryName(selectedCategory?.name ?? capturedCategoryName ?? "");
 
-  const filteredModels = models.filter((item) => {
-    const matchesCategory = !categoryId || item.categoryId === categoryId;
-    const matchesManufacturer =
-      !manufacturerId || manufacturerId === NEW_OPTION || item.manufacturerId === manufacturerId;
+  const filteredModels = useMemo(() => {
+    return models.filter((item) => {
+      const matchesCategory = !categoryId || item.categoryId === categoryId;
+      const matchesManufacturer =
+        !manufacturerId || manufacturerId === NEW_OPTION || item.manufacturerId === manufacturerId;
 
-    return matchesCategory && matchesManufacturer;
-  });
+      return matchesCategory && matchesManufacturer;
+    });
+  }, [categoryId, manufacturerId, models]);
 
   const showNewManufacturer = manufacturerId === NEW_OPTION;
   const showModelSelect = Boolean(categoryId);
   const showNewModel =
     modelId === NEW_OPTION || (showNewManufacturer && categoryId.length > 0);
+
+  const parseCaptureIntoForm = () => {
+    const parsed = parseEquipmentCapture(captureText);
+    const summary = buildCaptureSummary(parsed);
+
+    if (!summary.length) {
+      setCaptureFeedback(
+        "Não encontrei campos reconhecíveis na captura. Use frases como: marca Samsung, modelo UN50AU7700, número de série 123, ano 2022, acessórios controle, relato inicial liga sem imagem, condição física oxidação.",
+      );
+      return;
+    }
+
+    let resolvedCategoryId = categoryId;
+    let resolvedCapturedCategoryName = "";
+    let resolvedManufacturerId = manufacturerId;
+    let resolvedModelId = modelId;
+    let resolvedNewManufacturerName = newManufacturerName;
+    let resolvedNewModelName = newModelName;
+
+    if (parsed.category) {
+      const matchedCategory = matchCatalogOption(categories, parsed.category);
+
+      if (matchedCategory) {
+        resolvedCategoryId = matchedCategory.id;
+        resolvedCapturedCategoryName = "";
+      } else {
+        resolvedCategoryId = "";
+        resolvedCapturedCategoryName = parsed.category;
+      }
+    }
+
+    if (parsed.manufacturer) {
+      const matchedManufacturer = matchCatalogOption(manufacturers, parsed.manufacturer);
+
+      if (matchedManufacturer) {
+        resolvedManufacturerId = matchedManufacturer.id;
+        resolvedNewManufacturerName = "";
+      } else {
+        resolvedManufacturerId = NEW_OPTION;
+        resolvedNewManufacturerName = parsed.manufacturer;
+      }
+    }
+
+    if (parsed.model) {
+      const matchedModel =
+        matchEquipmentModel(models, parsed.model, {
+          manufacturerId:
+            resolvedManufacturerId && resolvedManufacturerId !== NEW_OPTION
+              ? resolvedManufacturerId
+              : undefined,
+          categoryId: resolvedCategoryId || undefined,
+        }) ?? matchEquipmentModel(models, parsed.model);
+
+      if (matchedModel) {
+        resolvedModelId = matchedModel.id;
+        resolvedNewModelName = "";
+        resolvedCategoryId = resolvedCategoryId || matchedModel.categoryId;
+
+        if (!parsed.manufacturer) {
+          resolvedManufacturerId = matchedModel.manufacturerId;
+        }
+      } else {
+        resolvedModelId = NEW_OPTION;
+        resolvedNewModelName = parsed.model;
+      }
+    }
+
+    setCategoryId(resolvedCategoryId);
+    setCapturedCategoryName(resolvedCapturedCategoryName);
+    setManufacturerId(resolvedManufacturerId);
+    setModelId(resolvedModelId);
+    setNewManufacturerName(resolvedNewManufacturerName);
+    setNewModelName(resolvedNewModelName);
+
+    if (parsed.serialNumber) {
+      setSerialNumber(parsed.serialNumber);
+    }
+
+    if (parsed.manufacturingYear) {
+      setManufacturingYear(parsed.manufacturingYear.replace(/[^\d]/g, "").slice(0, 4));
+    }
+
+    if (parsed.accessoriesIncluded) {
+      setAccessoriesIncluded(parsed.accessoriesIncluded);
+    }
+
+    if (parsed.initialProblemReport) {
+      setInitialProblemReport(parsed.initialProblemReport);
+    }
+
+    if (parsed.physicalConditionNotes) {
+      setPhysicalConditionNotes(parsed.physicalConditionNotes);
+    }
+
+    const needsCategoryHelp =
+      !resolvedCategoryId &&
+      !resolvedCapturedCategoryName &&
+      Boolean(parsed.model) &&
+      resolvedModelId === NEW_OPTION;
+
+    setCaptureFeedback(
+      needsCategoryHelp
+        ? `Captura aplicada: ${summary.join(" | ")} | Falta informar a categoria para permitir o cadastro automático do modelo novo.`
+        : `Captura aplicada: ${summary.join(" | ")}`,
+    );
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -150,6 +328,66 @@ export function EquipmentIntakeForm({
         </div>
       ) : null}
 
+      <section className="rounded-[24px] border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] p-4 sm:p-5">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
+          Captura inteligente
+        </p>
+        <h4 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+          Fale ou digite tudo de uma vez
+        </h4>
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+          Exemplo: categoria notebook, marca Lenovo, modelo IdeaPad 3 15ALC6, número de série
+          PF12345, ano 2022, acessórios carregador, relato inicial liga sem vídeo, condição física
+          leves marcas na tampa.
+        </p>
+
+        <label className="mt-4 grid gap-2 text-sm text-[var(--foreground)]">
+          <span className="font-medium">Captura dos dados do aparelho</span>
+          <textarea
+            name="equipment_capture_text"
+            rows={5}
+            value={captureText}
+            onChange={(event) => setCaptureText(event.target.value)}
+            placeholder="Digite ou dite os dados completos do equipamento para preencher o formulário automaticamente."
+            className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
+          />
+        </label>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={parseCaptureIntoForm}
+            className="rounded-full bg-[var(--accent-teal)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#227e73]"
+          >
+            Preencher formulário a partir da captura
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCaptureText("");
+              setCaptureFeedback(null);
+            }}
+            className="rounded-full border border-[var(--panel-border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
+          >
+            Limpar captura
+          </button>
+        </div>
+
+        {captureFeedback ? (
+          <div className="mt-4 rounded-2xl border border-[rgba(45,139,130,0.24)] bg-[rgba(16,13,11,0.35)] px-4 py-3 text-sm text-[var(--foreground)]">
+            {captureFeedback}
+          </div>
+        ) : null}
+
+        {capturedCategoryName ? (
+          <div className="mt-3 rounded-2xl border border-[rgba(184,109,60,0.24)] bg-[rgba(184,109,60,0.08)] px-4 py-3 text-sm text-[var(--foreground)]">
+            Categoria nova detectada: <strong>{capturedCategoryName}</strong>. Ela será cadastrada automaticamente no envio.
+          </div>
+        ) : null}
+      </section>
+
+      <input type="hidden" name="captured_category_name" value={capturedCategoryName} />
+
       <div className="grid gap-4 md:grid-cols-2">
         <SelectField
           label="Categoria"
@@ -157,6 +395,7 @@ export function EquipmentIntakeForm({
           value={categoryId}
           onChange={(value) => {
             setCategoryId(value);
+            setCapturedCategoryName("");
             setModelId("");
           }}
         >
@@ -177,6 +416,9 @@ export function EquipmentIntakeForm({
           onChange={(value) => {
             setManufacturerId(value);
             setModelId(value === NEW_OPTION ? NEW_OPTION : "");
+            if (value !== NEW_OPTION) {
+              setNewManufacturerName("");
+            }
           }}
         >
           <option value="">Não sei ainda</option>
@@ -190,6 +432,7 @@ export function EquipmentIntakeForm({
       </div>
 
       <CatalogShortcutLinks
+        title="Não encontrou a opção?"
         items={[
           { href: "/catalogo-tecnico?tab=categorias", label: "Cadastrar categoria" },
           { href: "/catalogo-tecnico?tab=fabricantes", label: "Cadastrar fabricante" },
@@ -202,6 +445,8 @@ export function EquipmentIntakeForm({
           label="Novo fabricante"
           name="new_manufacturer_name"
           placeholder="Ex.: TCL, Philco, Positivo"
+          value={newManufacturerName}
+          onChange={setNewManufacturerName}
         />
       ) : null}
 
@@ -218,7 +463,12 @@ export function EquipmentIntakeForm({
             label="Modelo"
             name="equipment_model_id"
             value={modelId}
-            onChange={setModelId}
+            onChange={(value) => {
+              setModelId(value);
+              if (value !== NEW_OPTION) {
+                setNewModelName("");
+              }
+            }}
             disabled={!showModelSelect}
           >
             <option value="">Não sei ainda</option>
@@ -235,6 +485,8 @@ export function EquipmentIntakeForm({
           label="Número de série"
           name="equipment_serial_number"
           placeholder="Ex.: SN123456789"
+          value={serialNumber}
+          onChange={setSerialNumber}
         />
       </div>
 
@@ -243,6 +495,8 @@ export function EquipmentIntakeForm({
           label="Novo modelo"
           name="new_model_name"
           placeholder="Ex.: UN50AU7700, IdeaPad 3 15ALC6"
+          value={newModelName}
+          onChange={setNewModelName}
         />
       ) : null}
 
@@ -252,11 +506,15 @@ export function EquipmentIntakeForm({
           name="manufacturing_year"
           placeholder="Ex.: 2022"
           type="number"
+          value={manufacturingYear}
+          onChange={setManufacturingYear}
         />
         <Field
           label="Acessórios que vieram"
           name="accessories_included"
           placeholder="Ex.: fonte, controle, carregador, base"
+          value={accessoriesIncluded}
+          onChange={setAccessoriesIncluded}
         />
       </div>
 
@@ -414,26 +672,24 @@ export function EquipmentIntakeForm({
         </section>
       ) : null}
 
-      <label className="grid gap-2 text-sm text-[var(--foreground)]">
-        <span className="font-medium">Relato inicial</span>
-        <textarea
-          required
-          name="initial_problem_report"
-          rows={5}
-          placeholder="Descreva sintomas, comportamento e o que já foi visto na entrada."
-          className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
-        />
-      </label>
+      <TextareaField
+        label="Relato inicial"
+        name="initial_problem_report"
+        rows={5}
+        required
+        value={initialProblemReport}
+        onChange={setInitialProblemReport}
+        placeholder="Descreva sintomas, comportamento e o que já foi visto na entrada."
+      />
 
-      <label className="grid gap-2 text-sm text-[var(--foreground)]">
-        <span className="font-medium">Condição física observada</span>
-        <textarea
-          name="physical_condition_notes"
-          rows={4}
-          placeholder="Oxidação, marcas, trincas, sinais de reparo, faltando peças, etc."
-          className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
-        />
-      </label>
+      <TextareaField
+        label="Condição física observada"
+        name="physical_condition_notes"
+        rows={4}
+        value={physicalConditionNotes}
+        onChange={setPhysicalConditionNotes}
+        placeholder="Oxidação, marcas, trincas, sinais de reparo, faltando peças, etc."
+      />
 
       <label className="grid gap-2 text-sm text-[var(--foreground)]">
         <span className="font-medium">Fotos do equipamento</span>
