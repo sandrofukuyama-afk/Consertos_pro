@@ -120,16 +120,7 @@ export function AppShell({
         })}
       </nav>
 
-      <div className="mt-auto pt-6">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(230,228,245,0.58)]">
-            Próxima fase
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[rgba(230,228,245,0.82)]">
-            Formulários operacionais, timeline real, anexos e busca integrada.
-          </p>
-        </div>
-      </div>
+
     </div>
   );
 
@@ -236,12 +227,7 @@ export function AppShell({
             </button>
           </div>
  
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-[rgba(230,228,245,0.68)]">
-            <p className="mb-1 font-mono uppercase tracking-[0.22em] text-[rgba(230,228,245,0.58)]">
-              Próxima fase
-            </p>
-            Formulários operacionais, timeline real, anexos e busca integrada.
-          </div>
+
         </div>
       </div>
     );
