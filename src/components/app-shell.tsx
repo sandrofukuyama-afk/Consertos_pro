@@ -28,6 +28,30 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleAppUpdate = async () => {
+    setIsUpdating(true);
+    if ("serviceWorker" in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      } catch (err) {
+        console.error("Erro ao desregistrar service worker:", err);
+      }
+    }
+    if ("caches" in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch (err) {
+        console.error("Erro ao limpar cache:", err);
+      }
+    }
+    window.location.reload();
+  };
 
   const userInitials = user.fullName
     ? user.fullName
@@ -188,6 +212,30 @@ export function AppShell({
             </div>
           </div>
 
+          <div className="border-t border-white/10 pt-4">
+            <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)]">
+              Sistema
+            </p>
+            <button
+              onClick={() => {
+                onClose();
+                void handleAppUpdate();
+              }}
+              disabled={isUpdating}
+              className="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/3 px-4 py-3.5 text-white/80 hover:bg-white/5 disabled:opacity-50 transition"
+            >
+              <div className="flex items-center gap-3">
+                <svg className={`h-5 w-5 text-[var(--accent-copper)] ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
+                </svg>
+                <span className="text-sm font-semibold tracking-tight">
+                  {isUpdating ? "Limpando e atualizando..." : "Forçar Atualização"}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--muted)]">Limpar cache</span>
+            </button>
+          </div>
+ 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-[rgba(230,228,245,0.68)]">
             <p className="mb-1 font-mono uppercase tracking-[0.22em] text-[rgba(230,228,245,0.58)]">
               Próxima fase
@@ -227,11 +275,23 @@ export function AppShell({
             <Logo size={26} />
             ConsertosPro
           </Link>
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-copper)] text-xs font-semibold text-white shadow-sm"
-            title={user.fullName}
-          >
-            {userInitials}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleAppUpdate}
+              disabled={isUpdating}
+              title="Limpar cache e atualizar"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white transition disabled:opacity-50"
+            >
+              <svg className={`h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
+              </svg>
+            </button>
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-copper)] text-xs font-semibold text-white shadow-sm"
+              title={user.fullName}
+            >
+              {userInitials}
+            </div>
           </div>
         </header>
 
@@ -262,6 +322,17 @@ export function AppShell({
               >
                 {actionLabel}
               </Link>
+              <button
+                onClick={handleAppUpdate}
+                disabled={isUpdating}
+                title="Limpar cache e atualizar"
+                className="flex items-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] hover:bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50"
+              >
+                <svg className={`h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
+                </svg>
+                <span>{isUpdating ? "Atualizando..." : "Atualizar App"}</span>
+              </button>
               <div className="hidden max-w-full break-words rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-2.5 text-center text-sm font-medium text-[var(--foreground)] sm:block">
                 {user.fullName}
               </div>
