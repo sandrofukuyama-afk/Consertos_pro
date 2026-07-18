@@ -101,7 +101,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.95fr)]">
-          <article className="self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
+          <article className="w-full min-w-0 xl:self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-2 border-b border-[var(--panel-border)] pb-4 md:flex-row md:items-end md:justify-between">
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
