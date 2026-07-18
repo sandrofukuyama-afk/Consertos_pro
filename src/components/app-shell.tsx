@@ -165,7 +165,7 @@ export function AppShell({
             <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)]">
               Páginas de suporte
             </p>
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               {secondaryItems.map((item) => {
                 const displayLabel =
                   item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
