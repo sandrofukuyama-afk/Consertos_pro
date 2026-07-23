@@ -83,28 +83,28 @@ export default async function DiagnosticDetailPage({
   const maintenanceStages: MaintenanceStage[] = [
     {
       id: "triagem",
-      title: "1. Triagem",
+      title: "1. Triagem dos sintomas",
       description: hasSymptoms
-        ? "Sintomas e contexto inicial já foram registrados."
-        : "Comece registrando o sintoma principal e o contexto do defeito.",
+        ? "Os sintomas do equipamento e o contexto inicial já foram registrados."
+        : "Registre os sintomas que causam o defeito neste equipamento.",
       href: "#triagem",
       status: hasSymptoms ? "done" : "current",
     },
     {
       id: "investigacao",
-      title: "2. Investigação",
+      title: "2. Diagnóstico com IA",
       description: hasInvestigationProgress
-        ? "Já existe avanço com recomendação, testes ou medições."
-        : "Gere uma recomendação e registre o primeiro teste executado.",
+        ? "A IA já ajudou com recomendação, testes ou medições deste aparelho."
+        : "Use a IA para sugerir causa, solução e o próximo teste do aparelho.",
       href: "#investigacao",
       status: hasInvestigationProgress ? "done" : hasSymptoms ? "current" : "pending",
     },
     {
       id: "evidencias",
-      title: "3. Evidências",
+      title: "3. Apoio à reparação",
       description: hasEvidence
-        ? "O caso já possui evidências, hipóteses ou valores de referência."
-        : "Anexe fotos, registre hipóteses e salve medições de apoio.",
+        ? "Já existem anexos, hipóteses ou referências para apoiar o reparo."
+        : "Use esquemas, anexos e referências da placa para apoiar o reparo.",
       href: "#evidencias",
       status: hasEvidence ? "done" : hasInvestigationProgress ? "current" : "pending",
     },
@@ -145,8 +145,8 @@ export default async function DiagnosticDetailPage({
     {
       id: "triagem",
       eyebrow: "Etapa ativa",
-      title: "Registrar o defeito com clareza",
-      objective: "Abra o caso com sintomas observáveis, contexto da bancada e condição física do equipamento.",
+      title: "Registrar os sintomas que causam o problema",
+      objective: "Depois do cadastro do equipamento, documente os sintomas observáveis, o relato inicial e a condição física.",
       checklist: [
         { label: "Sintoma principal registrado", done: hasSymptoms },
         { label: "Contexto inicial preenchido", done: Boolean(detail.initialReport?.trim()) },
@@ -159,8 +159,8 @@ export default async function DiagnosticDetailPage({
     {
       id: "investigacao",
       eyebrow: "Etapa ativa",
-      title: "Validar uma linha técnica de investigação",
-      objective: "Gere uma recomendação, execute testes e consolide as primeiras leituras ou hipóteses da bancada.",
+      title: "Usar a IA para buscar a causa e orientar o diagnóstico",
+      objective: "Gere uma recomendação da IA, valide testes sugeridos e registre medições ou hipóteses para este aparelho.",
       checklist: [
         { label: "Recomendação técnica gerada", done: hasDiagnosticRecommendation },
         { label: "Pelo menos um teste registrado", done: hasTests },
@@ -173,8 +173,8 @@ export default async function DiagnosticDetailPage({
     {
       id: "evidencias",
       eyebrow: "Etapa ativa",
-      title: "Organizar provas do diagnóstico",
-      objective: "Anexe evidências do caso e salve referências úteis para justificar a conclusão técnica.",
+      title: "Usar apoio técnico para auxiliar a reparação",
+      objective: "Reúna anexos, referências da placa e histórico técnico do mesmo aparelho para apoiar o reparo.",
       checklist: [
         { label: "Linha de investigação já iniciada", done: hasInvestigationRecord || hasDiagnosticRecommendation },
         { label: "Ao menos um anexo enviado", done: hasAttachments },
@@ -187,8 +187,8 @@ export default async function DiagnosticDetailPage({
     {
       id: "encerramento",
       eyebrow: "Etapa ativa",
-      title: "Fechar o caso com rastreabilidade",
-      objective: "Consolide causa, solução aplicada e resultado final somente depois de validar a investigação.",
+      title: "Concluir o reparo com causa e solução registradas",
+      objective: "Depois de confirmar o defeito, registre a causa, a solução aplicada e o resultado final do reparo.",
       checklist: [
         { label: "Investigação registrada", done: hasInvestigationRecord || hasDiagnosticRecommendation },
         { label: "Evidência técnica anexada", done: hasEvidenceRecord },
@@ -245,14 +245,14 @@ export default async function DiagnosticDetailPage({
           <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                Fluxo de manutenção
+                Fluxo do atendimento
               </p>
               <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                Ordem sugerida para trabalhar este caso
+                Depois do cadastro do equipamento, siga este fluxo
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                Em vez de preencher blocos soltos, siga esta sequência de bancada para abrir, investigar,
-                reunir evidências e só então encerrar.
+                O cadastro do equipamento já foi feito. Agora o técnico deve seguir a ordem natural:
+                triagem dos sintomas, diagnóstico assistido por IA, apoio à reparação e encerramento.
               </p>
             </div>
             <Link
@@ -263,7 +263,7 @@ export default async function DiagnosticDetailPage({
             </Link>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-4">
+          <div className="mt-5 space-y-3">
             {maintenanceStages.map((stage) => {
               const isDone = stage.status === "done";
               const isCurrent = activeStageId === stage.id;
@@ -272,7 +272,7 @@ export default async function DiagnosticDetailPage({
                 <Link
                   key={stage.id}
                   href={`/diagnosticos/${detail.id}?stage=${stage.id}#${stage.id}`}
-                  className={`rounded-xl sm:rounded-[22px] border p-4 transition ${
+                  className={`flex flex-col gap-3 rounded-xl sm:rounded-[22px] border p-4 transition sm:flex-row sm:items-center sm:justify-between ${
                     isDone
                       ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)]"
                       : isCurrent
@@ -280,8 +280,24 @@ export default async function DiagnosticDetailPage({
                         : "border-[var(--panel-border)] bg-[var(--background)] hover:border-[rgba(230,228,245,0.24)]"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[var(--foreground)]">{stage.title}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          isDone
+                            ? "bg-[rgba(45,139,130,0.16)] text-[var(--accent-teal)]"
+                            : isCurrent
+                              ? "bg-[rgba(109,94,242,0.18)] text-[var(--accent-copper)]"
+                              : "bg-white/5 text-[var(--muted)]"
+                        }`}
+                      >
+                        {stage.title.split(".")[0]}
+                      </span>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">{stage.title}</p>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{stage.description}</p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
                         isDone
@@ -293,8 +309,10 @@ export default async function DiagnosticDetailPage({
                     >
                       {isDone ? "Concluído" : isCurrent ? "Agora" : "Depois"}
                     </span>
+                    <span className="text-sm font-semibold text-[var(--accent-copper)]">
+                      Abrir
+                    </span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{stage.description}</p>
                 </Link>
               );
             })}
@@ -307,7 +325,7 @@ export default async function DiagnosticDetailPage({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                {activeStageGuide.eyebrow}
+                Agora faça isso
               </p>
               <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                 {activeStageGuide.title}
@@ -315,25 +333,35 @@ export default async function DiagnosticDetailPage({
               <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
                 {activeStageGuide.objective}
               </p>
+              <p className="mt-3 text-sm font-medium text-[var(--foreground)]">
+                Origem do fluxo: cadastro do equipamento concluído.
+              </p>
             </div>
             <div className="rounded-xl sm:rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)]">
               Checklist {completedChecklistCount}/{activeStageGuide.checklist.length}
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            {activeStageGuide.checklist.map((item) => (
-              <div
-                key={item.label}
-                className={`rounded-xl sm:rounded-[20px] border px-4 py-3 text-sm ${
-                  item.done
-                    ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] text-[var(--foreground)]"
-                    : "border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--muted)]"
-                }`}
-              >
-                <span className="font-semibold">{item.done ? "OK" : "Pendente"}</span> {item.label}
-              </div>
-            ))}
+          <div className="mt-5 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-5">
+            <p className="text-sm font-semibold text-[var(--foreground)]">O que precisa acontecer nesta etapa</p>
+            <ol className="mt-4 space-y-3">
+              {activeStageGuide.checklist.map((item, index) => (
+                <li key={item.label} className="flex items-start gap-3 text-sm">
+                  <span
+                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      item.done
+                        ? "bg-[rgba(45,139,130,0.16)] text-[var(--accent-teal)]"
+                        : "bg-white/5 text-[var(--muted)]"
+                    }`}
+                  >
+                    {item.done ? "OK" : index + 1}
+                  </span>
+                  <span className={item.done ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
+                    {item.label}
+                  </span>
+                </li>
+              ))}
+            </ol>
           </div>
 
           {!activeStageGuide.isReadyToAdvance ? (
@@ -554,13 +582,13 @@ export default async function DiagnosticDetailPage({
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                  Assistente técnico
+                  Diagnóstico assistido
                 </p>
                 <h3 className="mt-2 break-words text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                  Próximo passo guiado por contexto
+                  IA para buscar causa, solução e próximo teste
                 </h3>
                 <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
-                  Usa o histórico do caso, memória inteligente e documentos relacionados para sugerir um único passo objetivo por vez.
+                  Usa o histórico deste aparelho, memória filtrada e documentos técnicos para sugerir um passo objetivo por vez.
                 </p>
 
                 {/* Agente de IA Especialista Ativo */}
@@ -643,121 +671,127 @@ export default async function DiagnosticDetailPage({
                     ) : null}
                   </div>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">Evidências consideradas</p>
-                      <div className="mt-2 space-y-2">
-                        {(detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).length ? (
-                          (detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).map((item) => (
-                            <p
-                              key={item}
-                              className="rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-3 py-2 text-sm text-[var(--muted)]"
-                            >
-                              {item}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-sm text-[var(--muted)]">Nenhuma evidência estruturada foi salva na última rodada.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--foreground)]">Observação de segurança</p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        {detail.assistantSnapshot.latestResponse.structured?.safetyNote ?? "Sem observação de segurança registrada."}
-                      </p>
-                      <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">Modo atual</p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                        {detail.assistantSnapshot.externalProviderConfigured
-                          ? "IA externa ativa para recuperar memória com mais precisão."
-                          : "Modo local ativo para manter a recomendação auditável mesmo sem provedor externo configurado."}
-                      </p>
-                    </div>
-                  </div>
+                  <details className="mt-4 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-3.5 sm:p-4">
+                    <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">
+                      Ver detalhes avançados da IA e feedback
+                    </summary>
 
-                  <div className="mt-4 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-3.5 sm:p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          Feedback do técnico
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">Evidências consideradas</p>
+                        <div className="mt-2 space-y-2">
+                          {(detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).length ? (
+                            (detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).map((item) => (
+                              <p
+                                key={item}
+                                className="rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--muted)]"
+                              >
+                                {item}
+                              </p>
+                            ))
+                          ) : (
+                            <p className="text-sm text-[var(--muted)]">Nenhuma evidência estruturada foi salva na última rodada.</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">Observação de segurança</p>
+                        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                          {detail.assistantSnapshot.latestResponse.structured?.safetyNote ?? "Sem observação de segurança registrada."}
                         </p>
-                        <p className="mt-2 text-sm text-[var(--muted)]">
-                          Salve se a recomendação ajudou e se ela foi seguida de fato na bancada.
+                        <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">Modo atual</p>
+                        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                          {detail.assistantSnapshot.externalProviderConfigured
+                            ? "IA externa ativa para recuperar memória com mais precisão."
+                            : "Modo local ativo para manter a recomendação auditável mesmo sem provedor externo configurado."}
                         </p>
                       </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            Feedback do técnico
+                          </p>
+                          <p className="mt-2 text-sm text-[var(--muted)]">
+                            Salve se a recomendação ajudou e se ela foi seguida de fato na bancada.
+                          </p>
+                        </div>
+                        {detail.assistantSnapshot.latestResponse.feedback ? (
+                          <StatusPill
+                            label={detail.assistantSnapshot.latestResponse.feedback.rating.replaceAll("_", " ")}
+                          />
+                        ) : null}
+                      </div>
+
                       {detail.assistantSnapshot.latestResponse.feedback ? (
-                        <StatusPill
-                          label={detail.assistantSnapshot.latestResponse.feedback.rating.replaceAll("_", " ")}
-                        />
+                        <div className="mt-4 rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-3.5 sm:p-4 text-sm text-[var(--foreground)]">
+                          <p>
+                            Último feedback: {detail.assistantSnapshot.latestResponse.feedback.submittedBy} • {detail.assistantSnapshot.latestResponse.feedback.createdAt}
+                          </p>
+                          <p className="mt-2 text-[var(--muted)]">
+                            {detail.assistantSnapshot.latestResponse.feedback.wasFollowed === true
+                              ? "A sugestão foi seguida."
+                              : detail.assistantSnapshot.latestResponse.feedback.wasFollowed === false
+                                ? "A sugestão não foi seguida."
+                                : "Não foi informado se a sugestão foi seguida."}
+                          </p>
+                          <p className="mt-2 text-[var(--muted)]">
+                            {detail.assistantSnapshot.latestResponse.feedback.note || "Sem observação adicional."}
+                          </p>
+                        </div>
                       ) : null}
+
+                      <form action={saveAssistantFeedbackAction} className="mt-4 grid gap-3">
+                        <input type="hidden" name="diagnostic_id" value={detail.id} />
+                        <input
+                          type="hidden"
+                          name="ai_response_id"
+                          value={detail.assistantSnapshot.latestResponse.id}
+                        />
+                        <select
+                          name="feedback_rating"
+                          required
+                          defaultValue={detail.assistantSnapshot.latestResponse.feedback?.rating ?? ""}
+                          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+                        >
+                          <option value="" disabled>
+                            Avaliar utilidade
+                          </option>
+                          <option value="helpful">Ajudou bem</option>
+                          <option value="partially_helpful">Ajudou parcialmente</option>
+                          <option value="not_helpful">Não ajudou</option>
+                        </select>
+                        <select
+                          name="was_followed"
+                          defaultValue={
+                            detail.assistantSnapshot.latestResponse.feedback?.wasFollowed === true
+                              ? "yes"
+                              : detail.assistantSnapshot.latestResponse.feedback?.wasFollowed === false
+                                ? "no"
+                                : ""
+                          }
+                          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+                        >
+                          <option value="">Não informar se foi seguida</option>
+                          <option value="yes">A sugestão foi seguida</option>
+                          <option value="no">A sugestão não foi seguida</option>
+                        </select>
+                        <textarea
+                          name="note"
+                          rows={3}
+                          defaultValue={detail.assistantSnapshot.latestResponse.feedback?.note ?? ""}
+                          placeholder="Observação do técnico sobre a qualidade da recomendação"
+                          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+                        />
+                        <FormSubmitButton
+                          idleLabel="Salvar feedback"
+                          pendingLabel="Salvando feedback..."
+                        />
+                      </form>
                     </div>
-
-                    {detail.assistantSnapshot.latestResponse.feedback ? (
-                      <div className="mt-4 rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4 text-sm text-[var(--foreground)]">
-                        <p>
-                          Último feedback: {detail.assistantSnapshot.latestResponse.feedback.submittedBy} • {detail.assistantSnapshot.latestResponse.feedback.createdAt}
-                        </p>
-                        <p className="mt-2 text-[var(--muted)]">
-                          {detail.assistantSnapshot.latestResponse.feedback.wasFollowed === true
-                            ? "A sugestão foi seguida."
-                            : detail.assistantSnapshot.latestResponse.feedback.wasFollowed === false
-                              ? "A sugestão não foi seguida."
-                              : "Não foi informado se a sugestão foi seguida."}
-                        </p>
-                        <p className="mt-2 text-[var(--muted)]">
-                          {detail.assistantSnapshot.latestResponse.feedback.note || "Sem observação adicional."}
-                        </p>
-                      </div>
-                    ) : null}
-
-                    <form action={saveAssistantFeedbackAction} className="mt-4 grid gap-3">
-                      <input type="hidden" name="diagnostic_id" value={detail.id} />
-                      <input
-                        type="hidden"
-                        name="ai_response_id"
-                        value={detail.assistantSnapshot.latestResponse.id}
-                      />
-                      <select
-                        name="feedback_rating"
-                        required
-                        defaultValue={detail.assistantSnapshot.latestResponse.feedback?.rating ?? ""}
-                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-                      >
-                        <option value="" disabled>
-                          Avaliar utilidade
-                        </option>
-                        <option value="helpful">Ajudou bem</option>
-                        <option value="partially_helpful">Ajudou parcialmente</option>
-                        <option value="not_helpful">Não ajudou</option>
-                      </select>
-                      <select
-                        name="was_followed"
-                        defaultValue={
-                          detail.assistantSnapshot.latestResponse.feedback?.wasFollowed === true
-                            ? "yes"
-                            : detail.assistantSnapshot.latestResponse.feedback?.wasFollowed === false
-                              ? "no"
-                              : ""
-                        }
-                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-                      >
-                        <option value="">Não informar se foi seguida</option>
-                        <option value="yes">A sugestão foi seguida</option>
-                        <option value="no">A sugestão não foi seguida</option>
-                      </select>
-                      <textarea
-                        name="note"
-                        rows={3}
-                        defaultValue={detail.assistantSnapshot.latestResponse.feedback?.note ?? ""}
-                        placeholder="Observação do técnico sobre a qualidade da recomendação"
-                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-                      />
-                      <FormSubmitButton
-                        idleLabel="Salvar feedback"
-                        pendingLabel="Salvando feedback..."
-                      />
-                    </form>
-                  </div>
+                  </details>
                 </div>
               </div>
             ) : (
@@ -775,7 +809,7 @@ export default async function DiagnosticDetailPage({
                     Casos do mesmo aparelho
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
-                    Memória filtrada
+                    Histórico técnico relacionado
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--muted)]">
@@ -811,10 +845,10 @@ export default async function DiagnosticDetailPage({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                    Documentos relacionados
+                    Esquemas e documentos
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
-                    Apoio técnico imediato
+                    Apoio técnico da placa
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--muted)]">
@@ -842,7 +876,7 @@ export default async function DiagnosticDetailPage({
                   ))
                 ) : (
                   <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
-                    Ainda não há documento técnico recuperado para reforçar a próxima decisão.
+                    Ainda não há esquema ou documento técnico recuperado para ajudar nesta reparação.
                   </div>
                 )}
               </div>
