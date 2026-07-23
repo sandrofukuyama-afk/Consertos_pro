@@ -25,6 +25,14 @@ type CatalogoPageProps = {
   }>;
 };
 
+function pickRelation<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
 export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPageProps) {
   const user = await requireCurrentUser();
   const params = await searchParams;
@@ -51,7 +59,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
   const searchLower = q.toLowerCase();
 
   // Filters
-  const filteredCategories = categories.filter((item: any) => {
+  const filteredCategories = categories.filter((item) => {
     if (!searchLower) return true;
     return (
       item.name.toLowerCase().includes(searchLower) ||
@@ -60,7 +68,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     );
   });
 
-  const filteredManufacturers = manufacturers.filter((item: any) => {
+  const filteredManufacturers = manufacturers.filter((item) => {
     if (!searchLower) return true;
     return (
       item.name.toLowerCase().includes(searchLower) ||
@@ -69,7 +77,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     );
   });
 
-  const filteredBoardTypes = boardTypes.filter((item: any) => {
+  const filteredBoardTypes = boardTypes.filter((item) => {
     if (!searchLower) return true;
     return (
       item.name.toLowerCase().includes(searchLower) ||
@@ -78,28 +86,34 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     );
   });
 
-  const filteredModels = models.filter((item: any) => {
+  const filteredModels = models.filter((item) => {
+    const manufacturer = pickRelation(item.manufacturers);
+    const category = pickRelation(item.equipment_categories);
+
     if (!searchLower) return true;
     return (
       item.model_name.toLowerCase().includes(searchLower) ||
       (item.family_name?.toLowerCase() || "").includes(searchLower) ||
-      (item.manufacturers?.name?.toLowerCase() || "").includes(searchLower) ||
-      (item.equipment_categories?.name?.toLowerCase() || "").includes(searchLower)
+      (manufacturer?.name?.toLowerCase() || "").includes(searchLower) ||
+      (category?.name?.toLowerCase() || "").includes(searchLower)
     );
   });
 
-  const filteredBoards = boards.filter((item: any) => {
+  const filteredBoards = boards.filter((item) => {
+    const manufacturer = pickRelation(item.manufacturers);
+    const boardType = pickRelation(item.board_types);
+
     if (!searchLower) return true;
     return (
       item.board_code.toLowerCase().includes(searchLower) ||
       (item.board_revision?.toLowerCase() || "").includes(searchLower) ||
       (item.description?.toLowerCase() || "").includes(searchLower) ||
-      (item.manufacturers?.name?.toLowerCase() || "").includes(searchLower) ||
-      (item.board_types?.name?.toLowerCase() || "").includes(searchLower)
+      (manufacturer?.name?.toLowerCase() || "").includes(searchLower) ||
+      (boardType?.name?.toLowerCase() || "").includes(searchLower)
     );
   });
 
-  const filteredComponents = components.filter((item: any) => {
+  const filteredComponents = components.filter((item) => {
     if (!searchLower) return true;
     return (
       item.component_ref.toLowerCase().includes(searchLower) ||
@@ -110,36 +124,44 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     );
   });
 
-  const filteredModelBoards = modelBoards.filter((item: any) => {
+  const filteredModelBoards = modelBoards.filter((item) => {
+    const model = pickRelation(item.equipment_models);
+    const board = pickRelation(item.boards);
+
     if (!searchLower) return true;
     return (
-      (item.equipment_models?.model_name?.toLowerCase() || "").includes(searchLower) ||
-      (item.boards?.board_code?.toLowerCase() || "").includes(searchLower) ||
+      (model?.model_name?.toLowerCase() || "").includes(searchLower) ||
+      (board?.board_code?.toLowerCase() || "").includes(searchLower) ||
       item.role_label.toLowerCase().includes(searchLower)
     );
   });
 
-  const filteredBoardComponents = boardComponents.filter((item: any) => {
+  const filteredBoardComponents = boardComponents.filter((item) => {
+    const board = pickRelation(item.boards);
+    const component = pickRelation(item.components);
+
     if (!searchLower) return true;
     return (
-      (item.boards?.board_code?.toLowerCase() || "").includes(searchLower) ||
-      (item.components?.component_ref?.toLowerCase() || "").includes(searchLower) ||
+      (board?.board_code?.toLowerCase() || "").includes(searchLower) ||
+      (component?.component_ref?.toLowerCase() || "").includes(searchLower) ||
       item.reference_designator.toLowerCase().includes(searchLower) ||
       (item.circuit_function?.toLowerCase() || "").includes(searchLower)
     );
   });
 
-  const filteredSymptoms = symptoms.filter((item: any) => {
+  const filteredSymptoms = symptoms.filter((item) => {
+    const category = pickRelation(item.equipment_categories);
+
     if (!searchLower) return true;
     return (
       item.name.toLowerCase().includes(searchLower) ||
       (item.symptom_group?.toLowerCase() || "").includes(searchLower) ||
       (item.description?.toLowerCase() || "").includes(searchLower) ||
-      (item.equipment_categories?.name?.toLowerCase() || "").includes(searchLower)
+      (category?.name?.toLowerCase() || "").includes(searchLower)
     );
   });
 
-  const filteredTests = tests.filter((item: any) => {
+  const filteredTests = tests.filter((item) => {
     if (!searchLower) return true;
     return (
       item.name.toLowerCase().includes(searchLower) ||
@@ -254,15 +276,20 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredModels.length > 0 ? (
-                      filteredModels.map((item: any) => (
-                        <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
-                          <td className="px-4 py-3 font-semibold text-white">{item.model_name}</td>
-                          <td className="px-4 py-3">{item.manufacturers?.name ?? "N/A"}</td>
-                          <td className="px-4 py-3">{item.equipment_categories?.name ?? "N/A"}</td>
-                          <td className="px-4 py-3 font-mono text-xs">{item.family_name || "-"}</td>
-                          <td className="px-4 py-3 text-xs">{item.revision_label || "-"}</td>
-                        </tr>
-                      ))
+                      filteredModels.map((item) => {
+                        const manufacturer = pickRelation(item.manufacturers);
+                        const category = pickRelation(item.equipment_categories);
+
+                        return (
+                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                            <td className="px-4 py-3 font-semibold text-white">{item.model_name}</td>
+                            <td className="px-4 py-3">{manufacturer?.name ?? "N/A"}</td>
+                            <td className="px-4 py-3">{category?.name ?? "N/A"}</td>
+                            <td className="px-4 py-3 font-mono text-xs">{item.family_name || "-"}</td>
+                            <td className="px-4 py-3 text-xs">{item.revision_label || "-"}</td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)]">
@@ -290,15 +317,20 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredBoards.length > 0 ? (
-                      filteredBoards.map((item: any) => (
-                        <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
-                          <td className="px-4 py-3 font-mono font-semibold text-[var(--accent-copper)]">{item.board_code}</td>
-                          <td className="px-4 py-3">{item.board_types?.name ?? "N/A"}</td>
-                          <td className="px-4 py-3">{item.manufacturers?.name ?? "N/A"}</td>
-                          <td className="px-4 py-3 font-mono text-xs">{item.board_revision || "-"}</td>
-                          <td className="px-4 py-3 text-xs max-w-xs truncate">{item.description || "-"}</td>
-                        </tr>
-                      ))
+                      filteredBoards.map((item) => {
+                        const boardType = pickRelation(item.board_types);
+                        const manufacturer = pickRelation(item.manufacturers);
+
+                        return (
+                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                            <td className="px-4 py-3 font-mono font-semibold text-[var(--accent-copper)]">{item.board_code}</td>
+                            <td className="px-4 py-3">{boardType?.name ?? "N/A"}</td>
+                            <td className="px-4 py-3">{manufacturer?.name ?? "N/A"}</td>
+                            <td className="px-4 py-3 font-mono text-xs">{item.board_revision || "-"}</td>
+                            <td className="px-4 py-3 text-xs max-w-xs truncate">{item.description || "-"}</td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center text-[var(--muted)]">
@@ -326,7 +358,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredComponents.length > 0 ? (
-                      filteredComponents.map((item: any) => (
+                      filteredComponents.map((item) => (
                         <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                           <td className="px-4 py-3 font-mono font-semibold text-white">{item.component_ref}</td>
                           <td className="px-4 py-3 font-semibold text-[var(--accent-teal)]">{item.component_type}</td>
@@ -360,14 +392,18 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredSymptoms.length > 0 ? (
-                      filteredSymptoms.map((item: any) => (
-                        <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
-                          <td className="px-4 py-3 font-semibold text-white">{item.name}</td>
-                          <td className="px-4 py-3">{item.equipment_categories?.name ?? "N/A"}</td>
-                          <td className="px-4 py-3 text-xs">{item.symptom_group || "-"}</td>
-                          <td className="px-4 py-3 text-xs max-w-xs truncate">{item.description || "-"}</td>
-                        </tr>
-                      ))
+                      filteredSymptoms.map((item) => {
+                        const category = pickRelation(item.equipment_categories);
+
+                        return (
+                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                            <td className="px-4 py-3 font-semibold text-white">{item.name}</td>
+                            <td className="px-4 py-3">{category?.name ?? "N/A"}</td>
+                            <td className="px-4 py-3 text-xs">{item.symptom_group || "-"}</td>
+                            <td className="px-4 py-3 text-xs max-w-xs truncate">{item.description || "-"}</td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
                         <td colSpan={4} className="px-4 py-8 text-center text-[var(--muted)]">
@@ -393,7 +429,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredTests.length > 0 ? (
-                      filteredTests.map((item: any) => (
+                      filteredTests.map((item) => (
                         <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                           <td className="px-4 py-3 font-semibold text-white">{item.name}</td>
                           <td className="px-4 py-3 text-xs">{item.test_group || "-"}</td>
@@ -428,7 +464,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredModelBoards.length > 0 ? (
-                      filteredModelBoards.map((item: any) => (
+                      filteredModelBoards.map((item) => (
                         <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                           <td className="px-4 py-3 font-semibold text-white">{item.equipment_models?.model_name ?? "N/A"}</td>
                           <td className="px-4 py-3 font-mono font-semibold text-[var(--accent-copper)]">{item.boards?.board_code ?? "N/A"}</td>
@@ -472,7 +508,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                   </thead>
                   <tbody>
                     {filteredBoardComponents.length > 0 ? (
-                      filteredBoardComponents.map((item: any) => (
+                      filteredBoardComponents.map((item) => (
                         <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                           <td className="px-4 py-3 font-mono font-semibold text-[var(--accent-copper)]">{item.boards?.board_code ?? "N/A"}</td>
                           <td className="px-4 py-3 font-mono font-bold text-white text-xs">{item.reference_designator}</td>
@@ -514,7 +550,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCategories.map((item: any) => (
+                      {filteredCategories.map((item) => (
                         <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                           <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
                           <td className="px-3 py-2 font-mono text-xs">{item.slug}</td>
@@ -539,7 +575,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredManufacturers.map((item: any) => (
+                        {filteredManufacturers.map((item) => (
                           <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                             <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
                             <td className="px-3 py-2 text-xs">{item.country || "-"}</td>
@@ -565,7 +601,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredBoardTypes.map((item: any) => (
+                        {filteredBoardTypes.map((item) => (
                           <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                             <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
                             <td className="px-3 py-2 text-xs font-mono">{item.slug || "-"}</td>
@@ -591,7 +627,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                         </tr>
                       </thead>
                       <tbody>
-                        {manufacturers.map((item: any) => (
+                        {manufacturers.map((item) => (
                           <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
                             <td className="px-3 py-2 font-semibold text-white">{item.name}</td>
                             <td className="px-3 py-2 text-xs">{item.country || "-"}</td>
@@ -630,7 +666,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {categories.map((c: any) => (
+                    {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
@@ -646,7 +682,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {manufacturers.map((m: any) => (
+                    {manufacturers.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>
@@ -712,7 +748,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {boardTypes.map((b: any) => (
+                    {boardTypes.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.name}
                       </option>
@@ -727,7 +763,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione se souber</option>
-                    {manufacturers.map((m: any) => (
+                    {manufacturers.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>
@@ -863,7 +899,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {categories.map((c: any) => (
+                    {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
@@ -968,7 +1004,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {models.map((m: any) => (
+                    {models.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.model_name}
                       </option>
@@ -984,7 +1020,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {boards.map((b: any) => (
+                    {boards.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.board_code}
                       </option>
@@ -1039,7 +1075,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {boards.map((b: any) => (
+                    {boards.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.board_code}
                       </option>
@@ -1055,7 +1091,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                     className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 outline-none"
                   >
                     <option value="">Selecione</option>
-                    {components.map((c: any) => (
+                    {components.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.component_ref} ({c.component_type})
                       </option>

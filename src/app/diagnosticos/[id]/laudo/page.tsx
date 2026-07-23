@@ -9,7 +9,7 @@ type LaudoPageProps = {
 };
 
 export default async function LaudoPage({ params }: LaudoPageProps) {
-  const user = await requireCurrentUser();
+  await requireCurrentUser();
   const { id } = await params;
   
   let detail;
@@ -83,7 +83,7 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
         <h3 className="font-bold text-gray-800 mb-2 uppercase text-xs tracking-wider">Sintomas Identificados</h3>
         {detail.symptoms.length > 0 ? (
           <ul className="list-disc pl-5 space-y-1 text-gray-700">
-            {detail.symptoms.map((symptom: any) => (
+            {detail.symptoms.map((symptom) => (
               <li key={symptom.id}>
                 <strong>{symptom.name}</strong> (Severidade: {symptom.severity})
               </li>
@@ -99,7 +99,7 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
         <h3 className="font-bold text-gray-800 mb-3 uppercase text-xs tracking-wider">Testes e Medições Realizadas</h3>
         {detail.tests.length > 0 || detail.measurements.length > 0 ? (
           <div className="space-y-4">
-            {detail.tests.map((run: any) => (
+            {detail.tests.map((run) => (
               <div key={run.id} className="border-l-4 border-orange-500 pl-4 py-1">
                 <p className="font-semibold text-gray-800">
                   Teste: {run.testName}
@@ -110,7 +110,7 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
               </div>
             ))}
 
-            {detail.measurements.map((measure: any) => (
+            {detail.measurements.map((measure) => (
               <div key={measure.id} className="border-l-4 border-teal-500 pl-4 py-1">
                 <p className="font-semibold text-gray-800">
                   Medição no ponto: {measure.pointLabel}

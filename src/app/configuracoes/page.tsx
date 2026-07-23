@@ -141,7 +141,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
                             </p>
                             {profile.notes ? (
                               <p className="mt-1.5 line-clamp-1 text-xs italic text-[var(--muted)]">
-                                "{profile.notes}"
+                                &quot;{profile.notes}&quot;
                               </p>
                             ) : null}
                           </div>
@@ -179,7 +179,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
 
                   <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
                     {history.length > 0 ? (
-                      history.map((log: any) => {
+                      history.map((log) => {
                         const dateLabel = formatRelativeTime(log.changed_at);
                         const changeTone =
                           log.change_type === "create"
@@ -251,7 +251,7 @@ export default async function ConfiguracoesPage({ searchParams }: SettingsPagePr
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     {reviews.length > 0 ? (
-                      reviews.map((review: any) => {
+                      reviews.map((review) => {
                         const dateLabel = formatRelativeTime(review.reviewed_at);
                         const statusTone =
                           review.review_status === "approved"

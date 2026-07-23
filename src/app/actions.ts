@@ -1,5 +1,6 @@
 "use server";
 
+import { writeFile } from "node:fs/promises";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -20,14 +21,21 @@ import {
 import { queueDiagnosticSemanticSync } from "@/lib/services/semantic-sync";
 import { mapSupabaseAuthErrorMessage } from "@/lib/auth-messages";
 import { createClient } from "@/lib/supabase/server";
+import type { ComponentAnnotation } from "@/types/domain";
+
+function getErrorDigest(error: unknown) {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return null;
+  }
+
+  const { digest } = error as { digest?: unknown };
+  return typeof digest === "string" ? digest : null;
+}
 
 function isRedirectError(error: unknown): error is Error & { digest: string } {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
   return (
-    (error as any).message === "NEXT_REDIRECT" ||
-    (typeof (error as any).digest === "string" && (error as any).digest.startsWith("NEXT_REDIRECT"))
+    (error instanceof Error && error.message === "NEXT_REDIRECT") ||
+    (getErrorDigest(error)?.startsWith("NEXT_REDIRECT") ?? false)
   );
 }
 
@@ -1223,25 +1231,24 @@ export async function syncSemanticMemoryAction() {
     );
   } catch (error) {
     try {
-      const fs = require("fs");
-      fs.writeFileSync(
-        "c:/Users/User/Projetos/Antigravity/ConsertosPro/error_debug.log",
+      await writeFile(
+        "error_debug.log",
         JSON.stringify({
           message: error instanceof Error ? error.message : String(error),
           name: error instanceof Error ? error.name : null,
           stack: error instanceof Error ? error.stack : null,
-          digest: error && typeof error === "object" && "digest" in error ? (error as any).digest : null,
+          digest: getErrorDigest(error),
           isRedirect: isRedirectError(error),
         }, null, 2)
       );
-    } catch (e) {
+    } catch {
       // ignore log write errors
     }
 
     if (
       isRedirectError(error) ||
       (error instanceof Error && error.message === "NEXT_REDIRECT") ||
-      (error && typeof error === "object" && "digest" in error && String((error as any).digest).startsWith("NEXT_REDIRECT"))
+      (getErrorDigest(error)?.startsWith("NEXT_REDIRECT") ?? false)
     ) {
       throw error;
     }
@@ -1254,7 +1261,7 @@ export async function syncSemanticMemoryAction() {
 export async function saveAttachmentAnnotationsAction(
   attachmentId: string,
   diagnosticId: string,
-  annotations: any[]
+  annotations: ComponentAnnotation[]
 ) {
   await requireCurrentUser();
   const supabase = await createClient();

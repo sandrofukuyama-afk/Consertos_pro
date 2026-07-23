@@ -1,6 +1,95 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CatalogOption, EquipmentModelCatalogOption } from "@/types/domain";
 
+type CategoryRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+};
+
+type ManufacturerRow = {
+  id: string;
+  name: string;
+  country: string | null;
+  notes: string | null;
+};
+
+type BoardTypeRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+};
+
+type EquipmentModelRow = {
+  id: string;
+  model_name: string;
+  family_name: string | null;
+  revision_label: string | null;
+  manufacturers: { name: string | null } | null;
+  equipment_categories: { name: string | null } | null;
+};
+
+type BoardRow = {
+  id: string;
+  board_code: string;
+  board_revision: string | null;
+  description: string | null;
+  board_types: { name: string | null } | null;
+  manufacturers: { name: string | null } | null;
+};
+
+type ComponentRow = {
+  id: string;
+  component_ref: string;
+  component_type: string;
+  manufacturer_part_number: string | null;
+  generic_part_number: string | null;
+  package_type: string | null;
+  description: string | null;
+};
+
+type SymptomRow = {
+  id: string;
+  name: string;
+  symptom_group: string | null;
+  description: string | null;
+  equipment_categories: { name: string | null } | null;
+};
+
+type TestRow = {
+  id: string;
+  name: string;
+  test_group: string | null;
+  default_unit: string | null;
+  description: string | null;
+};
+
+type ModelBoardRow = {
+  id: string;
+  role_label: string;
+  is_primary: boolean;
+  notes: string | null;
+  equipment_models: { model_name: string | null } | null;
+  boards: { board_code: string | null } | null;
+};
+
+type BoardComponentRow = {
+  id: string;
+  reference_designator: string;
+  circuit_function: string | null;
+  expected_behavior: string | null;
+  is_critical: boolean;
+  boards: { board_code: string | null } | null;
+  components:
+    | {
+        component_ref: string | null;
+        component_type: string | null;
+      }
+    | null;
+};
+
 export async function getDiagnosticCatalog() {
   const supabase = await createClient();
 
@@ -115,16 +204,16 @@ export async function getCatalogDashboardData() {
   ]);
 
   return {
-    categories: categories.data ?? [],
-    manufacturers: manufacturers.data ?? [],
-    boardTypes: boardTypes.data ?? [],
-    models: models.data ?? [],
-    boards: boards.data ?? [],
-    components: components.data ?? [],
-    symptoms: symptoms.data ?? [],
-    tests: tests.data ?? [],
-    modelBoards: modelBoards.data ?? [],
-    boardComponents: boardComponents.data ?? [],
+    categories: (categories.data ?? []) as CategoryRow[],
+    manufacturers: (manufacturers.data ?? []) as ManufacturerRow[],
+    boardTypes: (boardTypes.data ?? []) as BoardTypeRow[],
+    models: (models.data ?? []) as EquipmentModelRow[],
+    boards: (boards.data ?? []) as BoardRow[],
+    components: (components.data ?? []) as ComponentRow[],
+    symptoms: (symptoms.data ?? []) as SymptomRow[],
+    tests: (tests.data ?? []) as TestRow[],
+    modelBoards: (modelBoards.data ?? []) as ModelBoardRow[],
+    boardComponents: (boardComponents.data ?? []) as BoardComponentRow[],
   };
 }
 

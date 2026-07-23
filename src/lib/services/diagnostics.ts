@@ -1,17 +1,89 @@
 import { notFound } from "next/navigation";
 
-import { getGuidedFlowForCategory } from "@/lib/domain/guided-flows";
 import { getGuidedTreeForCategory, type GuidedTreeNode } from "@/lib/domain/guided-tree";
 import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
+  ComponentAnnotation,
   DiagnosticDetail,
   SymptomOption,
   TechnicalDocumentListItem,
   TestOption,
 } from "@/types/domain";
+
+type DiagnosticBoardRow = {
+  id: string;
+  board_id: string | null;
+  role_label: string;
+  is_primary: boolean;
+  boards:
+    | { board_code: string | null; description: string | null }
+    | Array<{ board_code: string | null; description: string | null }>
+    | null;
+};
+
+type AttachmentAnalysis = {
+  observations?: string[];
+  suspectedIssues?: string[];
+  confidence?: string;
+  recommendation?: string;
+};
+
+type AttachmentRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  attachment_type: string;
+  mime_type: string;
+  created_at: string;
+  storage_path: string;
+  ai_image_analysis: AttachmentAnalysis | null;
+  ai_image_analyzed_at: string | null;
+  annotations: ComponentAnnotation[] | null;
+};
+
+type ReferenceMeasurementRow = {
+  id: string;
+  board_id: string;
+  component_ref: string;
+  measurement_point: string;
+  expected_value: string;
+  condition: string;
+  notes: string | null;
+  created_at: string;
+  users:
+    | { full_name: string | null }
+    | Array<{ full_name: string | null }>
+    | null;
+};
+
+type TechnicalDocumentRow = {
+  id: string;
+  title: string;
+  document_type: string;
+  is_indexed: boolean | null;
+  created_at: string;
+  storage_path: string;
+  manufacturers:
+    | { name: string | null }
+    | Array<{ name: string | null }>
+    | null;
+  equipment_models:
+    | { model_name: string | null }
+    | Array<{ model_name: string | null }>
+    | null;
+  boards:
+    | { board_code: string | null }
+    | Array<{ board_code: string | null }>
+    | null;
+  components:
+    | { component_ref: string | null }
+    | Array<{ component_ref: string | null }>
+    | null;
+  document_chunks: Array<{ id: string }> | null;
+};
 
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
@@ -272,10 +344,10 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   const guidedFlow = path;
 
-  const attachmentItems = data.attachments ?? [];
+  const attachmentItems = (data.attachments ?? []) as AttachmentRow[];
   const attachmentPaths = attachmentItems.map((item) => item.storage_path);
 
-  let signedUrlsMap: Record<string, string> = {};
+  const signedUrlsMap: Record<string, string> = {};
   if (attachmentPaths.length > 0) {
     const { data: signedData, error: signedError } = await supabase.storage
       .from("diagnostic-attachments")
@@ -290,7 +362,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     }
   }
 
-  const diagnosticBoards = ((data as any).diagnostic_boards ?? []).map((item: any) => {
+  const diagnosticBoards = ((data.diagnostic_boards ?? []) as DiagnosticBoardRow[]).map((item) => {
     const board = pickRelation(item.boards);
     return {
       id: item.id,
@@ -303,20 +375,15 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   });
 
   const boardIds = diagnosticBoards
-    .map((b: any) => b.boardId)
-    .filter((id: any): id is string => Boolean(id));
+    .map((board) => board.boardId)
+    .filter((id): id is string => Boolean(id));
 
   const [attachmentsList, assistantSnapshot, preventiveInsight, referenceMeasurements] = await Promise.all([
     Promise.resolve(
       attachmentItems.map((item) => {
         const signedUrl = signedUrlsMap[item.storage_path] ?? null;
 
-        const analysis = item.ai_image_analysis as {
-          observations?: string[];
-          suspectedIssues?: string[];
-          confidence?: string;
-          recommendation?: string;
-        } | null;
+        const analysis = item.ai_image_analysis;
 
         return {
           id: item.id,
@@ -336,7 +403,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
                   analyzedAt: formatRelativeTime(item.ai_image_analyzed_at),
                 }
               : null,
-          annotations: (item as any).annotations ?? [],
+          annotations: item.annotations ?? [],
         };
       })
     ),
@@ -361,7 +428,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           .in("board_id", boardIds)
           .order("component_ref")
           .then((res) => {
-            return (res.data ?? []).map((item: any) => {
+            return ((res.data ?? []) as ReferenceMeasurementRow[]).map((item) => {
               const user = pickRelation(item.users);
               return {
                 id: item.id,
@@ -603,11 +670,11 @@ export async function getTechnicalDocuments() {
     .limit(20);
 
   const items = await Promise.all(
-    (data ?? []).map(async (row) => {
+    ((data ?? []) as TechnicalDocumentRow[]).map(async (row) => {
       const manufacturer = pickRelation(row.manufacturers);
       const model = pickRelation(row.equipment_models);
       const board = pickRelation(row.boards);
-      const component = pickRelation((row as any).components);
+      const component = pickRelation(row.components);
       const chunks = Array.isArray(row.document_chunks) ? row.document_chunks : [];
       const { data: signed } = await supabase.storage
         .from("technical-documents")
