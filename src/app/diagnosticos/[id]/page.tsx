@@ -42,6 +42,17 @@ type MaintenanceStage = {
   status: "done" | "current" | "pending";
 };
 
+type StageGuide = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  objective: string;
+  checklist: Array<{ label: string; done: boolean }>;
+  nextLabel: string;
+  isReadyToAdvance: boolean;
+  blockedMessage: string;
+};
+
 export default async function DiagnosticDetailPage({
   params,
   searchParams,
@@ -114,6 +125,84 @@ export default async function DiagnosticDetailPage({
     maintenanceStages[maintenanceStages.length - 1];
   const validStageIds = new Set(maintenanceStages.map((stage) => stage.id));
   const activeStageId = validStageIds.has(selectedStage) ? selectedStage : nextMaintenanceStage.id;
+  const currentStageIndex = maintenanceStages.findIndex((stage) => stage.id === activeStageId);
+  const previousStage = currentStageIndex > 0 ? maintenanceStages[currentStageIndex - 1] : null;
+  const followingStage =
+    currentStageIndex >= 0 && currentStageIndex < maintenanceStages.length - 1
+      ? maintenanceStages[currentStageIndex + 1]
+      : null;
+
+  const hasDiagnosticRecommendation = Boolean(detail.assistantSnapshot.latestResponse);
+  const hasTests = detail.tests.length > 0;
+  const hasMeasurements = detail.measurements.length > 0;
+  const hasHypotheses = detail.hypotheses.length > 0;
+  const hasAttachments = detail.attachments.length > 0;
+  const hasReferenceMeasurements = detail.referenceMeasurements.length > 0;
+  const hasInvestigationRecord = hasTests || hasMeasurements || hasHypotheses;
+  const hasEvidenceRecord = hasAttachments || hasReferenceMeasurements;
+
+  const stageGuides: StageGuide[] = [
+    {
+      id: "triagem",
+      eyebrow: "Etapa ativa",
+      title: "Registrar o defeito com clareza",
+      objective: "Abra o caso com sintomas observáveis, contexto da bancada e condição física do equipamento.",
+      checklist: [
+        { label: "Sintoma principal registrado", done: hasSymptoms },
+        { label: "Contexto inicial preenchido", done: Boolean(detail.initialReport?.trim()) },
+        { label: "Condição física documentada", done: Boolean(detail.physicalNotes?.trim()) },
+      ],
+      nextLabel: "Ir para investigação",
+      isReadyToAdvance: hasSymptoms,
+      blockedMessage: "Antes de avançar, registre pelo menos o sintoma principal do equipamento.",
+    },
+    {
+      id: "investigacao",
+      eyebrow: "Etapa ativa",
+      title: "Validar uma linha técnica de investigação",
+      objective: "Gere uma recomendação, execute testes e consolide as primeiras leituras ou hipóteses da bancada.",
+      checklist: [
+        { label: "Recomendação técnica gerada", done: hasDiagnosticRecommendation },
+        { label: "Pelo menos um teste registrado", done: hasTests },
+        { label: "Medição ou hipótese documentada", done: hasMeasurements || hasHypotheses },
+      ],
+      nextLabel: "Ir para evidências",
+      isReadyToAdvance: hasDiagnosticRecommendation && hasInvestigationRecord,
+      blockedMessage: "Antes de seguir, gere a recomendação e registre ao menos um teste, medição ou hipótese.",
+    },
+    {
+      id: "evidencias",
+      eyebrow: "Etapa ativa",
+      title: "Organizar provas do diagnóstico",
+      objective: "Anexe evidências do caso e salve referências úteis para justificar a conclusão técnica.",
+      checklist: [
+        { label: "Linha de investigação já iniciada", done: hasInvestigationRecord || hasDiagnosticRecommendation },
+        { label: "Ao menos um anexo enviado", done: hasAttachments },
+        { label: "Medição de referência ou apoio registrada", done: hasReferenceMeasurements || hasMeasurements },
+      ],
+      nextLabel: "Ir para encerramento",
+      isReadyToAdvance: (hasInvestigationRecord || hasDiagnosticRecommendation) && hasEvidenceRecord,
+      blockedMessage: "Antes de encerrar, anexe pelo menos uma evidência ou registre uma medição de referência.",
+    },
+    {
+      id: "encerramento",
+      eyebrow: "Etapa ativa",
+      title: "Fechar o caso com rastreabilidade",
+      objective: "Consolide causa, solução aplicada e resultado final somente depois de validar a investigação.",
+      checklist: [
+        { label: "Investigação registrada", done: hasInvestigationRecord || hasDiagnosticRecommendation },
+        { label: "Evidência técnica anexada", done: hasEvidenceRecord },
+        { label: "Conclusão final preenchida", done: isClosed },
+      ],
+      nextLabel: "Fluxo concluído",
+      isReadyToAdvance: isClosed,
+      blockedMessage: "Ainda falta consolidar a causa e a solução do caso para concluir o fluxo.",
+    },
+  ];
+
+  const activeStageGuide =
+    stageGuides.find((stage) => stage.id === activeStageId) ?? stageGuides[0];
+  const completedChecklistCount = activeStageGuide.checklist.filter((item) => item.done).length;
 
   return (
     <AppShell
@@ -209,6 +298,89 @@ export default async function DiagnosticDetailPage({
                 </Link>
               );
             })}
+          </div>
+        </section>
+
+        <section
+          className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-6 shadow-[0_14px_34px_rgba(20,18,28,0.05)]"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                {activeStageGuide.eyebrow}
+              </p>
+              <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                {activeStageGuide.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                {activeStageGuide.objective}
+              </p>
+            </div>
+            <div className="rounded-xl sm:rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)]">
+              Checklist {completedChecklistCount}/{activeStageGuide.checklist.length}
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            {activeStageGuide.checklist.map((item) => (
+              <div
+                key={item.label}
+                className={`rounded-xl sm:rounded-[20px] border px-4 py-3 text-sm ${
+                  item.done
+                    ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] text-[var(--foreground)]"
+                    : "border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--muted)]"
+                }`}
+              >
+                <span className="font-semibold">{item.done ? "OK" : "Pendente"}</span> {item.label}
+              </div>
+            ))}
+          </div>
+
+          {!activeStageGuide.isReadyToAdvance ? (
+            <div className="mt-5 rounded-xl sm:rounded-[22px] border border-[rgba(216,166,84,0.3)] bg-[rgba(216,166,84,0.1)] px-4 py-3 text-sm text-[var(--foreground)]">
+              {activeStageGuide.blockedMessage}
+            </div>
+          ) : null}
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-3">
+              {previousStage ? (
+                <Link
+                  href={`/diagnosticos/${detail.id}?stage=${previousStage.id}#${previousStage.id}`}
+                  className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                >
+                  Voltar para {previousStage.title}
+                </Link>
+              ) : null}
+
+              {followingStage ? (
+                activeStageGuide.isReadyToAdvance ? (
+                  <Link
+                    href={`/diagnosticos/${detail.id}?stage=${followingStage.id}#${followingStage.id}`}
+                    className="inline-flex rounded-full border border-[rgba(109,94,242,0.24)] bg-[rgba(109,94,242,0.12)] px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
+                  >
+                    {activeStageGuide.nextLabel}
+                  </Link>
+                ) : (
+                  <span className="inline-flex rounded-full border border-dashed border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]">
+                    {activeStageGuide.nextLabel}
+                  </span>
+                )
+              ) : (
+                <span className="inline-flex rounded-full border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] px-4 py-2 text-sm font-semibold text-[var(--accent-teal)]">
+                  {activeStageGuide.nextLabel}
+                </span>
+              )}
+            </div>
+
+            {!activeStageGuide.isReadyToAdvance && previousStage ? (
+              <Link
+                href={`/diagnosticos/${detail.id}?stage=${previousStage.id}#${previousStage.id}`}
+                className="text-sm font-medium text-[var(--accent-copper)]"
+              >
+                Revisar etapa anterior
+              </Link>
+            ) : null}
           </div>
         </section>
 
