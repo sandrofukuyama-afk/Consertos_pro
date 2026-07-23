@@ -86,7 +86,7 @@ export default async function DiagnosticDetailPage({
           </section>
         ) : null}
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
@@ -113,7 +113,7 @@ export default async function DiagnosticDetailPage({
               />
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="flex flex-col justify-between rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -248,7 +248,7 @@ export default async function DiagnosticDetailPage({
           </aside>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
@@ -543,7 +543,7 @@ export default async function DiagnosticDetailPage({
           </aside>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-3">
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -888,7 +888,7 @@ export default async function DiagnosticDetailPage({
               Valores esperados (tensão, resistência, impedância) para comparação rápida.
             </p>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
               {/* Tabela de Medições existentes */}
               <div>
                 {detail.referenceMeasurements.length > 0 ? (
@@ -943,7 +943,7 @@ export default async function DiagnosticDetailPage({
           </section>
         )}
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Linha do tempo

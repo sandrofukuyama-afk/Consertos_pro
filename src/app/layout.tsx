@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { FormAssistProvider } from "@/components/form-assist-provider";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Sora } from "next/font/google";
 import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
@@ -44,6 +44,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#ca6a55",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -54,10 +60,6 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${sora.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="theme-color" content="#ca6a55" />
-      </head>
       <body className="min-h-full flex flex-col">
         <FormAssistProvider />
         <PwaProvider />
