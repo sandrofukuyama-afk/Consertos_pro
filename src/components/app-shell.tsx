@@ -281,8 +281,8 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-hidden rounded-[30px] border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
-          <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-8 md:py-5">
+        <main className="min-w-0 flex-1 overflow-hidden rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
+          <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 md:py-5">
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Central de diagnósticos
@@ -302,23 +302,25 @@ export function AppShell({
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
-              <Link
-                href={actionHref}
-                className="rounded-full bg-[var(--accent-copper)] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]"
-              >
-                {actionLabel}
-              </Link>
-              <button
-                onClick={handleAppUpdate}
-                disabled={isUpdating}
-                title="Limpar cache e atualizar"
-                className="flex items-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] hover:bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50"
-              >
-                <svg className={`h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
-                </svg>
-                <span>{isUpdating ? "Atualizando..." : "Atualizar App"}</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:gap-3">
+                <Link
+                  href={actionHref}
+                  className="rounded-full bg-[var(--accent-copper)] px-4 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]"
+                >
+                  {actionLabel}
+                </Link>
+                <button
+                  onClick={handleAppUpdate}
+                  disabled={isUpdating}
+                  title="Limpar cache e atualizar"
+                  className="flex items-center justify-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] hover:bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50"
+                >
+                  <svg className={`h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
+                  </svg>
+                  <span className="truncate">{isUpdating ? "Atualizando..." : "Atualizar App"}</span>
+                </button>
+              </div>
               <div className="hidden max-w-full break-words rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-2.5 text-center text-sm font-medium text-[var(--foreground)] sm:block">
                 {user.fullName}
               </div>
@@ -332,7 +334,7 @@ export function AppShell({
             </div>
           </header>
 
-          <div className="px-4 py-4 pb-24 md:px-8 md:py-7 lg:pb-7">{children}</div>
+          <div className="px-3 py-3 pb-24 sm:px-4 sm:py-4 md:px-8 md:py-7 lg:pb-7">{children}</div>
         </main>
 
         <nav className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-around border-t border-white/10 bg-[var(--panel)]/90 px-2 py-2 pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md lg:hidden">

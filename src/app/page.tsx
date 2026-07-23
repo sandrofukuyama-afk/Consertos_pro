@@ -37,7 +37,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         ) : null}
 
         <section
-          className={`rounded-[26px] border p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)] ${
+          className={`rounded-2xl sm:rounded-[26px] border p-4 sm:p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)] ${
             supabaseReady
               ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)]"
               : "border-[rgba(109,94,242,0.24)] bg-[rgba(109,94,242,0.08)]"
@@ -75,13 +75,13 @@ export default async function Home({ searchParams }: HomePageProps) {
           {dashboard.kpis.map((item) => (
             <article
               key={item.label}
-              className="rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)]"
+              className="rounded-2xl sm:rounded-[26px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)]"
             >
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 {item.label}
               </p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <span className="font-[family-name:var(--font-heading)] text-5xl font-semibold tracking-tight text-[var(--foreground)]">
+                <span className="font-[family-name:var(--font-heading)] text-4xl sm:text-5xl font-semibold tracking-tight text-[var(--foreground)]">
                   {item.value}
                 </span>
                 <span
@@ -101,13 +101,13 @@ export default async function Home({ searchParams }: HomePageProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.95fr)]">
-          <article className="w-full min-w-0 xl:self-start rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
+          <article className="w-full min-w-0 xl:self-start rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-5 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-2 border-b border-[var(--panel-border)] pb-4 md:flex-row md:items-end md:justify-between">
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Central de casos
                 </p>
-                <h3 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words font-[family-name:var(--font-heading)] text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Lista ativa da bancada
                 </h3>
               </div>
@@ -117,7 +117,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             </div>
 
             {dashboard.diagnostics.length ? (
-              <div className="mt-5 overflow-hidden rounded-[24px] border border-[var(--panel-border)]">
+              <div className="mt-4 overflow-hidden rounded-xl sm:rounded-[24px] border border-[var(--panel-border)]">
                 <div className="hidden md:grid grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                   <span>Equipamento</span>
                   <span>Defeito atual</span>
@@ -129,7 +129,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                   <Link
                     key={diagnostic.id}
                     href={`/diagnosticos/${diagnostic.recordId}`}
-                    className="flex flex-col gap-3 border-t border-[var(--panel-border)] px-4 py-4 transition hover:bg-white/2 md:grid md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
+                    className="flex flex-col gap-3 border-t border-[var(--panel-border)] p-3.5 sm:p-4 transition hover:bg-white/2 md:grid md:grid-cols-[0.8fr_1.4fr_1.2fr_1.1fr_1fr]"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center justify-between md:block">
@@ -184,22 +184,22 @@ export default async function Home({ searchParams }: HomePageProps) {
           </article>
 
           <div className="grid min-w-0 gap-4">
-            <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-white shadow-[0_20px_52px_rgba(14,13,20,0.18)]">
+            <article className="rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5 text-white shadow-[0_20px_52px_rgba(14,13,20,0.18)]">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
                 Próximo passo sugerido
               </p>
-              <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
+              <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-xl sm:text-2xl font-semibold tracking-tight">
                 Isolar a linha LCD_VDD antes de regravar BIOS
               </h3>
               <p className="mt-3 break-words text-sm leading-7 text-[rgba(230,228,245,0.76)]">
                 A ideia aqui é mostrar um teste por vez. Esta área exibe a sugestão da IA com um motivo simples para ajudar na decisão.
               </p>
-              <div className="mt-5 break-words rounded-[22px] border border-white/10 bg-white/6 p-4 text-sm leading-6 text-[rgba(230,228,245,0.84)]">
+              <div className="mt-4 break-words rounded-xl sm:rounded-[22px] border border-white/10 bg-white/6 p-3.5 sm:p-4 text-sm leading-6 text-[rgba(230,228,245,0.84)]">
                 Justificativa: há medição estável de 19V, consumo inicial coerente e histórico recente de casos semelhantes com falha no circuito de imagem. A regravação agora teria custo maior e menor poder de isolamento.
               </div>
             </article>
 
-            <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
+            <article className="rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-5">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Linha do tempo do caso
               </p>
@@ -209,7 +209,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                     key={`${item.time}-${item.title}`}
                     className="grid gap-3 sm:grid-cols-[72px_minmax(0,1fr)]"
                   >
-                    <div className="inline-flex w-fit min-w-[72px] items-center justify-center rounded-2xl bg-[var(--background-strong)] px-3 py-3 text-center font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-copper)]">
+                    <div className="inline-flex w-fit min-w-[72px] items-center justify-center rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-copper)]">
                       {item.time}
                     </div>
                     <div className="min-w-0">
@@ -225,7 +225,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               </div>
             </article>
 
-            <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
+            <article className="rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-5">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Hipóteses em aberto
               </p>
@@ -233,7 +233,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                 {hypotheses.map((item) => (
                   <div
                     key={item.title}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                    className="rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4"
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
@@ -259,13 +259,13 @@ export default async function Home({ searchParams }: HomePageProps) {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
+          <article className="rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Biblioteca técnica
                 </p>
-                <h3 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words font-[family-name:var(--font-heading)] text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Documentos recentes
                 </h3>
               </div>
@@ -278,7 +278,7 @@ export default async function Home({ searchParams }: HomePageProps) {
               {dashboard.documents.map((item) => (
                 <article
                   key={item.title}
-                  className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5"
+                  className="rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-5"
                 >
                   <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
                     {item.type}
@@ -294,18 +294,18 @@ export default async function Home({ searchParams }: HomePageProps) {
             </div>
           </article>
 
-          <article className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-white">
+          <article className="rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
               Causas confirmadas
             </p>
-            <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
+            <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-xl sm:text-2xl font-semibold tracking-tight">
               Casos que viraram referência
             </h3>
             <div className="mt-4 space-y-3">
               {dashboard.knowledgeItems.map((item) => (
                 <div
                   key={item.cause}
-                  className="rounded-[22px] border border-white/10 bg-white/6 p-4"
+                  className="rounded-xl sm:rounded-[22px] border border-white/10 bg-white/6 p-3.5 sm:p-4"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <p className="min-w-0 break-words text-sm font-semibold leading-6 text-white">

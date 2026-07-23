@@ -71,7 +71,7 @@ export default async function DiagnosticDetailPage({
         ) : null}
 
         {detail.preventiveInsight ? (
-          <section className="rounded-[26px] border border-[rgba(216,166,84,0.32)] bg-[rgba(216,166,84,0.1)] p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)]">
+          <section className="rounded-2xl sm:rounded-[26px] border border-[rgba(216,166,84,0.32)] bg-[rgba(216,166,84,0.1)] p-4 sm:p-5 shadow-[0_14px_32px_rgba(20,18,28,0.06)]">
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-amber)]">
               Recomendação preventiva
             </p>
@@ -87,13 +87,13 @@ export default async function DiagnosticDetailPage({
         ) : null}
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Contexto atual
                 </p>
-                <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--foreground)]">
                   {detail.summary}
                 </h3>
                 <p className="mt-3 break-words text-sm leading-7 text-[var(--muted)]">
@@ -114,7 +114,7 @@ export default async function DiagnosticDetailPage({
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="flex flex-col justify-between rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <div className="flex flex-col justify-between rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
@@ -158,7 +158,7 @@ export default async function DiagnosticDetailPage({
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <div className="rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
                   Condição física
                 </p>
@@ -178,11 +178,11 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">
+          <aside className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-6 text-white">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[rgba(230,228,245,0.56)]">
               Árvore de investigação · {detail.category}
             </p>
-            <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight">
+            <h3 className="mt-3 break-words font-[family-name:var(--font-heading)] text-xl sm:text-2xl font-semibold tracking-tight">
               Fluxo dinâmico de bancada
             </h3>
             <ol className="mt-4 space-y-2">
@@ -249,13 +249,13 @@ export default async function DiagnosticDetailPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                   Assistente técnico
                 </p>
-                <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                <h3 className="mt-2 break-words text-xl sm:text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                   Próximo passo guiado por contexto
                 </h3>
                 <p className="mt-2 break-words text-sm leading-6 text-[var(--muted)]">
@@ -263,7 +263,7 @@ export default async function DiagnosticDetailPage({
                 </p>
 
                 {/* Agente de IA Especialista Ativo */}
-                <div className="mt-4 flex flex-col items-start gap-1.5 rounded-[18px] border border-[var(--accent-teal)]/20 bg-[rgba(45,139,130,0.06)] p-3.5 text-white">
+                <div className="mt-4 flex flex-col items-start gap-1.5 rounded-xl sm:rounded-[18px] border border-[var(--accent-teal)]/20 bg-[rgba(45,139,130,0.06)] p-3 text-white">
                   <div className="flex items-center gap-2">
                     <span className="flex h-2 w-2 shrink-0 rounded-full bg-[var(--accent-teal)] animate-pulse" />
                     <span className="font-mono text-xs uppercase tracking-wider text-[var(--accent-teal)] font-bold">
@@ -285,7 +285,7 @@ export default async function DiagnosticDetailPage({
 
             {detail.assistantSnapshot.latestResponse ? (
               <div className="mt-5 grid gap-4">
-                <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+                <div className="rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
@@ -313,7 +313,7 @@ export default async function DiagnosticDetailPage({
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-[22px] border border-[rgba(109,94,242,0.18)] bg-[var(--card-surface-soft)] p-4">
+                  <div className="mt-4 rounded-xl sm:rounded-[22px] border border-[rgba(109,94,242,0.18)] bg-[var(--card-surface-soft)] p-3.5 sm:p-4">
                     <p className="text-sm font-semibold text-[var(--foreground)]">Próximo teste recomendado</p>
                     <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                       {detail.assistantSnapshot.latestResponse.structured?.nextTest ?? detail.assistantSnapshot.latestResponse.recommendedNextStep}
@@ -344,7 +344,7 @@ export default async function DiagnosticDetailPage({
                           (detail.assistantSnapshot.latestResponse.structured?.evidence ?? []).map((item) => (
                             <p
                               key={item}
-                              className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-3 py-2 text-sm text-[var(--muted)]"
+                              className="rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-3 py-2 text-sm text-[var(--muted)]"
                             >
                               {item}
                             </p>
@@ -368,7 +368,7 @@ export default async function DiagnosticDetailPage({
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
+                  <div className="mt-4 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-3.5 sm:p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -386,7 +386,7 @@ export default async function DiagnosticDetailPage({
                     </div>
 
                     {detail.assistantSnapshot.latestResponse.feedback ? (
-                      <div className="mt-4 rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] p-4 text-sm text-[var(--foreground)]">
+                      <div className="mt-4 rounded-xl sm:rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4 text-sm text-[var(--foreground)]">
                         <p>
                           Último feedback: {detail.assistantSnapshot.latestResponse.feedback.submittedBy} • {detail.assistantSnapshot.latestResponse.feedback.createdAt}
                         </p>
@@ -454,14 +454,14 @@ export default async function DiagnosticDetailPage({
                 </div>
               </div>
             ) : (
-              <div className="mt-5 rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-8 text-sm leading-6 text-[var(--muted)]">
+              <div className="mt-5 rounded-xl sm:rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 sm:px-5 sm:py-8 text-sm leading-6 text-[var(--muted)]">
                 Ainda não existe recomendação salva para este caso. Gere a primeira leitura para registrar resumo técnico, hipótese dominante e próximo teste sugerido em `ai_responses`.
               </div>
             )}
           </article>
 
           <aside className="grid gap-4">
-            <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+            <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -482,7 +482,7 @@ export default async function DiagnosticDetailPage({
                     <Link
                       key={item.id}
                       href={item.href ?? "#"}
-                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109,94,242,0.3)]"
+                      className="block rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4 hover:border-[rgba(109,94,242,0.3)]"
                     >
                       <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
                         {item.sourceType} / {item.similarityLabel}
@@ -500,7 +500,7 @@ export default async function DiagnosticDetailPage({
               </div>
             </article>
 
-            <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+            <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -523,7 +523,7 @@ export default async function DiagnosticDetailPage({
                       href={item.href ?? "#"}
                       target="_blank"
                       rel="noreferrer"
-                      className="block rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 hover:border-[rgba(109,94,242,0.3)]"
+                      className="block rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4 hover:border-[rgba(109,94,242,0.3)]"
                     >
                       <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
                         {item.sourceType} / {item.similarityLabel}
@@ -544,7 +544,7 @@ export default async function DiagnosticDetailPage({
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -604,7 +604,7 @@ export default async function DiagnosticDetailPage({
                 detail.symptoms.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                    className="rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 break-words text-sm font-semibold text-[var(--foreground)]">
@@ -630,7 +630,7 @@ export default async function DiagnosticDetailPage({
 
           <article
             id="registrar-teste"
-            className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6"
+            className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
           >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Testes
@@ -714,7 +714,7 @@ export default async function DiagnosticDetailPage({
                 detail.tests.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                    className="rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -758,7 +758,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Hipóteses
             </p>
@@ -807,7 +807,7 @@ export default async function DiagnosticDetailPage({
                 detail.hypotheses.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                    className="rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 break-words text-sm font-semibold text-[var(--foreground)]">
@@ -834,7 +834,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Medições
             </p>
@@ -850,7 +850,7 @@ export default async function DiagnosticDetailPage({
                 detail.measurements.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                    className="rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4"
                   >
                     <p className="text-sm font-semibold text-[var(--foreground)]">
                       {item.measurementType} • {item.pointLabel}
@@ -877,7 +877,7 @@ export default async function DiagnosticDetailPage({
 
         {/* Medições de Referência de Bancada */}
         {detail.boards.length > 0 && (
-          <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <section className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Valores de Referência
             </p>
@@ -931,7 +931,7 @@ export default async function DiagnosticDetailPage({
               </div>
 
               {/* Formulário para Adicionar Medição */}
-              <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <div className="rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
                   Nova Medição de Referência
                 </p>
@@ -944,7 +944,7 @@ export default async function DiagnosticDetailPage({
         )}
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Linha do tempo
             </p>
@@ -957,7 +957,7 @@ export default async function DiagnosticDetailPage({
                 detail.timeline.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
+                    className="rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-3.5 sm:p-4"
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
@@ -981,7 +981,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Evidências
             </p>
@@ -1045,7 +1045,7 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
-          <article className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
+          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Encerramento
             </p>
@@ -1054,7 +1054,7 @@ export default async function DiagnosticDetailPage({
             </h3>
 
             {detail.resolvedCase ? (
-              <div className="mt-5 rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-5">
+              <div className="mt-5 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                 <p className="text-sm font-semibold text-[var(--foreground)]">
                   Caso encerrado como {detail.resolvedCase.caseStatus}
                 </p>
