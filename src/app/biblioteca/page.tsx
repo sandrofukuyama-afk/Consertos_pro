@@ -10,6 +10,7 @@ type BibliotecaPageProps = {
     message?: string;
     manufacturer_id?: string;
     model_id?: string;
+    board_id?: string;
   }>;
 };
 
@@ -132,6 +133,7 @@ export default async function BibliotecaPage({
                 components={catalog.components}
                 selectedManufacturerId={params.manufacturer_id}
                 selectedModelId={params.model_id}
+                selectedBoardId={params.board_id}
               />
             </div>
           </aside>

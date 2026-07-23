@@ -128,6 +128,8 @@ export type BoardMeasurement = {
 
 export type DiagnosticDetail = {
   id: string;
+  manufacturerId: string | null;
+  modelId: string | null;
   category: string;
   manufacturer: string;
   model: string;
@@ -161,6 +163,7 @@ export type DiagnosticDetail = {
     id: string;
     name: string;
     severity: string;
+    notes: string;
     sourceType: string;
     isPrimary: boolean;
     capturedAt: string;
@@ -170,8 +173,11 @@ export type DiagnosticDetail = {
     testName: string;
     resultStatus: string;
     stepOrder: number;
+    testGroup: string;
     procedureNotes: string;
+    expectedResult: string;
     actualResult: string;
+    conclusion: string;
     performedAt: string;
     technician: string;
     requestedByAi: boolean;
@@ -183,6 +189,12 @@ export type DiagnosticDetail = {
     pointLabel: string;
     measuredValue: string;
     expectedValue: string;
+    tolerance: string;
+    context: string;
+    isOutOfRange: boolean;
+    linkedTestId: string | null;
+    linkedTestName: string | null;
+    boardLabel: string;
     measuredAt: string;
     technician: string;
   }>;

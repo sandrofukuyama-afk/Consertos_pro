@@ -7,6 +7,13 @@ export type AssistantNarrativeFacts = {
   category: string;
   manufacturer: string;
   summary: string;
+  activeScenario: {
+    id: string;
+    title: string;
+    summary: string;
+    firstMeasurements: string[];
+    nextChecks: string[];
+  };
   categoryStrategyFocus: string;
   categoryFirstMove: string;
   categorySafety: string;
@@ -67,7 +74,10 @@ const SYSTEM_PROMPT = [
   "recomendar o teste indicado em 'recommendedTestName' do contexto, apenas explicando por que",
   "e como executá-lo — não substitua por outro teste. Se houver 'symptomGroupInsight', use-o para",
   "reforçar ou qualificar a hipótese principal, deixando claro que é um padrão histórico e não uma",
-  "certeza. Retorne apenas o JSON estruturado pedido.",
+  "certeza. Considere 'activeScenario' como o protocolo principal da bancada: priorize as medições",
+  "e checks desse cenário antes de abrir frentes paralelas. Se já existirem medições registradas,",
+  "use esses dados para refinar a hipótese e o próximo passo em vez de reiniciar a triagem.",
+  "Retorne apenas o JSON estruturado pedido.",
 ].join(" ");
 
 export function isLlmConfigured() {

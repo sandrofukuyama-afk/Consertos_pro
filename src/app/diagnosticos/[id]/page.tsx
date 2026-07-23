@@ -53,6 +53,22 @@ type StageGuide = {
   blockedMessage: string;
 };
 
+type ScenarioProtocol = {
+  id: string;
+  title: string;
+  summary: string;
+  triggers: string[];
+  firstMeasurements: string[];
+  nextChecks: string[];
+};
+
+function normalizeDiagnosticText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 export default async function DiagnosticDetailPage({
   params,
   searchParams,
@@ -140,6 +156,140 @@ export default async function DiagnosticDetailPage({
   const hasReferenceMeasurements = detail.referenceMeasurements.length > 0;
   const hasInvestigationRecord = hasTests || hasMeasurements || hasHypotheses;
   const hasEvidenceRecord = hasAttachments || hasReferenceMeasurements;
+  const primaryBoard = detail.boards.find((board) => board.isPrimary) ?? detail.boards[0] ?? null;
+  const schematicUploadHref = `/biblioteca${
+    detail.manufacturerId || detail.modelId || primaryBoard?.boardId
+      ? `?${new URLSearchParams(
+          Object.fromEntries(
+            [
+              detail.manufacturerId ? ["manufacturer_id", detail.manufacturerId] : null,
+              detail.modelId ? ["model_id", detail.modelId] : null,
+              primaryBoard?.boardId ? ["board_id", primaryBoard.boardId] : null,
+            ].filter((entry): entry is [string, string] => Boolean(entry)),
+          ),
+        ).toString()}`
+      : ""
+  }`;
+  const noPowerSignals = normalizeDiagnosticText(
+    [detail.summary, detail.initialReport, ...detail.symptoms.map((item) => item.name)].join(" "),
+  );
+  const isNoPowerCase =
+    noPowerSignals.includes("nao liga") ||
+    noPowerSignals.includes("não liga") ||
+    noPowerSignals.includes("sem start") ||
+    noPowerSignals.includes("no power") ||
+    noPowerSignals.includes("sem ligar");
+
+  const batterySignals = noPowerSignals.includes("bateria") || noPowerSignals.includes("carrega");
+  const videoSignals =
+    noPowerSignals.includes("sem video") ||
+    noPowerSignals.includes("sem imagem") ||
+    noPowerSignals.includes("liga sem video") ||
+    noPowerSignals.includes("liga sem imagem");
+  const highConsumptionSignals =
+    noPowerSignals.includes("consumo alto") ||
+    noPowerSignals.includes("consumo elevado") ||
+    noPowerSignals.includes("aquecendo") ||
+    noPowerSignals.includes("esquenta");
+  const shortSignals =
+    noPowerSignals.includes("curto") ||
+    noPowerSignals.includes("linha em curto") ||
+    noPowerSignals.includes("resistencia baixa");
+  const scenarioProtocols: ScenarioProtocol[] = [
+    {
+      id: "nao-liga",
+      title: "Notebook não liga",
+      summary: "Comece por consumo e tensões primárias antes de suspeitar de BIOS, SIO ou PCH.",
+      triggers: ["Não liga", "Sem start", "Sem consumo definido"],
+      firstMeasurements: [
+        "Consumo na fonte assimétrica em standby e ao pressionar power",
+        "Tensão de entrada VIN / DC-IN",
+        "3.3V_ALW e 5V_ALW",
+        "Sinal do botão power e sequência de start",
+      ],
+      nextChecks: [
+        "Se faltar ALW, investigar primário e habilitação",
+        "Se houver ALW mas sem start, seguir sinais de power e EC/SIO",
+      ],
+    },
+    {
+      id: "sem-video",
+      title: "Liga sem vídeo",
+      summary: "Separar cedo se a falha está em tela, backlight, RAM, BIOS ou geração de vídeo.",
+      triggers: ["Liga sem imagem", "Sem vídeo", "Power ok"],
+      firstMeasurements: [
+        "Confirmar consumo e tensões secundárias após start",
+        "Testar monitor externo / HDMI",
+        "Verificar alimentação da tela e backlight",
+        "Conferir RAM, BIOS e sinais de reset/clock",
+      ],
+      nextChecks: [
+        "Se houver vídeo externo, isolar tela, flat ou LVDS/eDP",
+        "Se não houver vídeo em nenhuma saída, seguir BIOS, RAM e chipset",
+      ],
+    },
+    {
+      id: "nao-carrega-bateria",
+      title: "Não carrega bateria",
+      summary: "Focar no circuito charger e na detecção da bateria antes de trocar componentes sem medição.",
+      triggers: ["Não carrega", "Bateria não sobe", "Fonte reconhecida"],
+      firstMeasurements: [
+        "Tensão da fonte na entrada e no charger",
+        "Tensão nos mosfets de entrada do circuito charger",
+        "Linha da bateria / BAT+",
+        "Sinais ACOK, CMSRC, REGN e detecção da bateria",
+      ],
+      nextChecks: [
+        "Se REGN/ACOK faltarem, seguir charger e habilitação",
+        "Se BAT+ não subir, verificar mosfets, charger e comunicação da bateria",
+      ],
+    },
+    {
+      id: "consumo-alto",
+      title: "Consumo alto",
+      summary: "Usar consumo na fonte e aquecimento para isolar a linha suspeita antes de aprofundar.",
+      triggers: ["Consumo alto", "Aquecendo", "Curva anormal"],
+      firstMeasurements: [
+        "Perfil de consumo em standby e no start",
+        "Temperatura / aquecimento anormal por inspeção",
+        "Resistência para terra nas bobinas principais",
+        "Injeção controlada na linha suspeita quando aplicável",
+      ],
+      nextChecks: [
+        "Se a linha aquecer componente específico, confrontar com esquema/boardview",
+        "Registrar a linha suspeita antes de pedir novo passo à IA",
+      ],
+    },
+    {
+      id: "curto-na-linha",
+      title: "Curto na linha",
+      summary: "Medir resistência e isolar a linha em curto antes de insistir em start ou troca de BIOS.",
+      triggers: ["Curto na linha", "Baixa resistência", "Proteção da fonte"],
+      firstMeasurements: [
+        "Resistência para terra nas linhas principais",
+        "Comparar bobinas e rails mais críticos",
+        "Injeção de tensão com corrente limitada",
+        "Identificar componente que aquece primeiro",
+      ],
+      nextChecks: [
+        "Usar esquema/boardview para rastrear a linha em curto",
+        "Depois da localização, registrar componente suspeito e pedir nova análise da IA",
+      ],
+    },
+  ];
+  const activeScenarioId = isNoPowerCase
+    ? "nao-liga"
+    : videoSignals
+      ? "sem-video"
+      : batterySignals
+        ? "nao-carrega-bateria"
+        : shortSignals
+          ? "curto-na-linha"
+          : highConsumptionSignals
+            ? "consumo-alto"
+            : "nao-liga";
+  const activeScenario =
+    scenarioProtocols.find((scenario) => scenario.id === activeScenarioId) ?? scenarioProtocols[0];
 
   const stageGuides: StageGuide[] = [
     {
@@ -618,6 +768,113 @@ export default async function DiagnosticDetailPage({
               </form>
             </div>
 
+            <div className="mt-5 rounded-xl sm:rounded-[24px] border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] p-4 sm:p-5">
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-teal)]">
+                Fluxo inicial de bancada
+              </p>
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {scenarioProtocols.map((scenario) => {
+                  const isActiveScenario = scenario.id === activeScenario.id;
+
+                  return (
+                    <div
+                      key={scenario.id}
+                      className={`rounded-xl sm:rounded-[20px] border p-4 ${
+                        isActiveScenario
+                          ? "border-[rgba(109,94,242,0.28)] bg-[rgba(109,94,242,0.1)]"
+                          : "border-[var(--panel-border)] bg-[var(--card-surface)]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-[var(--foreground)]">{scenario.title}</p>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                            isActiveScenario
+                              ? "bg-[rgba(109,94,242,0.18)] text-[var(--accent-copper)]"
+                              : "bg-white/5 text-[var(--muted)]"
+                          }`}
+                        >
+                          {isActiveScenario ? "Cenário ativo" : "Alternativo"}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{scenario.summary}</p>
+                      <p className="mt-3 text-xs text-[var(--muted)]">
+                        Gatilhos: {scenario.triggers.join(" • ")}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <h4 className="mt-2 text-lg font-semibold text-[var(--foreground)]">
+                Protocolo ativo: {activeScenario.title}
+              </h4>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                {activeScenario.summary}
+              </p>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl sm:rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">Primeiras medições</p>
+                  <ol className="mt-3 space-y-3 text-sm text-[var(--muted)]">
+                    {activeScenario.firstMeasurements.map((item, index) => (
+                      <li key={item}>
+                        {index + 1}. {item}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div className="rounded-xl sm:rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">Próximos checks</p>
+                  <ol className="mt-3 space-y-3 text-sm text-[var(--muted)]">
+                    {activeScenario.nextChecks.map((item, index) => (
+                      <li key={item}>
+                        {index + 1}. {item}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl sm:rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4">
+                <p className="text-sm font-semibold text-[var(--foreground)]">Ações rápidas</p>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link
+                    href="#medicoes"
+                    className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                  >
+                    Registrar tensões e consumo
+                  </Link>
+                  <Link
+                    href={schematicUploadHref}
+                    className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                  >
+                    Enviar esquema da placa
+                  </Link>
+                  <Link
+                    href="#registrar-teste"
+                    className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                  >
+                    Registrar resultado do teste
+                  </Link>
+                  <Link
+                    href="#registrar-sintoma"
+                    className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                  >
+                    Registrar novo sintoma
+                  </Link>
+                </div>
+              </div>
+
+              {primaryBoard ? (
+                <p className="mt-4 text-sm text-[var(--muted)]">
+                  Placa relacionada ao caso: {primaryBoard.name ?? "Placa principal"}
+                  {primaryBoard.boardCode ? ` • ${primaryBoard.boardCode}` : ""}.
+                </p>
+              ) : null}
+            </div>
+
             {detail.assistantSnapshot.latestResponse ? (
               <div className="mt-5 grid gap-4">
                 <div className="rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
@@ -955,6 +1212,12 @@ export default async function DiagnosticDetailPage({
                 placeholder="Severidade ou contexto"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
+              <textarea
+                name="notes"
+                rows={3}
+                placeholder="Detalhe o sintoma. Ex.: liga e desliga em 3s, sem backlight, aquece PU401"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
               <label className="inline-flex items-center gap-2 text-sm text-[var(--foreground)]">
                 <input type="checkbox" name="is_primary" />
                 Sintoma principal
@@ -990,6 +1253,9 @@ export default async function DiagnosticDetailPage({
                     </div>
                     <p className="mt-2 text-sm text-[var(--muted)]">
                       Severidade: {item.severity}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--foreground)]">
+                      {item.notes}
                     </p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
                       {item.sourceType} • {item.capturedAt}
@@ -1033,6 +1299,7 @@ export default async function DiagnosticDetailPage({
                 name="requested_by_ai_response_id"
                 value={requestedByAiResponseId}
               />
+              <input type="hidden" name="diagnostic_board_id" value={primaryBoard?.id ?? ""} />
               <select
                 required
                 name="test_id"
@@ -1069,6 +1336,18 @@ export default async function DiagnosticDetailPage({
                 name="actual_result"
                 rows={3}
                 placeholder="O que aconteceu no teste? Ex.: sem 3.3V, consumo 0.02A, não ligou"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <textarea
+                name="expected_result"
+                rows={2}
+                placeholder="O que era esperado nesse teste"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+              />
+              <textarea
+                name="conclusion"
+                rows={2}
+                placeholder="Conclusao rapida do teste. Ex.: primario sem 19V apos jack, BIOS nao parece ser a primeira suspeita"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <FormSubmitButton
@@ -1271,7 +1550,23 @@ export default async function DiagnosticDetailPage({
               Registrar tensão, corrente ou resistência
             </h3>
             <div className="mt-5">
-              <MeasurementForm diagnosticId={detail.id} />
+              <MeasurementForm
+                diagnosticId={detail.id}
+                tests={detail.tests.map((item) => ({
+                  id: item.id,
+                  testName: item.testName,
+                  stepOrder: item.stepOrder,
+                  expectedResult: item.expectedResult,
+                }))}
+                boards={detail.boards.map((item) => ({
+                  id: item.id,
+                  roleLabel: item.roleLabel,
+                  boardCode: item.boardCode,
+                  name: item.name,
+                }))}
+                suggestedTestId={suggestedTestId}
+                activeScenarioTitle={activeScenario.title}
+              />
             </div>
 
             <div className="mt-5 space-y-3">

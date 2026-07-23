@@ -17,6 +17,7 @@ type TechnicalDocumentUploadFormProps = {
   components: CatalogOption[];
   selectedManufacturerId?: string;
   selectedModelId?: string;
+  selectedBoardId?: string;
 };
 
 export function TechnicalDocumentUploadForm({
@@ -27,6 +28,7 @@ export function TechnicalDocumentUploadForm({
   components,
   selectedManufacturerId,
   selectedModelId,
+  selectedBoardId,
 }: TechnicalDocumentUploadFormProps) {
   return (
     <div className="grid gap-4">
@@ -202,7 +204,7 @@ export function TechnicalDocumentUploadForm({
         <select
           form="upload-technical-document"
           name="board_id"
-          defaultValue=""
+          defaultValue={selectedBoardId ?? ""}
           className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
         >
           <option value="">

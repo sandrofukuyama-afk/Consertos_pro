@@ -492,6 +492,7 @@ export async function addDiagnosticSymptomAction(formData: FormData) {
   const diagnosticId = String(formData.get("diagnostic_id") ?? "");
   const symptomId = String(formData.get("symptom_id") ?? "");
   const severity = String(formData.get("severity") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
   const sourceType = String(formData.get("source_type") ?? "technician");
   const isPrimary = formData.get("is_primary") === "on";
 
@@ -515,6 +516,7 @@ export async function addDiagnosticSymptomAction(formData: FormData) {
     diagnostic_id: diagnosticId,
     symptom_id: symptomId,
     severity,
+    notes,
     source_type: sourceType,
     is_primary: isPrimary,
   });
@@ -539,8 +541,13 @@ export async function addDiagnosticTestAction(formData: FormData) {
     String(formData.get("requested_by_ai_response_id") ?? "").trim() || null;
   const procedureNotes =
     String(formData.get("procedure_notes") ?? "").trim() || null;
+  const expectedResult =
+    String(formData.get("expected_result") ?? "").trim() || null;
   const actualResult = String(formData.get("actual_result") ?? "").trim() || null;
+  const conclusion = String(formData.get("conclusion") ?? "").trim() || null;
   const resultStatus = String(formData.get("result_status") ?? "pending");
+  const diagnosticBoardId =
+    String(formData.get("diagnostic_board_id") ?? "").trim() || null;
 
   if (!diagnosticId || !testId) {
     redirect(`/diagnosticos/${diagnosticId}?error=Teste inválido.`);
@@ -558,12 +565,15 @@ export async function addDiagnosticTestAction(formData: FormData) {
   const { error } = await supabase.from("diagnostic_test_runs").insert({
     diagnostic_id: diagnosticId,
     test_id: testId,
+    diagnostic_board_id: diagnosticBoardId,
     performed_by_user_id: user.id,
     step_order: nextStep,
     requested_by_ai_response_id: requestedByAiResponseId,
     result_status: resultStatus,
     procedure_notes: procedureNotes,
+    expected_result: expectedResult,
     actual_result: actualResult,
+    conclusion,
   });
 
   if (error) {
@@ -582,18 +592,27 @@ export async function addMeasurementAction(formData: FormData) {
 
   const diagnosticId = String(formData.get("diagnostic_id") ?? "");
   const measurementType = String(formData.get("measurement_type") ?? "");
+  const diagnosticTestRunId =
+    String(formData.get("diagnostic_test_run_id") ?? "").trim() || null;
+  const diagnosticBoardId =
+    String(formData.get("diagnostic_board_id") ?? "").trim() || null;
   const pointLabel = String(formData.get("point_label") ?? "").trim() || null;
   const unit = String(formData.get("unit") ?? "").trim() || null;
   const measuredValueText =
     String(formData.get("measured_value_text") ?? "").trim() || null;
   const expectedValueText =
     String(formData.get("expected_value_text") ?? "").trim() || null;
+  const toleranceText =
+    String(formData.get("tolerance_text") ?? "").trim() || null;
+  const measurementContext =
+    String(formData.get("measurement_context") ?? "").trim() || null;
   const measuredValueNumericRaw = String(
     formData.get("measured_value_numeric") ?? "",
   ).trim();
   const measuredValueNumeric = measuredValueNumericRaw
     ? Number(measuredValueNumericRaw)
     : null;
+  const isOutOfRange = formData.get("is_out_of_range") === "on";
 
   if (!diagnosticId || !measurementType) {
     redirect(`/diagnosticos/${diagnosticId}?error=Medição inválida.`);
@@ -611,6 +630,8 @@ export async function addMeasurementAction(formData: FormData) {
 
   const { error } = await supabase.from("measurements").insert({
     diagnostic_id: diagnosticId,
+    diagnostic_test_run_id: diagnosticTestRunId,
+    diagnostic_board_id: diagnosticBoardId,
     measurement_type: measurementType,
     point_label: pointLabel,
     unit,
@@ -620,6 +641,9 @@ export async function addMeasurementAction(formData: FormData) {
         : null,
     measured_value_text: measuredValueText,
     expected_value_text: expectedValueText,
+    tolerance_text: toleranceText,
+    measurement_context: measurementContext,
+    is_out_of_range: isOutOfRange,
     measured_by_user_id: user.id,
   });
 

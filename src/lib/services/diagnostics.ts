@@ -97,9 +97,23 @@ function prettifyStatus(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function buildBoardLabel(
+  board: {
+    roleLabel: string;
+    boardCode: string | null;
+    name: string | null;
+  } | null,
+) {
+  if (!board) {
+    return "Placa nao informada";
+  }
+
+  return board.name ?? board.boardCode ?? board.roleLabel;
+}
+
 function formatEquipmentDetailValue(value: string | number | boolean) {
   if (typeof value === "boolean") {
-    return value ? "Sim" : "Não";
+    return value ? "Sim" : "Nao";
   }
 
   return String(value);
@@ -111,12 +125,12 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
   }
 
   const labels: Record<string, string> = {
-    manufacturingYear: "Ano de fabricação",
-    accessoriesIncluded: "Acessórios",
+    manufacturingYear: "Ano de fabricacao",
+    accessoriesIncluded: "Acessorios",
     tvScreenSizeInches: "Tela (pol)",
     tvScreenType: "Tipo de tela",
     tvKind: "Tipo de TV",
-    tvResolution: "Resolução",
+    tvResolution: "Resolucao",
     tvPanelCode: "Codigo do painel",
     notebookProcessor: "Processador",
     notebookRamGb: "RAM (GB)",
@@ -138,7 +152,10 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
   };
 
   return Object.entries(details)
-    .filter(([, value]) => typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+    .filter(
+      ([, value]) =>
+        typeof value === "string" || typeof value === "number" || typeof value === "boolean",
+    )
     .map(([key, value]) => ({
       label: labels[key] ?? key,
       value: formatEquipmentDetailValue(value as string | number | boolean),
@@ -155,6 +172,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         id,
         status,
         priority,
+        manufacturer_id,
         equipment_label,
         equipment_serial_number,
         equipment_details,
@@ -175,6 +193,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         diagnostic_symptoms(
           id,
           severity,
+          notes,
           source_type,
           is_primary,
           captured_at,
@@ -186,7 +205,9 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           requested_by_ai_response_id,
           result_status,
           procedure_notes,
+          expected_result,
           actual_result,
+          conclusion,
           performed_at,
           tests(slug, name, test_group),
           users!diagnostic_test_runs_performed_by_user_id_fkey(full_name)
@@ -200,11 +221,16 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         measurements(
           id,
           measurement_type,
+          diagnostic_test_run_id,
+          diagnostic_board_id,
           point_label,
           unit,
           measured_value_numeric,
           measured_value_text,
           expected_value_text,
+          tolerance_text,
+          measurement_context,
+          is_out_of_range,
           measured_at,
           users!measurements_measured_by_user_id_fkey(full_name)
         ),
@@ -261,7 +287,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const tree = getGuidedTreeForCategory(categorySlug);
 
   const testRuns = [...(data.diagnostic_test_runs ?? [])].sort(
-    (a, b) => new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime()
+    (a, b) => new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime(),
   );
 
   const path: Array<{
@@ -284,7 +310,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     visited.add(currentNodeId);
 
     const node: GuidedTreeNode = tree[currentNodeId];
-    
+
     const matchingRun = testRuns.find((run) => {
       const test = pickRelation(run.tests);
       return test?.slug === node.testSlug && run.result_status !== "pending";
@@ -323,7 +349,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       if (!node.branches.success && !node.branches.failed && !node.branches.inconclusive) {
         currentNodeId = null;
       } else {
-        let nextPreviewId = node.branches.success ?? node.branches.inconclusive ?? node.branches.failed;
+        let nextPreviewId =
+          node.branches.success ?? node.branches.inconclusive ?? node.branches.failed;
         while (nextPreviewId && tree[nextPreviewId] && !visited.has(nextPreviewId)) {
           visited.add(nextPreviewId);
           const nextNode = tree[nextPreviewId];
@@ -335,7 +362,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
             status: "pending",
             order: order++,
           });
-          nextPreviewId = nextNode.branches.success ?? nextNode.branches.inconclusive ?? nextNode.branches.failed;
+          nextPreviewId =
+            nextNode.branches.success ?? nextNode.branches.inconclusive ?? nextNode.branches.failed;
         }
         currentNodeId = null;
       }
@@ -374,47 +402,52 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     };
   });
 
+  const diagnosticBoardMap = new Map(
+    diagnosticBoards.map((board) => [board.id, board] as const),
+  );
+
   const boardIds = diagnosticBoards
     .map((board) => board.boardId)
     .filter((id): id is string => Boolean(id));
 
-  const [attachmentsList, assistantSnapshot, preventiveInsight, referenceMeasurements] = await Promise.all([
-    Promise.resolve(
-      attachmentItems.map((item) => {
-        const signedUrl = signedUrlsMap[item.storage_path] ?? null;
+  const [attachmentsList, assistantSnapshot, preventiveInsight, referenceMeasurements] =
+    await Promise.all([
+      Promise.resolve(
+        attachmentItems.map((item) => {
+          const signedUrl = signedUrlsMap[item.storage_path] ?? null;
 
-        const analysis = item.ai_image_analysis;
+          const analysis = item.ai_image_analysis;
 
-        return {
-          id: item.id,
-          title: item.title,
-          description: item.description ?? "Sem descrição.",
-          attachmentType: prettifyStatus(item.attachment_type),
-          mimeType: item.mime_type,
-          uploadedAt: formatRelativeTime(item.created_at),
-          signedUrl,
-          imageAnalysis:
-            analysis && item.ai_image_analyzed_at
-              ? {
-                  observations: analysis.observations ?? [],
-                  suspectedIssues: analysis.suspectedIssues ?? [],
-                  confidence: analysis.confidence ?? "low",
-                  recommendation: analysis.recommendation ?? "",
-                  analyzedAt: formatRelativeTime(item.ai_image_analyzed_at),
-                }
-              : null,
-          annotations: item.annotations ?? [],
-        };
-      })
-    ),
-    getDiagnosticAssistantSnapshot(diagnosticId, supabase),
-    data.equipment_model_id
-      ? getPreventiveInsightForModel(data.equipment_model_id, diagnosticId, supabase)
-      : Promise.resolve(null),
-    boardIds.length > 0
-      ? supabase
-          .from("board_measurements")
-          .select(`
+          return {
+            id: item.id,
+            title: item.title,
+            description: item.description ?? "Sem descricao.",
+            attachmentType: prettifyStatus(item.attachment_type),
+            mimeType: item.mime_type,
+            uploadedAt: formatRelativeTime(item.created_at),
+            signedUrl,
+            imageAnalysis:
+              analysis && item.ai_image_analyzed_at
+                ? {
+                    observations: analysis.observations ?? [],
+                    suspectedIssues: analysis.suspectedIssues ?? [],
+                    confidence: analysis.confidence ?? "low",
+                    recommendation: analysis.recommendation ?? "",
+                    analyzedAt: formatRelativeTime(item.ai_image_analyzed_at),
+                  }
+                : null,
+            annotations: item.annotations ?? [],
+          };
+        }),
+      ),
+      getDiagnosticAssistantSnapshot(diagnosticId, supabase),
+      data.equipment_model_id
+        ? getPreventiveInsightForModel(data.equipment_model_id, diagnosticId, supabase)
+        : Promise.resolve(null),
+      boardIds.length > 0
+        ? supabase
+            .from("board_measurements")
+            .select(`
             id,
             board_id,
             component_ref,
@@ -425,26 +458,26 @@ export async function getDiagnosticDetail(diagnosticId: string) {
             created_at,
             users(full_name)
           `)
-          .in("board_id", boardIds)
-          .order("component_ref")
-          .then((res) => {
-            return ((res.data ?? []) as ReferenceMeasurementRow[]).map((item) => {
-              const user = pickRelation(item.users);
-              return {
-                id: item.id,
-                boardId: item.board_id,
-                componentRef: item.component_ref,
-                measurementPoint: item.measurement_point,
-                expectedValue: item.expected_value,
-                condition: item.condition,
-                notes: item.notes,
-                createdAt: formatRelativeTime(item.created_at),
-                userName: user?.full_name ?? "Técnico interno",
-              };
-            });
-          })
-      : Promise.resolve([]),
-  ]);
+            .in("board_id", boardIds)
+            .order("component_ref")
+            .then((res) => {
+              return ((res.data ?? []) as ReferenceMeasurementRow[]).map((item) => {
+                const user = pickRelation(item.users);
+                return {
+                  id: item.id,
+                  boardId: item.board_id,
+                  componentRef: item.component_ref,
+                  measurementPoint: item.measurement_point,
+                  expectedValue: item.expected_value,
+                  condition: item.condition,
+                  notes: item.notes,
+                  createdAt: formatRelativeTime(item.created_at),
+                  userName: user?.full_name ?? "Tecnico interno",
+                };
+              });
+            })
+        : Promise.resolve([]),
+    ]);
 
   const attachments = attachmentsList;
 
@@ -456,7 +489,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         id: `symptom-${item.id}`,
         kind: "Sintoma",
         title: symptom?.name ?? "Sintoma registrado",
-        description: item.severity ?? "Sem severidade informada.",
+        description: item.notes ?? item.severity ?? "Sem severidade informada.",
         happenedAt: item.captured_at ?? new Date().toISOString(),
       };
     }),
@@ -469,23 +502,27 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         title: item.requested_by_ai_response_id
           ? `${test?.name ?? "Teste executado"} sugerido pela IA`
           : test?.name ?? "Teste executado",
-        description: item.actual_result ?? item.procedure_notes ?? "Sem resultado registrado.",
+        description:
+          item.actual_result ??
+          item.conclusion ??
+          item.procedure_notes ??
+          "Sem resultado registrado.",
         happenedAt: item.performed_at ?? new Date().toISOString(),
       };
     }),
     ...(data.ai_responses ?? []).map((item) => ({
       id: `ai-response-${item.id}`,
       kind: "IA",
-      title: "Recomendação técnica registrada",
+      title: "Recomendacao tecnica registrada",
       description:
         item.recommended_next_step ??
         item.reasoning_summary ??
-        "Leitura técnica salva para orientar o próximo passo.",
+        "Leitura tecnica salva para orientar o proximo passo.",
       happenedAt: item.created_at ?? new Date().toISOString(),
     })),
     ...(data.measurements ?? []).map((item) => ({
       id: `measurement-${item.id}`,
-      kind: "Medição",
+      kind: "Medicao",
       title: item.point_label ?? "Leitura registrada",
       description:
         item.measured_value_text ??
@@ -496,9 +533,9 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     })),
     ...(data.hypotheses ?? []).map((item) => ({
       id: `hypothesis-${item.id}`,
-      kind: "Hipótese",
+      kind: "Hipotese",
       title: item.title,
-      description: item.evidence_summary ?? item.description ?? "Hipótese adicionada.",
+      description: item.evidence_summary ?? item.description ?? "Hipotese adicionada.",
       happenedAt: item.created_at ?? new Date().toISOString(),
     })),
     ...(data.attachments ?? []).map((item) => ({
@@ -517,18 +554,20 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   return {
     id: data.id,
-    category: category?.name ?? "Não classificado",
-    manufacturer: manufacturer?.name ?? "Não identificado",
-    model: model?.model_name ?? "Não informado",
-    serialNumber: data.equipment_serial_number ?? "Não informado",
+    manufacturerId: data.manufacturer_id ?? null,
+    modelId: data.equipment_model_id ?? null,
+    category: category?.name ?? "Nao classificado",
+    manufacturer: manufacturer?.name ?? "Nao identificado",
+    model: model?.model_name ?? "Nao informado",
+    serialNumber: data.equipment_serial_number ?? "Nao informado",
     label,
     status: prettifyStatus(data.status),
     priority: prettifyStatus(data.priority),
-    summary: data.current_summary ?? "Resumo ainda não definido.",
+    summary: data.current_summary ?? "Resumo ainda nao definido.",
     initialReport: data.initial_problem_report,
-    physicalNotes: data.physical_condition_notes ?? "Sem observações físicas.",
+    physicalNotes: data.physical_condition_notes ?? "Sem observacoes fisicas.",
     equipmentDetails,
-    openedBy: openedBy?.full_name ?? "Usuário interno",
+    openedBy: openedBy?.full_name ?? "Usuario interno",
     createdAt: formatRelativeTime(data.created_at),
     preventiveInsight,
     guidedFlow,
@@ -545,7 +584,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       return {
         id: item.id,
         name: symptom?.name ?? "Sintoma",
-        severity: item.severity ?? "não informada",
+        severity: item.severity ?? "nao informada",
+        notes: item.notes ?? "Sem observacao adicional.",
         sourceType: prettifyStatus(item.source_type),
         isPrimary: item.is_primary,
         capturedAt: formatRelativeTime(item.captured_at),
@@ -560,49 +600,65 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         testName: test?.name ?? "Teste",
         resultStatus: prettifyStatus(item.result_status),
         stepOrder: item.step_order,
+        testGroup: test?.test_group ?? "Sem grupo",
         procedureNotes: item.procedure_notes ?? "Sem procedimento descrito.",
+        expectedResult: item.expected_result ?? "Sem resultado esperado definido.",
         actualResult: item.actual_result ?? "Sem resultado final registrado.",
+        conclusion: item.conclusion ?? "Sem conclusao registrada.",
         performedAt: formatRelativeTime(item.performed_at),
-        technician: tech?.full_name ?? "Técnico interno",
+        technician: tech?.full_name ?? "Tecnico interno",
         requestedByAi: Boolean(item.requested_by_ai_response_id),
         requestedByAiResponseId: item.requested_by_ai_response_id ?? null,
       };
     }),
     measurements: (data.measurements ?? []).map((item) => {
       const tech = pickRelation(item.users);
+      const linkedTest = (data.diagnostic_test_runs ?? []).find(
+        (testRun) => testRun.id === item.diagnostic_test_run_id,
+      );
+      const linkedTestRelation = linkedTest ? pickRelation(linkedTest.tests) : null;
+      const board = item.diagnostic_board_id
+        ? diagnosticBoardMap.get(item.diagnostic_board_id) ?? null
+        : null;
       const measuredValue =
         item.measured_value_text ??
         (item.measured_value_numeric !== null && item.measured_value_numeric !== undefined
           ? `${item.measured_value_numeric}${item.unit ? ` ${item.unit}` : ""}`
-          : "Sem valor numérico");
+          : "Sem valor numerico");
 
       return {
         id: item.id,
         measurementType: prettifyStatus(item.measurement_type),
-        pointLabel: item.point_label ?? "Ponto não informado",
+        pointLabel: item.point_label ?? "Ponto nao informado",
         measuredValue,
-        expectedValue: item.expected_value_text ?? "Não informado",
+        expectedValue: item.expected_value_text ?? "Nao informado",
+        tolerance: item.tolerance_text ?? "Sem tolerancia definida",
+        context: item.measurement_context ?? "Sem contexto registrado.",
+        isOutOfRange: item.is_out_of_range,
+        linkedTestId: item.diagnostic_test_run_id ?? null,
+        linkedTestName: linkedTestRelation?.name ?? null,
+        boardLabel: buildBoardLabel(board),
         measuredAt: formatRelativeTime(item.measured_at),
-        technician: tech?.full_name ?? "Técnico interno",
+        technician: tech?.full_name ?? "Tecnico interno",
       };
     }),
     hypotheses: (data.hypotheses ?? []).map((item) => ({
       id: item.id,
       title: item.title,
-      description: item.description ?? "Sem descrição complementar.",
+      description: item.description ?? "Sem descricao complementar.",
       status: prettifyStatus(item.status),
       confidence:
         item.confidence_score !== null && item.confidence_score !== undefined
           ? String(item.confidence_score)
           : "0",
-      evidence: item.evidence_summary ?? "Sem evidência registrada.",
+      evidence: item.evidence_summary ?? "Sem evidencia registrada.",
       createdAt: formatRelativeTime(item.created_at),
     })),
     attachments,
     timeline,
     assistantSnapshot,
     boards: diagnosticBoards,
-    referenceMeasurements: referenceMeasurements,
+    referenceMeasurements,
   } satisfies DiagnosticDetail;
 }
 
@@ -684,8 +740,9 @@ export async function getTechnicalDocuments() {
         id: row.id,
         title: row.title,
         documentType: prettifyStatus(row.document_type),
-        manufacturer: manufacturer?.name ?? "Não informado",
-        relation: model?.model_name ?? board?.board_code ?? component?.component_ref ?? "Referência geral",
+        manufacturer: manufacturer?.name ?? "Nao informado",
+        relation:
+          model?.model_name ?? board?.board_code ?? component?.component_ref ?? "Referencia geral",
         uploadedAt: formatRelativeTime(row.created_at),
         chunksCount: chunks.length,
         isIndexed: row.is_indexed || chunks.length > 0,

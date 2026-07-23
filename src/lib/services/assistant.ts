@@ -71,6 +71,25 @@ type CategoryStrategy = {
   safety: string;
 };
 
+type AssistantScenario = {
+  id: string;
+  title: string;
+  summary: string;
+  firstMeasurements: string[];
+  nextChecks: string[];
+};
+
+type MeasurementSignal = {
+  type:
+    | "missing_primary_voltage"
+    | "low_consumption"
+    | "high_consumption"
+    | "short_suspected"
+    | "battery_line_issue"
+    | "video_power_issue";
+  description: string;
+};
+
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -122,6 +141,234 @@ function normalizeComparable(value: string | null | undefined) {
 function isMeaningfulValue(value: string | null | undefined) {
   const normalized = normalizeComparable(value);
   return normalized.length > 0 && normalized !== "naoinformado" && normalized !== "naoidentificado";
+}
+
+function inferMeasurementSignals(context: DiagnosticAssistantContext): MeasurementSignal[] {
+  const signals: MeasurementSignal[] = [];
+
+  for (const measurement of context.measurements) {
+    const point = normalizeComparable(measurement.pointLabel);
+    const measuredText = normalizeComparable(measurement.measuredValueText);
+    const expectedText = normalizeComparable(measurement.expectedValueText);
+    const unit = normalizeComparable(measurement.unit);
+    const numeric = measurement.measuredValueNumeric;
+    const type = normalizeComparable(measurement.measurementType);
+
+    if (
+      type === "voltage" &&
+      numeric !== null &&
+      numeric < 1 &&
+      (point.includes("3v") || point.includes("3p3") || point.includes("5v") || point.includes("alw"))
+    ) {
+      signals.push({
+        type: "missing_primary_voltage",
+        description: `Tensão primária baixa/ausente em ${measurement.pointLabel ?? "ponto não informado"}.`,
+      });
+    }
+
+    if ((type === "consumption" || type === "current") && numeric !== null && numeric <= 0.03) {
+      signals.push({
+        type: "low_consumption",
+        description: `Consumo muito baixo registrado (${numeric}${measurement.unit ? ` ${measurement.unit}` : ""}).`,
+      });
+    }
+
+    if ((type === "consumption" || type === "current") && numeric !== null && numeric >= 0.4) {
+      signals.push({
+        type: "high_consumption",
+        description: `Consumo elevado registrado (${numeric}${measurement.unit ? ` ${measurement.unit}` : ""}).`,
+      });
+    }
+
+    if (
+      type === "resistance" &&
+      numeric !== null &&
+      numeric <= 5 &&
+      (unit === "ohm" || unit === "r" || unit === "ω" || unit === "")
+    ) {
+      signals.push({
+        type: "short_suspected",
+        description: `Baixa resistência em ${measurement.pointLabel ?? "ponto não informado"}, suspeita de curto.`,
+      });
+    }
+
+    if (
+      point.includes("bat") ||
+      point.includes("batt") ||
+      expectedText.includes("bat") ||
+      measuredText.includes("bateria")
+    ) {
+      signals.push({
+        type: "battery_line_issue",
+        description: `Medição relacionada à linha da bateria em ${measurement.pointLabel ?? "ponto não informado"}.`,
+      });
+    }
+
+    if (
+      point.includes("lcd") ||
+      point.includes("edp") ||
+      point.includes("lvds") ||
+      point.includes("backlight")
+    ) {
+      signals.push({
+        type: "video_power_issue",
+        description: `Medição associada à alimentação de vídeo/tela em ${measurement.pointLabel ?? "ponto não informado"}.`,
+      });
+    }
+  }
+
+  return signals;
+}
+
+function inferAssistantScenario(context: DiagnosticAssistantContext): AssistantScenario {
+  const signalText = normalizeComparable(
+    [context.summary, context.initialReport, ...context.symptoms.map((item) => item.name)].join(" "),
+  );
+  const measurementSignals = inferMeasurementSignals(context);
+
+  const scenarios: AssistantScenario[] = [
+    {
+      id: "nao-liga",
+      title: "Notebook não liga",
+      summary: "Começar por consumo e tensões primárias antes de suspeitar de BIOS, SIO ou PCH.",
+      firstMeasurements: [
+        "Consumo na fonte assimétrica em standby e ao pressionar power",
+        "Tensão de entrada VIN / DC-IN",
+        "3.3V_ALW e 5V_ALW",
+        "Sinal do botão power e sequência de start",
+      ],
+      nextChecks: [
+        "Se faltar ALW, seguir primário e habilitação",
+        "Se houver ALW mas sem start, seguir EC/SIO e sinais de power",
+      ],
+    },
+    {
+      id: "sem-video",
+      title: "Liga sem vídeo",
+      summary: "Separar cedo se a falha está em tela, backlight, RAM, BIOS ou geração de vídeo.",
+      firstMeasurements: [
+        "Tensões secundárias após start",
+        "Teste em monitor externo",
+        "Alimentação da tela e backlight",
+        "Reset, clock, BIOS e RAM",
+      ],
+      nextChecks: [
+        "Se houver vídeo externo, isolar tela ou flat",
+        "Se não houver vídeo em nenhuma saída, seguir BIOS, RAM e chipset",
+      ],
+    },
+    {
+      id: "nao-carrega-bateria",
+      title: "Não carrega bateria",
+      summary: "Focar no circuito charger e na detecção da bateria antes de trocas sem medição.",
+      firstMeasurements: [
+        "Entrada da fonte e charger",
+        "Linha BAT+",
+        "Mosfets do charger",
+        "Sinais ACOK, CMSRC e REGN",
+      ],
+      nextChecks: [
+        "Se REGN/ACOK faltarem, seguir charger e habilitação",
+        "Se BAT+ não subir, verificar charger, mosfets e comunicação da bateria",
+      ],
+    },
+    {
+      id: "consumo-alto",
+      title: "Consumo alto",
+      summary: "Usar consumo e aquecimento para localizar a linha suspeita antes de aprofundar.",
+      firstMeasurements: [
+        "Perfil de consumo em standby e no start",
+        "Aquecimento anormal por inspeção",
+        "Resistência nas bobinas principais",
+        "Injeção controlada na linha suspeita",
+      ],
+      nextChecks: [
+        "Confrontar o ponto quente com esquema/boardview",
+        "Registrar a linha suspeita antes da próxima recomendação",
+      ],
+    },
+    {
+      id: "curto-na-linha",
+      title: "Curto na linha",
+      summary: "Medir resistência e isolar a linha em curto antes de insistir em start.",
+      firstMeasurements: [
+        "Resistência para terra nas linhas principais",
+        "Comparação entre bobinas e rails críticos",
+        "Injeção com corrente limitada",
+        "Componente que aquece primeiro",
+      ],
+      nextChecks: [
+        "Usar esquema/boardview para rastrear a linha em curto",
+        "Registrar o componente suspeito e pedir nova análise",
+      ],
+    },
+  ];
+
+  if (
+    signalText.includes("naoliga") ||
+    signalText.includes("semligar") ||
+    signalText.includes("sempower") ||
+    signalText.includes("semstart") ||
+    signalText.includes("nopower")
+  ) {
+    return scenarios[0];
+  }
+
+  if (measurementSignals.some((item) => item.type === "video_power_issue")) {
+    return scenarios[1];
+  }
+
+  if (
+    signalText.includes("semvideo") ||
+    signalText.includes("semimagem") ||
+    signalText.includes("ligasemvideo") ||
+    signalText.includes("ligasemimagem")
+  ) {
+    return scenarios[1];
+  }
+
+  if (signalText.includes("bateria") || signalText.includes("carrega")) {
+    return scenarios[2];
+  }
+
+  if (measurementSignals.some((item) => item.type === "battery_line_issue")) {
+    return scenarios[2];
+  }
+
+  if (
+    signalText.includes("curto") ||
+    signalText.includes("linhaemcurto") ||
+    signalText.includes("resistenciabaixa")
+  ) {
+    return scenarios[4];
+  }
+
+  if (measurementSignals.some((item) => item.type === "short_suspected")) {
+    return scenarios[4];
+  }
+
+  if (
+    signalText.includes("consumoalto") ||
+    signalText.includes("consumoelevado") ||
+    signalText.includes("aquecendo") ||
+    signalText.includes("esquenta")
+  ) {
+    return scenarios[3];
+  }
+
+  if (measurementSignals.some((item) => item.type === "high_consumption")) {
+    return scenarios[3];
+  }
+
+  if (
+    measurementSignals.some(
+      (item) => item.type === "missing_primary_voltage" || item.type === "low_consumption",
+    )
+  ) {
+    return scenarios[0];
+  }
+
+  return scenarios[0];
 }
 
 function resolveCategoryStrategy(category: string): CategoryStrategy {
@@ -632,6 +879,7 @@ async function buildStructuredResponse(
   symptomGroupInsights: Map<string, { topCause: string; count: number }>,
 ) {
   const strategy = resolveCategoryStrategy(context.category);
+  const activeScenario = inferAssistantScenario(context);
   const latestTest = [...context.tests].sort((a, b) => b.stepOrder - a.stepOrder)[0] ?? null;
   const latestMeasurement = context.measurements[0] ?? null;
   const primarySymptomEntry =
@@ -653,6 +901,9 @@ async function buildStructuredResponse(
 
   let nextTest = "Registrar um próximo passo objetivo na bancada.";
   let validationGoal = "Gerar evidência suficiente para reduzir as hipóteses abertas.";
+  const latestMeasurementSummary = latestMeasurement
+    ? `${latestMeasurement.measurementType} em ${latestMeasurement.pointLabel ?? "ponto não informado"} com leitura ${latestMeasurement.measuredValueText ?? latestMeasurement.measuredValueNumeric ?? "não informada"}${latestMeasurement.unit ? ` ${latestMeasurement.unit}` : ""}`
+    : null;
   const mainHypothesis =
     strongestHypothesis?.title ??
     (primarySymptomInsight
@@ -666,23 +917,27 @@ async function buildStructuredResponse(
     validationGoal = "Dar contexto mínimo para que a triagem deixe de ser genérica.";
   } else if (!context.tests.length) {
     nextTest = `Executar o teste ${nextTestName} e registrar procedimento e resultado observado.`;
-    validationGoal = `${strategy.firstMove} Isso cria a primeira quebra objetiva entre blocos do defeito.`;
+    validationGoal = `${activeScenario.summary} ${strategy.firstMove}`;
   } else if (latestTest?.resultStatus === "pending") {
     nextTest = `Concluir o teste ${latestTest.testName} antes de abrir outra frente de verificação.`;
     validationGoal = "Evitar ramificações sem fechar a evidência que já foi iniciada.";
   } else if (!context.measurements.length) {
-    nextTest = "Adicionar uma medição objetiva no ponto principal relacionado ao último teste executado.";
-    validationGoal = "Transformar a conclusão do teste em dado comparável e auditável.";
+    nextTest = `Adicionar uma medição objetiva priorizando: ${activeScenario.firstMeasurements[0]}.`;
+    validationGoal = `Transformar a conclusão do teste em dado auditável e seguir o protocolo ${activeScenario.title}.`;
   } else if (strongestHypothesis) {
     nextTest = `Validar a hipótese ${strongestHypothesis.title} com um teste binário ou medição no ponto mais próximo da causa suspeita.`;
     validationGoal = "Confirmar ou enfraquecer a hipótese mais forte sem repetir etapas já percorridas.";
   } else {
-    nextTest = `Executar o teste ${nextTestName} como próxima separação objetiva do defeito.`;
-    validationGoal = "Avançar um passo com maior poder de isolamento do que repetir inspeções abertas.";
+    nextTest = latestMeasurementSummary
+      ? `Com base na medição registrada (${latestMeasurementSummary}), execute o teste ${nextTestName} para validar ${activeScenario.nextChecks[0].toLowerCase()}.`
+      : `Executar o teste ${nextTestName} como próxima separação objetiva do defeito.`;
+    validationGoal = `Avançar um passo com maior poder de isolamento seguindo o protocolo ${activeScenario.title}.`;
   }
 
   const evidence = [
     `Resumo atual do caso: ${context.summary}`,
+    `Cenário ativo de bancada: ${activeScenario.title}.`,
+    `Primeiras medições esperadas no cenário: ${activeScenario.firstMeasurements.join("; ")}.`,
     `Estratégia da categoria: ${strategy.summaryFocus}`,
     primarySymptom ? `Sintoma dominante observado: ${primarySymptom}.` : null,
     primarySymptomInsight
@@ -708,6 +963,7 @@ async function buildStructuredResponse(
   const technicalSummary = [
     `O diagnóstico ${context.label} está em ${context.category} da ${context.manufacturer}.`,
     `O foco atual permanece em ${context.summary}.`,
+    `Cenário ativo identificado: ${activeScenario.title}. ${activeScenario.summary}`,
     strategy.summaryFocus,
     latestTest
       ? `Já existe histórico de teste suficiente para orientar o próximo passo sem reiniciar a triagem.`
@@ -744,6 +1000,7 @@ async function buildStructuredResponse(
           category: context.category,
           manufacturer: context.manufacturer,
           summary: context.summary,
+          activeScenario,
           categoryStrategyFocus: strategy.summaryFocus,
           categoryFirstMove: strategy.firstMove,
           categorySafety: strategy.safety,
