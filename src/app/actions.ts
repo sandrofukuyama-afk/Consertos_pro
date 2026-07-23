@@ -690,6 +690,10 @@ export async function generateDiagnosticAssistantAction(formData: FormData) {
       )}`,
     );
   } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
     const message =
       error instanceof Error ? error.message : "Falha ao gerar recomendação técnica.";
     redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(message)}`);
