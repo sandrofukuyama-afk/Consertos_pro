@@ -55,6 +55,7 @@ export default function RootLayout({
       className={`${sora.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <meta name="theme-color" content="#ca6a55" />
       </head>
       <body className="min-h-full flex flex-col">
