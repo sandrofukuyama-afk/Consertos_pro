@@ -671,6 +671,35 @@ export default async function DiagnosticDetailPage({
                     ) : null}
                   </div>
 
+                  <div className="mt-4 rounded-xl sm:rounded-[22px] border border-[rgba(45,139,130,0.2)] bg-[rgba(45,139,130,0.08)] p-4 sm:p-5">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                      Depois de executar o teste, registre o retorno da bancada
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      Não precisa procurar na tela. Escolha abaixo exatamente o que você quer registrar agora.
+                    </p>
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                      <Link
+                        href="#registrar-teste"
+                        className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                      >
+                        1. Resultado do teste
+                      </Link>
+                      <Link
+                        href="#medicoes"
+                        className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                      >
+                        2. Medição encontrada
+                      </Link>
+                      <Link
+                        href="#registrar-sintoma"
+                        className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                      >
+                        3. Novo sintoma observado
+                      </Link>
+                    </div>
+                  </div>
+
                   <details className="mt-4 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-3.5 sm:p-4">
                     <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">
                       Ver detalhes avançados da IA e feedback
@@ -982,10 +1011,10 @@ export default async function DiagnosticDetailPage({
             className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
           >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Testes
+              1. Resultado do teste
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Fluxo da investigação
+              O que aconteceu ao executar o teste
             </h3>
             {requestedByAiResponseId && detail.assistantSnapshot.latestResponse ? (
               <div className="mt-4 rounded-[22px] border border-[rgba(109,94,242,0.24)] bg-[rgba(109,94,242,0.08)] p-4 text-sm text-[var(--foreground)]">
@@ -1033,13 +1062,13 @@ export default async function DiagnosticDetailPage({
               <textarea
                 name="procedure_notes"
                 rows={3}
-                placeholder="Procedimento executado"
+                placeholder="O que você fez no teste"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <textarea
                 name="actual_result"
                 rows={3}
-                placeholder="Resultado observado"
+                placeholder="O que aconteceu no teste? Ex.: sem 3.3V, consumo 0.02A, não ligou"
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
               />
               <FormSubmitButton
@@ -1114,11 +1143,52 @@ export default async function DiagnosticDetailPage({
             className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
           >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Hipóteses
+              3. Novo sintoma ou hipótese
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Linhas de investigação
+              Registrar nova observação da bancada
             </h3>
+
+            <div
+              id="registrar-sintoma"
+              className="mt-5 rounded-xl sm:rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5"
+            >
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                Se apareceu um comportamento novo no aparelho, registre aqui
+              </p>
+              <form action={addDiagnosticSymptomAction} className="mt-4 grid gap-3">
+                <input type="hidden" name="diagnostic_id" value={detail.id} />
+                <select
+                  required
+                  name="symptom_id"
+                  defaultValue=""
+                  className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none"
+                >
+                  <option value="" disabled>
+                    Selecionar sintoma observado
+                  </option>
+                  {options.symptoms.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  name="severity"
+                  placeholder="Contexto do sintoma. Ex.: não ligou, sem imagem, consumo subiu"
+                  className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm outline-none"
+                />
+                <label className="inline-flex items-center gap-2 text-sm text-[var(--foreground)]">
+                  <input type="checkbox" name="is_primary" />
+                  Marcar como sintoma principal
+                </label>
+                <FormSubmitButton
+                  idleLabel="Registrar sintoma observado"
+                  pendingLabel="Salvando sintoma..."
+                />
+              </form>
+            </div>
 
             <form action={addHypothesisAction} className="mt-5 grid gap-3">
               <input type="hidden" name="diagnostic_id" value={detail.id} />
@@ -1195,10 +1265,10 @@ export default async function DiagnosticDetailPage({
             className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
           >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-              Medições
+              2. Medição encontrada
             </p>
             <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-              Leituras da bancada
+              Registrar tensão, corrente ou resistência
             </h3>
             <div className="mt-5">
               <MeasurementForm diagnosticId={detail.id} />
