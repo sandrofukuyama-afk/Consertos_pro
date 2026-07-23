@@ -30,7 +30,16 @@ type DiagnosticDetailPageProps = {
     message?: string;
     ai_response_id?: string;
     suggested_test_id?: string;
+    stage?: string;
   }>;
+};
+
+type MaintenanceStage = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  status: "done" | "current" | "pending";
 };
 
 export default async function DiagnosticDetailPage({
@@ -48,6 +57,63 @@ export default async function DiagnosticDetailPage({
   const query = await searchParams;
   const suggestedTestId = query.suggested_test_id?.trim() ?? "";
   const requestedByAiResponseId = query.ai_response_id?.trim() ?? "";
+  const selectedStage = query.stage?.trim() ?? "";
+  const hasSymptoms = detail.symptoms.length > 0;
+  const hasInvestigationProgress =
+    detail.tests.length > 0 ||
+    detail.measurements.length > 0 ||
+    Boolean(detail.assistantSnapshot.latestResponse);
+  const hasEvidence =
+    detail.attachments.length > 0 ||
+    detail.hypotheses.length > 0 ||
+    detail.referenceMeasurements.length > 0;
+  const isClosed = Boolean(detail.resolvedCase);
+
+  const maintenanceStages: MaintenanceStage[] = [
+    {
+      id: "triagem",
+      title: "1. Triagem",
+      description: hasSymptoms
+        ? "Sintomas e contexto inicial já foram registrados."
+        : "Comece registrando o sintoma principal e o contexto do defeito.",
+      href: "#triagem",
+      status: hasSymptoms ? "done" : "current",
+    },
+    {
+      id: "investigacao",
+      title: "2. Investigação",
+      description: hasInvestigationProgress
+        ? "Já existe avanço com recomendação, testes ou medições."
+        : "Gere uma recomendação e registre o primeiro teste executado.",
+      href: "#investigacao",
+      status: hasInvestigationProgress ? "done" : hasSymptoms ? "current" : "pending",
+    },
+    {
+      id: "evidencias",
+      title: "3. Evidências",
+      description: hasEvidence
+        ? "O caso já possui evidências, hipóteses ou valores de referência."
+        : "Anexe fotos, registre hipóteses e salve medições de apoio.",
+      href: "#evidencias",
+      status: hasEvidence ? "done" : hasInvestigationProgress ? "current" : "pending",
+    },
+    {
+      id: "encerramento",
+      title: "4. Encerramento",
+      description: isClosed
+        ? "Causa e solução já foram consolidadas."
+        : "Feche o caso apenas depois de validar a causa e a solução.",
+      href: "#encerramento",
+      status: isClosed ? "done" : hasEvidence || hasInvestigationProgress ? "current" : "pending",
+    },
+  ];
+
+  const nextMaintenanceStage =
+    maintenanceStages.find((stage) => stage.status === "current") ??
+    maintenanceStages.find((stage) => stage.status === "pending") ??
+    maintenanceStages[maintenanceStages.length - 1];
+  const validStageIds = new Set(maintenanceStages.map((stage) => stage.id));
+  const activeStageId = validStageIds.has(selectedStage) ? selectedStage : nextMaintenanceStage.id;
 
   return (
     <AppShell
@@ -86,7 +152,68 @@ export default async function DiagnosticDetailPage({
           </section>
         ) : null}
 
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
+        <section className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
+          <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                Fluxo de manutenção
+              </p>
+              <h3 className="mt-2 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                Ordem sugerida para trabalhar este caso
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                Em vez de preencher blocos soltos, siga esta sequência de bancada para abrir, investigar,
+                reunir evidências e só então encerrar.
+              </p>
+            </div>
+            <Link
+              href={`/diagnosticos/${detail.id}?stage=${nextMaintenanceStage.id}#${nextMaintenanceStage.id}`}
+              className="inline-flex rounded-full border border-[rgba(109,94,242,0.24)] bg-[rgba(109,94,242,0.12)] px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
+            >
+              Ir para: {nextMaintenanceStage.title}
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-4">
+            {maintenanceStages.map((stage) => {
+              const isDone = stage.status === "done";
+              const isCurrent = activeStageId === stage.id;
+
+              return (
+                <Link
+                  key={stage.id}
+                  href={`/diagnosticos/${detail.id}?stage=${stage.id}#${stage.id}`}
+                  className={`rounded-xl sm:rounded-[22px] border p-4 transition ${
+                    isDone
+                      ? "border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)]"
+                      : isCurrent
+                        ? "border-[rgba(109,94,242,0.3)] bg-[rgba(109,94,242,0.12)]"
+                        : "border-[var(--panel-border)] bg-[var(--background)] hover:border-[rgba(230,228,245,0.24)]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">{stage.title}</p>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                        isDone
+                          ? "bg-[rgba(45,139,130,0.16)] text-[var(--accent-teal)]"
+                          : isCurrent
+                            ? "bg-[rgba(109,94,242,0.18)] text-[var(--accent-copper)]"
+                            : "bg-white/5 text-[var(--muted)]"
+                      }`}
+                    >
+                      {isDone ? "Concluído" : isCurrent ? "Agora" : "Depois"}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{stage.description}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {activeStageId === "triagem" ? (
+        <section id="triagem" className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,360px)]">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
@@ -247,8 +374,10 @@ export default async function DiagnosticDetailPage({
             </ol>
           </aside>
         </section>
+        ) : null}
 
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        {activeStageId === "investigacao" ? (
+        <section id="investigacao" className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6 shadow-[0_18px_44px_rgba(20,18,28,0.06)]">
             <div className="flex flex-col gap-4 border-b border-[var(--panel-border)] pb-5 md:flex-row md:items-start md:justify-between">
               <div>
@@ -328,7 +457,7 @@ export default async function DiagnosticDetailPage({
                     ) : null}
                     {detail.assistantSnapshot.latestResponse.structured?.recommendedTestId ? (
                       <Link
-                        href={`/diagnosticos/${detail.id}?ai_response_id=${detail.assistantSnapshot.latestResponse.id}&suggested_test_id=${detail.assistantSnapshot.latestResponse.structured.recommendedTestId}#registrar-teste`}
+                        href={`/diagnosticos/${detail.id}?stage=investigacao&ai_response_id=${detail.assistantSnapshot.latestResponse.id}&suggested_test_id=${detail.assistantSnapshot.latestResponse.structured.recommendedTestId}#registrar-teste`}
                         className="mt-4 inline-flex rounded-full border border-[rgba(109,94,242,0.24)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--accent-copper)]"
                       >
                         Usar sugestão no formulário
@@ -542,9 +671,15 @@ export default async function DiagnosticDetailPage({
             </article>
           </aside>
         </section>
+        ) : null}
 
+        {activeStageId === "triagem" || activeStageId === "investigacao" ? (
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
+          {activeStageId === "triagem" ? (
+          <article
+            id="triagem-panel"
+            className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -627,7 +762,9 @@ export default async function DiagnosticDetailPage({
               )}
             </div>
           </article>
+          ) : null}
 
+          {activeStageId === "investigacao" ? (
           <article
             id="registrar-teste"
             className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
@@ -757,8 +894,13 @@ export default async function DiagnosticDetailPage({
               )}
             </div>
           </article>
+          ) : null}
 
-          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
+          {activeStageId === "investigacao" ? (
+          <article
+            id="hipoteses"
+            className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
+          >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Hipóteses
             </p>
@@ -833,8 +975,13 @@ export default async function DiagnosticDetailPage({
               )}
             </div>
           </article>
+          ) : null}
 
-          <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
+          {activeStageId === "investigacao" ? (
+          <article
+            id="medicoes"
+            className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6"
+          >
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Medições
             </p>
@@ -873,11 +1020,13 @@ export default async function DiagnosticDetailPage({
               )}
             </div>
           </article>
+          ) : null}
         </section>
+        ) : null}
 
         {/* Medições de Referência de Bancada */}
-        {detail.boards.length > 0 && (
-          <section className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
+        {activeStageId === "evidencias" && detail.boards.length > 0 ? (
+          <section id="evidencias" className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Valores de Referência
             </p>
@@ -941,8 +1090,9 @@ export default async function DiagnosticDetailPage({
               </div>
             </div>
           </section>
-        )}
+        ) : null}
 
+        {activeStageId === "evidencias" ? (
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -1045,6 +1195,11 @@ export default async function DiagnosticDetailPage({
             </div>
           </article>
 
+        </section>
+        ) : null}
+
+        {activeStageId === "encerramento" ? (
+        <section id="encerramento">
           <article className="rounded-2xl sm:rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
             <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               Encerramento
@@ -1070,6 +1225,7 @@ export default async function DiagnosticDetailPage({
             )}
           </article>
         </section>
+        ) : null}
 
         <section>
           <Link
