@@ -578,9 +578,15 @@ export default async function DiagnosticDetailPage({
               </div>
               <form action={generateDiagnosticAssistantAction}>
                 <input type="hidden" name="diagnostic_id" value={detail.id} />
-                <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-                  {detail.assistantSnapshot.latestResponse ? "Atualizar recomendação" : "Gerar recomendação"}
-                </button>
+                <FormSubmitButton
+                  idleLabel={
+                    detail.assistantSnapshot.latestResponse ? "Atualizar recomendação" : "Gerar recomendação"
+                  }
+                  pendingLabel={
+                    detail.assistantSnapshot.latestResponse ? "Atualizando recomendação..." : "Gerando recomendação..."
+                  }
+                  className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 disabled:cursor-progress disabled:opacity-75"
+                />
               </form>
             </div>
 
@@ -766,10 +772,10 @@ export default async function DiagnosticDetailPage({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                    Casos semelhantes
+                    Casos do mesmo aparelho
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
-                    Memória recuperada
+                    Memória filtrada
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--muted)]">
@@ -795,7 +801,7 @@ export default async function DiagnosticDetailPage({
                   ))
                 ) : (
                   <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-4 py-6 text-sm text-[var(--muted)]">
-                    A busca inteligente ainda não encontrou casos próximos o bastante para este contexto.
+                    Ainda não encontramos casos do mesmo fabricante/modelo fortes o bastante para este equipamento.
                   </div>
                 )}
               </div>

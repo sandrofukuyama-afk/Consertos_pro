@@ -30,6 +30,7 @@ type DiagnosticAssistantContext = {
   initialReport: string;
   category: string;
   manufacturer: string;
+  model: string;
   physicalNotes: string;
   symptoms: Array<{
     name: string;
@@ -108,6 +109,19 @@ function normalizeWords(value: string) {
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
     .filter((item) => item.length >= 4);
+}
+
+function normalizeComparable(value: string | null | undefined) {
+  return (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function isMeaningfulValue(value: string | null | undefined) {
+  const normalized = normalizeComparable(value);
+  return normalized.length > 0 && normalized !== "naoinformado" && normalized !== "naoidentificado";
 }
 
 function resolveCategoryStrategy(category: string): CategoryStrategy {
@@ -277,6 +291,7 @@ async function getDiagnosticAssistantContext(
         physical_condition_notes,
         equipment_categories(name),
         manufacturers(name),
+        equipment_models(model_name),
         diagnostic_symptoms(severity, is_primary, symptoms(name, symptom_group)),
         diagnostic_test_runs(step_order, result_status, procedure_notes, actual_result, tests(id, name, test_group)),
         measurements(measurement_type, point_label, measured_value_numeric, measured_value_text, expected_value_text, unit),
@@ -292,6 +307,7 @@ async function getDiagnosticAssistantContext(
 
   const category = pickRelation(data.equipment_categories);
   const manufacturer = pickRelation(data.manufacturers);
+  const model = pickRelation(data.equipment_models);
 
   return {
     id: data.id,
@@ -300,6 +316,7 @@ async function getDiagnosticAssistantContext(
     initialReport: data.initial_problem_report,
     category: category?.name ?? "Não classificado",
     manufacturer: manufacturer?.name ?? "Não identificado",
+    model: model?.model_name ?? "Não informado",
     physicalNotes: data.physical_condition_notes ?? "Sem observações físicas.",
     symptoms: (data.diagnostic_symptoms ?? []).map((item) => ({
       name: pickRelation(item.symptoms)?.name ?? "Sintoma",
@@ -414,6 +431,60 @@ async function getSimilarCasesAndDocuments(
   const resolvedMap = new Map((resolvedResult.data ?? []).map((item) => [item.id, item]));
   const diagnosticsMap = new Map((diagnosticsResult.data ?? []).map((item) => [item.id, item]));
   const documentsMap = new Map((documentsResult.data ?? []).map((item) => [item.id, item]));
+  const candidateDiagnosticIds = [
+    ...new Set([
+      ...diagnosticIds,
+      ...((resolvedResult.data ?? []).map((item) => item.diagnostic_id).filter((item): item is string => Boolean(item))),
+    ]),
+  ];
+  const diagnosticMetadataResult = candidateDiagnosticIds.length
+    ? await supabase
+        .from("diagnostics")
+        .select("id, manufacturers(name), equipment_models(model_name)")
+        .in("id", candidateDiagnosticIds)
+    : {
+        data: [] as Array<{
+          id: string;
+          manufacturers: { name: string | null } | Array<{ name: string | null }> | null;
+          equipment_models: { model_name: string | null } | Array<{ model_name: string | null }> | null;
+        }>,
+      };
+  const diagnosticMetadataMap = new Map(
+    (diagnosticMetadataResult.data ?? []).map((item) => [
+      item.id,
+      {
+        manufacturer: pickRelation(item.manufacturers)?.name ?? "",
+        model: pickRelation(item.equipment_models)?.model_name ?? "",
+      },
+    ]),
+  );
+  const contextManufacturer = normalizeComparable(context.manufacturer);
+  const contextModel = normalizeComparable(context.model);
+
+  const matchesCurrentEquipment = (diagnosticId: string | null | undefined) => {
+    if (!diagnosticId) {
+      return false;
+    }
+
+    const metadata = diagnosticMetadataMap.get(diagnosticId);
+
+    if (!metadata) {
+      return false;
+    }
+
+    const candidateManufacturer = normalizeComparable(metadata.manufacturer);
+    const candidateModel = normalizeComparable(metadata.model);
+
+    if (contextManufacturer && candidateManufacturer !== contextManufacturer) {
+      return false;
+    }
+
+    if (isMeaningfulValue(context.model)) {
+      return candidateModel === contextModel;
+    }
+
+    return isMeaningfulValue(metadata.manufacturer);
+  };
 
   const similarCases: SemanticMatchResult[] = [];
 
@@ -421,7 +492,7 @@ async function getSimilarCasesAndDocuments(
     if (item.source_type === "resolved_case") {
       const resolvedCase = resolvedMap.get(item.source_id);
 
-      if (!resolvedCase) {
+      if (!resolvedCase || !matchesCurrentEquipment(resolvedCase.diagnostic_id)) {
         continue;
       }
 
@@ -439,7 +510,7 @@ async function getSimilarCasesAndDocuments(
 
     const diagnostic = diagnosticsMap.get(item.source_id);
 
-    if (!diagnostic || diagnostic.id === context.id) {
+    if (!diagnostic || diagnostic.id === context.id || !matchesCurrentEquipment(diagnostic.id)) {
       continue;
     }
 
