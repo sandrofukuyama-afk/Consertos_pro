@@ -116,14 +116,14 @@ export default async function DiagnosticDetailPage({
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="flex flex-col justify-between rounded-xl sm:rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5">
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
                       Metadados
                     </p>
                     <Link
                       href={`/diagnosticos/${detail.id}/laudo`}
                       target="_blank"
-                      className="rounded-full bg-[rgba(202,106,85,0.15)] hover:bg-[rgba(202,106,85,0.25)] border border-[var(--accent-copper)]/30 px-3 py-1 text-[11px] font-semibold text-[var(--accent-copper)] tracking-tight transition-all"
+                      className="rounded-full bg-[rgba(202,106,85,0.15)] hover:bg-[rgba(202,106,85,0.25)] border border-[var(--accent-copper)]/30 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-[11px] font-semibold text-[var(--accent-copper)] tracking-tight transition-all whitespace-nowrap"
                     >
                       🖨️ Imprimir Laudo
                     </Link>
