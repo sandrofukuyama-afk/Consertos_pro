@@ -48,6 +48,35 @@ function buildAssetHref(
   return `/boardview/lab?${params.toString()}`;
 }
 
+function appendLabContext(
+  href: string,
+  params: Record<string, string | null | undefined>,
+) {
+  const url = new URL(href, "http://localhost");
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  return `${url.pathname}?${url.searchParams.toString()}`;
+}
+
+function inferBoardviewSide(locationSummary: string | null | undefined) {
+  const normalized = (locationSummary ?? "").toLowerCase();
+
+  if (normalized.includes("top")) {
+    return "top";
+  }
+
+  if (normalized.includes("bottom")) {
+    return "bottom";
+  }
+
+  return null;
+}
+
 function getEquipmentDetailValue(detail: DiagnosticDetail, label: string) {
   return detail.equipmentDetails.find((item) => item.label === label)?.value ?? "Não informado";
 }
@@ -375,7 +404,11 @@ export function DiagnosticBenchWorkspace({
                               ) : null}
                             </div>
                             <ActionLink
-                              href={result.openLabHref}
+                              href={appendLabContext(result.openLabHref, {
+                                component: result.kind === "component" ? result.title : null,
+                                net: result.kind === "net" ? result.title : null,
+                                side: inferBoardviewSide(result.locationSummary),
+                              })}
                               label={result.kind === "net" ? "Abrir boardview nesta net" : "Abrir componente"}
                             />
                           </div>
@@ -398,7 +431,12 @@ export function DiagnosticBenchWorkspace({
                               </p>
                               <p className="mt-1 text-sm text-[var(--muted)]">{match.excerpt}</p>
                             </div>
-                            <ActionLink href={match.openLabHref} label="Abrir página do esquema" />
+                            <ActionLink
+                              href={appendLabContext(match.openLabHref, {
+                                page: String(match.pageNumber),
+                              })}
+                              label="Abrir página do esquema"
+                            />
                           </div>
                         </div>
                       ))}

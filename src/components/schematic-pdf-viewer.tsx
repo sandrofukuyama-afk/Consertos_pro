@@ -15,6 +15,7 @@ import type { PDFDocumentProxy, TextItem } from "pdfjs-dist/types/src/display/ap
 import {
   findSchematicPdfMatches,
   normalizeSchematicSearchQuery,
+  resolveRequestedSchematicPage,
   type SchematicPdfPageText,
 } from "@/lib/boardview/schematic-pdf";
 import {
@@ -41,6 +42,7 @@ type RenderedTextItem = {
 type SchematicPdfViewerProps = {
   fileBytes: Uint8Array | null;
   fileName: string | null;
+  initialPage: number | null;
   linkedSearchTerm: string | null;
   selectedMarkerTerm: string | null;
   searchQuery: string;
@@ -92,6 +94,7 @@ function getTextItems(
 export function SchematicPdfViewer({
   fileBytes,
   fileName,
+  initialPage,
   linkedSearchTerm,
   selectedMarkerTerm,
   searchQuery,
@@ -101,6 +104,8 @@ export function SchematicPdfViewer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const autoFocusedQueryRef = useRef<string | null>(null);
+  const appliedInitialPageRef = useRef<string | null>(null);
+  const scrolledFocusedOccurrenceRef = useRef<string | null>(null);
   const renderTaskRef = useRef<PdfRenderTaskLike | null>(null);
   const renderGenerationRef = useRef(0);
   const pendingZoomAnchorRef = useRef<PendingZoomAnchor | null>(null);
@@ -148,6 +153,7 @@ export function SchematicPdfViewer({
     () => findSchematicPdfMatches(pageTexts, effectiveSearchQuery),
     [effectiveSearchQuery, pageTexts],
   );
+  const normalizedInitialPage = initialPage && initialPage > 0 ? initialPage : null;
   const occurrencesDrawerVisible = occurrencesOpen && searchMatches.length > 0;
   const zoom =
     zoomMode === "manual"
@@ -353,9 +359,38 @@ export function SchematicPdfViewer({
   }, []);
 
   useEffect(() => {
+    if (!documentProxy || !normalizedInitialPage) {
+      return;
+    }
+
+    const focusKey = `${fileName ?? "pdf"}:${normalizedInitialPage}:${normalizedSearchQuery}`;
+    if (appliedInitialPageRef.current === focusKey) {
+      return;
+    }
+
+    appliedInitialPageRef.current = focusKey;
+    const requestedPage = resolveRequestedSchematicPage(
+      normalizedInitialPage,
+      documentProxy.numPages,
+    );
+    if (requestedPage === null) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setCurrentPage(requestedPage);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [documentProxy, fileName, normalizedInitialPage, normalizedSearchQuery]);
+
+  useEffect(() => {
     const normalizedLinkedQuery = normalizeSchematicSearchQuery(linkedSearchTerm ?? "");
     if (
       searchQuery.trim() ||
+      normalizedInitialPage !== null ||
       !normalizedLinkedQuery ||
       normalizedSearchQuery !== normalizedLinkedQuery ||
       !searchMatches.length
@@ -369,13 +404,61 @@ export function SchematicPdfViewer({
 
     autoFocusedQueryRef.current = normalizedLinkedQuery;
     setCurrentPage(searchMatches[0]!.pageNumber);
-  }, [linkedSearchTerm, normalizedSearchQuery, searchMatches, searchQuery]);
+  }, [linkedSearchTerm, normalizedInitialPage, normalizedSearchQuery, searchMatches, searchQuery]);
 
   useEffect(() => {
     if (!normalizedSearchQuery) {
       autoFocusedQueryRef.current = null;
+      scrolledFocusedOccurrenceRef.current = null;
     }
   }, [normalizedSearchQuery]);
+
+  const focusedOccurrenceItemId = useMemo(() => {
+    if (!normalizedSearchQuery || !renderedTextItems.length) {
+      return null;
+    }
+
+    if (normalizedInitialPage !== null && currentPage !== normalizedInitialPage) {
+      return null;
+    }
+
+    const matchingItem = renderedTextItems.find((item) => {
+      const normalizedItemText = normalizeSchematicSearchQuery(item.text);
+      return (
+        normalizedItemText.includes(normalizedSearchQuery) ||
+        normalizedSearchQuery.includes(normalizedItemText)
+      );
+    });
+
+    return matchingItem?.id ?? null;
+  }, [currentPage, normalizedInitialPage, normalizedSearchQuery, renderedTextItems]);
+
+  useEffect(() => {
+    if (!focusedOccurrenceItemId || !scrollContainerRef.current) {
+      return;
+    }
+
+    const occurrenceKey = `${currentPage}:${focusedOccurrenceItemId}:${normalizedSearchQuery}`;
+    if (scrolledFocusedOccurrenceRef.current === occurrenceKey) {
+      return;
+    }
+
+    const focusedItem = renderedTextItems.find((item) => item.id === focusedOccurrenceItemId);
+    if (!focusedItem) {
+      return;
+    }
+
+    scrolledFocusedOccurrenceRef.current = occurrenceKey;
+    const scrollContainer = scrollContainerRef.current;
+    const targetLeft = Math.max(0, focusedItem.left - scrollContainer.clientWidth * 0.3);
+    const targetTop = Math.max(0, focusedItem.top - scrollContainer.clientHeight * 0.3);
+
+    scrollContainer.scrollTo({
+      left: targetLeft,
+      top: targetTop,
+      behavior: "smooth",
+    });
+  }, [currentPage, focusedOccurrenceItemId, normalizedSearchQuery, renderedTextItems]);
 
   useEffect(() => {
     let cancelled = false;
@@ -741,8 +824,9 @@ export function SchematicPdfViewer({
                     .map((item) => {
                       const normalizedItemText = normalizeSchematicSearchQuery(item.text);
                       const isSelectedHighlight =
-                        normalizedSelectedMarkerTerm.length > 0 &&
-                        normalizedItemText === normalizedSelectedMarkerTerm;
+                        (normalizedSelectedMarkerTerm.length > 0 &&
+                          normalizedItemText === normalizedSelectedMarkerTerm) ||
+                        item.id === focusedOccurrenceItemId;
                       const isRelatedHighlight =
                         !isSelectedHighlight &&
                         normalizedManualSearchQuery.length > 0 &&

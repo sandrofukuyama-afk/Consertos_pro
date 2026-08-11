@@ -28,6 +28,11 @@ import {
   searchBoardviewLabModel,
 } from "@/lib/boardview/lab";
 import {
+  resolveInitialBoardviewSelection,
+  resolveInitialSideFilter,
+  type InitialBoardviewFocus,
+} from "@/lib/boardview/lab-focus";
+import {
   LandrexBoardviewParserError,
   parseLandrexTestlinkBoardview,
 } from "@/lib/boardview/landrex-testlink";
@@ -70,6 +75,10 @@ type BoardviewLabAssociation = {
   diagnosticId: string | null;
 };
 
+type InitialSchematicFocus = {
+  page: number | null;
+};
+
 type BoardviewLabProps = {
   initialAssociation: BoardviewLabAssociation;
   catalogOptions: {
@@ -79,6 +88,8 @@ type BoardviewLabProps = {
   };
   initialQuery?: string;
   initialViewerMode?: LabViewerMode;
+  initialBoardviewFocus?: InitialBoardviewFocus;
+  initialSchematicFocus?: InitialSchematicFocus;
   initialAssets?: Array<{
     slot: SaveableTechnicalFileSlot;
     assetId: string;
@@ -263,12 +274,22 @@ export function BoardviewLab({
   catalogOptions,
   initialQuery = "",
   initialViewerMode = "split",
+  initialBoardviewFocus = {
+    component: null,
+    net: null,
+    pad: null,
+    side: "both",
+  },
+  initialSchematicFocus = {
+    page: null,
+  },
   initialAssets = [],
 }: BoardviewLabProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const boardviewCanvasRef = useRef<BoardviewCanvasHandle | null>(null);
   const loadedInitialAssetsRef = useRef<string>("");
+  const appliedInitialBoardviewFocusRef = useRef<string | null>(null);
   const pendingSelectionFocusRef = useRef(false);
   const splitResizeStateRef = useRef<{
     active: boolean;
@@ -286,7 +307,7 @@ export function BoardviewLab({
   const [rootHeight, setRootHeight] = useState<number | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [model, setModel] = useState<BoardviewLabModel | null>(null);
-  const [sideFilter, setSideFilter] = useState<BoardviewLabSideFilter>("both");
+  const [sideFilter, setSideFilter] = useState<BoardviewLabSideFilter>(initialBoardviewFocus.side);
   const [query, setQuery] = useState(initialQuery);
   const [selected, setSelected] = useState<BoardviewLabSelection | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -321,6 +342,23 @@ export function BoardviewLab({
     });
   const deferredQuery = useDeferredValue(query);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const initialBoardviewFocusKey = useMemo(
+    () =>
+      JSON.stringify({
+        query: initialQuery,
+        component: initialBoardviewFocus.component,
+        net: initialBoardviewFocus.net,
+        pad: initialBoardviewFocus.pad,
+        side: initialBoardviewFocus.side,
+      }),
+    [
+      initialBoardviewFocus.component,
+      initialBoardviewFocus.net,
+      initialBoardviewFocus.pad,
+      initialBoardviewFocus.side,
+      initialQuery,
+    ],
+  );
 
   const visibleSelected =
     selected && isSelectionOnVisibleSide(selected, sideFilter) ? selected : null;
@@ -454,6 +492,12 @@ export function BoardviewLab({
   }, [initialQuery]);
 
   useEffect(() => {
+    setSideFilter((current) =>
+      current === initialBoardviewFocus.side ? current : initialBoardviewFocus.side,
+    );
+  }, [initialBoardviewFocus.side]);
+
+  useEffect(() => {
     setViewerMode((current) =>
       current === initialViewerMode ? current : initialViewerMode,
     );
@@ -467,6 +511,22 @@ export function BoardviewLab({
     boardviewCanvasRef.current?.focusSelection();
     pendingSelectionFocusRef.current = false;
   }, [visibleSelected]);
+
+  useEffect(() => {
+    if (!model || appliedInitialBoardviewFocusRef.current === initialBoardviewFocusKey) {
+      return;
+    }
+
+    const selection = resolveInitialBoardviewSelection(model, initialBoardviewFocus, initialQuery);
+    appliedInitialBoardviewFocusRef.current = initialBoardviewFocusKey;
+
+    if (!selection) {
+      return;
+    }
+
+    setSideFilter(resolveInitialSideFilter(selection, initialBoardviewFocus.side));
+    selectEntry(selection, true);
+  }, [initialBoardviewFocus, initialBoardviewFocusKey, initialQuery, model]);
 
   useEffect(() => {
     function handlePointerMove(event: PointerEvent) {
@@ -2127,6 +2187,7 @@ export function BoardviewLab({
                     <SchematicPdfViewer
                       fileBytes={pdfBytes}
                       fileName={pdfFileName}
+                      initialPage={initialSchematicFocus.page}
                       linkedSearchTerm={linkedSchematicQuery}
                       selectedMarkerTerm={selectedSchematicMarker}
                       searchQuery={query}
@@ -2145,6 +2206,7 @@ export function BoardviewLab({
                 <SchematicPdfViewer
                   fileBytes={pdfBytes}
                   fileName={pdfFileName}
+                  initialPage={initialSchematicFocus.page}
                   linkedSearchTerm={linkedSchematicQuery}
                   selectedMarkerTerm={selectedSchematicMarker}
                   searchQuery={query}

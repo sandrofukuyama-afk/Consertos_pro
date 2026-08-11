@@ -20,7 +20,9 @@ import {
   canvasToBoardPoint,
   findNearestBoardviewSelection,
   fitBoardviewViewport,
+  focusBoardviewViewportOnBounds,
   focusBoardviewViewportOnComponent,
+  getNetDetails,
   getSelectionHighlightNetName,
   getSelectionVisibleComponents,
 } from "@/lib/boardview/lab";
@@ -56,22 +58,6 @@ type BoardviewCanvasProps = {
   onCanvasMetricsChange?: (metrics: CanvasMetrics) => void;
   onViewportChange?: (viewport: BoardviewViewport) => void;
 };
-
-function getSelectionComponent(selection: BoardviewLabSelection | null) {
-  if (!selection) {
-    return null;
-  }
-
-  if (selection.kind === "component") {
-    return selection.component;
-  }
-
-  if (selection.kind === "padPin") {
-    return selection.component;
-  }
-
-  return null;
-}
 
 function sameViewport(left: BoardviewViewport, right: BoardviewViewport) {
   return (
@@ -265,26 +251,118 @@ export const BoardviewCanvas = forwardRef<
   }, [canvasSize.height, canvasSize.width, model]);
 
   const focusSelection = useCallback(() => {
-    const component = getSelectionComponent(selectedItem);
-
-    if (
-      !component ||
-      !model ||
-      canvasSize.width <= 0 ||
-      canvasSize.height <= 0
-    ) {
+    if (!selectedItem || !model || canvasSize.width <= 0 || canvasSize.height <= 0) {
       return;
     }
 
     pendingFitToScreenRef.current = false;
-    setViewport(
-      focusBoardviewViewportOnComponent(
-        component,
-        model.parsed.metadata.bounds,
-        canvasSize.width,
-        canvasSize.height,
-      ),
-    );
+    const boardBounds = model.parsed.metadata.bounds;
+
+    if (selectedItem.kind === "component") {
+      setViewport(
+        focusBoardviewViewportOnComponent(
+          selectedItem.component,
+          boardBounds,
+          canvasSize.width,
+          canvasSize.height,
+        ),
+      );
+      return;
+    }
+
+    if (selectedItem.kind === "padPin") {
+      if (selectedItem.component) {
+        setViewport(
+          focusBoardviewViewportOnComponent(
+            selectedItem.component,
+            boardBounds,
+            canvasSize.width,
+            canvasSize.height,
+          ),
+        );
+        return;
+      }
+
+      setViewport(
+        focusBoardviewViewportOnBounds(
+          {
+            minXMil: selectedItem.padPin.xMil - 120,
+            maxXMil: selectedItem.padPin.xMil + 120,
+            minYMil: selectedItem.padPin.yMil - 120,
+            maxYMil: selectedItem.padPin.yMil + 120,
+          },
+          boardBounds,
+          canvasSize.width,
+          canvasSize.height,
+        ),
+      );
+      return;
+    }
+
+    if (selectedItem.kind === "testPoint") {
+      setViewport(
+        focusBoardviewViewportOnBounds(
+          {
+            minXMil: selectedItem.testPoint.xMil - 120,
+            maxXMil: selectedItem.testPoint.xMil + 120,
+            minYMil: selectedItem.testPoint.yMil - 120,
+            maxYMil: selectedItem.testPoint.yMil + 120,
+          },
+          boardBounds,
+          canvasSize.width,
+          canvasSize.height,
+        ),
+      );
+      return;
+    }
+
+    const netDetails = getNetDetails(model, selectedItem.net.name);
+    if (netDetails.components[0]) {
+      setViewport(
+        focusBoardviewViewportOnComponent(
+          netDetails.components[0],
+          boardBounds,
+          canvasSize.width,
+          canvasSize.height,
+        ),
+      );
+      return;
+    }
+
+    if (netDetails.padPins[0]) {
+      const padPin = netDetails.padPins[0];
+      setViewport(
+        focusBoardviewViewportOnBounds(
+          {
+            minXMil: padPin.xMil - 120,
+            maxXMil: padPin.xMil + 120,
+            minYMil: padPin.yMil - 120,
+            maxYMil: padPin.yMil + 120,
+          },
+          boardBounds,
+          canvasSize.width,
+          canvasSize.height,
+        ),
+      );
+      return;
+    }
+
+    if (netDetails.testPoints[0]) {
+      const testPoint = netDetails.testPoints[0];
+      setViewport(
+        focusBoardviewViewportOnBounds(
+          {
+            minXMil: testPoint.xMil - 120,
+            maxXMil: testPoint.xMil + 120,
+            minYMil: testPoint.yMil - 120,
+            maxYMil: testPoint.yMil + 120,
+          },
+          boardBounds,
+          canvasSize.width,
+          canvasSize.height,
+        ),
+      );
+    }
   }, [canvasSize.height, canvasSize.width, model, selectedItem]);
 
   useImperativeHandle(

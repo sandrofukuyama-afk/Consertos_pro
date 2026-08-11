@@ -79,3 +79,14 @@ export function findSchematicPdfMatches(
 
   return matches;
 }
+
+export function resolveRequestedSchematicPage(
+  page: number | null,
+  pageCount: number,
+) {
+  if (!page || page <= 0 || pageCount <= 0) {
+    return null;
+  }
+
+  return Math.min(pageCount, Math.max(1, page));
+}

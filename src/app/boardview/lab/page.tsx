@@ -6,11 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 
 type BoardviewLabPageProps = {
   searchParams: Promise<{
+    asset_id?: string;
     board_id?: string;
     model_id?: string;
     diagnostic_id?: string;
     boardview_asset_id?: string;
     schematic_asset_id?: string;
+    component?: string;
+    net?: string;
+    pad?: string;
+    side?: "top" | "bottom" | "both";
+    page?: string;
     q?: string;
     view?: "split" | "boardview" | "schematic";
   }>;
@@ -48,9 +54,22 @@ export default async function BoardviewLabPage({
   const boardId = query.board_id?.trim() || null;
   const equipmentModelId = query.model_id?.trim() || null;
   const diagnosticId = query.diagnostic_id?.trim() || null;
-  const boardviewAssetId = query.boardview_asset_id?.trim() || null;
-  const schematicAssetId = query.schematic_asset_id?.trim() || null;
+  const sharedAssetId = query.asset_id?.trim() || null;
+  const boardviewAssetId =
+    query.boardview_asset_id?.trim() ||
+    (query.view !== "schematic" ? sharedAssetId : null);
+  const schematicAssetId =
+    query.schematic_asset_id?.trim() ||
+    (query.view === "schematic" ? sharedAssetId : null);
   const initialQuery = query.q?.trim() || "";
+  const initialBoardviewComponent = query.component?.trim() || null;
+  const initialBoardviewNet = query.net?.trim() || null;
+  const initialBoardviewPad = query.pad?.trim() || null;
+  const initialBoardviewSide =
+    query.side === "top" || query.side === "bottom" || query.side === "both"
+      ? query.side
+      : "both";
+  const initialSchematicPage = Number.parseInt(query.page ?? "", 10);
   const initialViewerMode =
     query.view === "split" || query.view === "boardview" || query.view === "schematic"
       ? query.view
@@ -183,6 +202,17 @@ export default async function BoardviewLabPage({
         initialAssets={initialAssets}
         initialQuery={initialQuery}
         initialViewerMode={initialViewerMode}
+        initialBoardviewFocus={{
+          component: initialBoardviewComponent,
+          net: initialBoardviewNet,
+          pad: initialBoardviewPad,
+          side: initialBoardviewSide,
+        }}
+        initialSchematicFocus={{
+          page: Number.isFinite(initialSchematicPage) && initialSchematicPage > 0
+            ? initialSchematicPage
+            : null,
+        }}
       />
     </AppShell>
   );
