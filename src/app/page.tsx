@@ -61,6 +61,30 @@ export default async function Home({ searchParams }: HomePageProps) {
           ))}
         </section>
 
+        <section className="rounded-[30px] border border-[rgba(45,139,130,0.2)] bg-[linear-gradient(135deg,rgba(45,139,130,0.12),rgba(109,94,242,0.1))] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--accent-teal)]">
+                LaboratÃ³rio
+              </p>
+              <h2 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                Boardview e esquema lado a lado
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                Abra o workspace tÃ©cnico para cruzar boardview, PDF do esquema e seleÃ§Ãµes do reparo sem sair do fluxo principal.
+              </p>
+            </div>
+            <div className="flex shrink-0">
+              <Link
+                href="/boardview/lab"
+                className="inline-flex items-center justify-center rounded-full border border-[rgba(45,139,130,0.3)] bg-[var(--card-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[rgba(45,139,130,0.45)] hover:bg-white/80"
+              >
+                Abrir boardview
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <section className="rounded-[30px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-5">
           <div className="flex flex-col gap-2 border-b border-[var(--panel-border)] pb-4 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">

@@ -170,6 +170,19 @@ export default async function DiagnosticDetailPage({
         ).toString()}`
       : ""
   }`;
+  const boardviewLabHref = `/boardview/lab${
+    detail.modelId || primaryBoard?.boardId || detail.id
+      ? `?${new URLSearchParams(
+          Object.fromEntries(
+            [
+              ["diagnostic_id", detail.id],
+              detail.modelId ? ["model_id", detail.modelId] : null,
+              primaryBoard?.boardId ? ["board_id", primaryBoard.boardId] : null,
+            ].filter((entry): entry is [string, string] => Boolean(entry)),
+          ),
+        ).toString()}`
+      : ""
+  }`;
   const noPowerSignals = normalizeDiagnosticText(
     [detail.summary, detail.initialReport, ...detail.symptoms.map((item) => item.name)].join(" "),
   );
@@ -840,6 +853,14 @@ export default async function DiagnosticDetailPage({
               <div className="mt-4 rounded-xl sm:rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4">
                 <p className="text-sm font-semibold text-[var(--foreground)]">Ações rápidas</p>
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  {primaryBoard || detail.modelId ? (
+                    <Link
+                      href={boardviewLabHref}
+                      className="inline-flex rounded-full border border-[rgba(45,139,130,0.28)] bg-[rgba(45,139,130,0.08)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
+                    >
+                      Abrir boardview
+                    </Link>
+                  ) : null}
                   <Link
                     href="#medicoes"
                     className="inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"

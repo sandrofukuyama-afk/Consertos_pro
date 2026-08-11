@@ -16,6 +16,11 @@ export const navItems: NavItem[] = [
     description: "Casos, timeline e próximos testes",
   },
   {
+    href: "/boardview/lab",
+    label: "Boardview",
+    description: "Laboratorio tecnico para cruzar boardview e esquema",
+  },
+  {
     href: "/catalogo-tecnico",
     label: "Catálogo técnico",
     description: "Marcas, modelos, placas e componentes",
