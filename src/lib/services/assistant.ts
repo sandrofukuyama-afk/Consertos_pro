@@ -62,6 +62,15 @@ type DiagnosticAssistantContext = {
     confidenceScore: number | null;
     status: string;
   }>;
+  technicalAssets: Array<{
+    id: string;
+    title: string;
+    assetType: string;
+    fileFormat: string;
+    boardName: string | null;
+    modelName: string | null;
+  }>;
+  benchPrompt: string | null;
 };
 
 type CategoryStrategy = {
@@ -526,6 +535,7 @@ async function getHistoricalTestGroupSuccess(supabase: SupabaseServerClient) {
 async function getDiagnosticAssistantContext(
   diagnosticId: string,
   supabase: SupabaseServerClient,
+  benchPrompt: string | null,
 ): Promise<DiagnosticAssistantContext | null> {
   const { data } = await supabase
     .from("diagnostics")
@@ -536,9 +546,11 @@ async function getDiagnosticAssistantContext(
         current_summary,
         initial_problem_report,
         physical_condition_notes,
+        equipment_model_id,
         equipment_categories(name),
         manufacturers(name),
         equipment_models(model_name),
+        diagnostic_boards(board_id, boards(board_code)),
         diagnostic_symptoms(severity, is_primary, symptoms(name, symptom_group)),
         diagnostic_test_runs(step_order, result_status, procedure_notes, actual_result, tests(id, name, test_group)),
         measurements(measurement_type, point_label, measured_value_numeric, measured_value_text, expected_value_text, unit),
@@ -555,6 +567,33 @@ async function getDiagnosticAssistantContext(
   const category = pickRelation(data.equipment_categories);
   const manufacturer = pickRelation(data.manufacturers);
   const model = pickRelation(data.equipment_models);
+  const boardIds = (data.diagnostic_boards ?? [])
+    .map((item) => item.board_id)
+    .filter((value): value is string => Boolean(value));
+  const technicalAssetLinkFilters: string[] = [];
+
+  if (data.equipment_model_id) {
+    technicalAssetLinkFilters.push(`equipment_model_id.eq.${data.equipment_model_id}`);
+  }
+
+  if (boardIds.length) {
+    technicalAssetLinkFilters.push(`board_id.in.(${boardIds.join(",")})`);
+  }
+
+  const technicalAssetLinksResult = technicalAssetLinkFilters.length
+    ? await supabase
+        .from("technical_asset_links")
+        .select(
+          `
+            board_id,
+            equipment_model_id,
+            boards(board_code),
+            equipment_models(model_name),
+            technical_assets(id, original_filename, asset_type, file_format)
+          `,
+        )
+        .or(technicalAssetLinkFilters.join(","))
+    : { data: [] as Array<Record<string, unknown>> };
 
   return {
     id: data.id,
@@ -595,6 +634,72 @@ async function getDiagnosticAssistantContext(
       confidenceScore: item.confidence_score,
       status: item.status,
     })),
+    technicalAssets: Array.from(
+      new Map(
+        (technicalAssetLinksResult.data ?? [])
+          .map((item) => {
+            const asset = pickRelation(
+              (item as {
+                technical_assets:
+                  | {
+                      id: string;
+                      original_filename: string;
+                      asset_type: string;
+                      file_format: string;
+                    }
+                  | Array<{
+                      id: string;
+                      original_filename: string;
+                      asset_type: string;
+                      file_format: string;
+                    }>
+                  | null;
+              }).technical_assets,
+            );
+
+            if (!asset) {
+              return null;
+            }
+
+            return [
+              asset.id,
+              {
+                id: asset.id,
+                title: asset.original_filename,
+                assetType: asset.asset_type,
+                fileFormat: asset.file_format,
+                boardName:
+                  pickRelation(
+                    (item as {
+                      boards:
+                        | { board_code: string | null }
+                        | Array<{ board_code: string | null }>
+                        | null;
+                    }).boards,
+                  )?.board_code ?? null,
+                modelName:
+                  pickRelation(
+                    (item as {
+                      equipment_models:
+                        | { model_name: string | null }
+                        | Array<{ model_name: string | null }>
+                        | null;
+                    }).equipment_models,
+                  )?.model_name ?? null,
+              },
+            ] as const;
+          })
+          .filter(
+            (
+              item,
+            ): item is readonly [
+              string,
+              DiagnosticAssistantContext["technicalAssets"][number],
+            ] => Boolean(item),
+          ),
+      ).values(),
+    ),
+    benchPrompt,
   };
 }
 
@@ -604,6 +709,7 @@ async function getSimilarCasesAndDocuments(
 ) {
   const query = [
     context.summary,
+    context.benchPrompt,
     ...context.symptoms.slice(0, 3).map((item) => item.name),
     ...context.hypotheses.slice(0, 2).map((item) => item.title),
   ]
@@ -890,6 +996,12 @@ async function buildStructuredResponse(
     : null;
   const strongestHypothesis = [...context.hypotheses]
     .sort((a, b) => (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0))[0] ?? null;
+  const availableBoardviewAsset =
+    context.technicalAssets.find(
+      (item) => item.fileFormat === "brd" || item.fileFormat === "bdv",
+    ) ?? null;
+  const availableSchematicAsset =
+    context.technicalAssets.find((item) => item.fileFormat === "pdf") ?? null;
   const recommendedTest = pickUnperformedTest(
     availableTests,
     context.tests.map((item) => item.testName),
@@ -898,6 +1010,7 @@ async function buildStructuredResponse(
     groupSuccessRate,
   );
   const nextTestName = recommendedTest?.name ?? "Executar o próximo teste objetivo da bancada";
+  const normalizedBenchPrompt = normalizeComparable(context.benchPrompt);
 
   let nextTest = "Registrar um próximo passo objetivo na bancada.";
   let validationGoal = "Gerar evidência suficiente para reduzir as hipóteses abertas.";
@@ -915,6 +1028,19 @@ async function buildStructuredResponse(
   if (!context.symptoms.length) {
     nextTest = "Registrar pelo menos um sintoma principal antes de pedir nova recomendação.";
     validationGoal = "Dar contexto mínimo para que a triagem deixe de ser genérica.";
+  } else if (
+    normalizedBenchPrompt.includes("esquema") ||
+    normalizedBenchPrompt.includes("boardview") ||
+    normalizedBenchPrompt.includes("net") ||
+    normalizedBenchPrompt.includes("linha")
+  ) {
+    nextTest = availableSchematicAsset
+      ? `Abrir o esquema ${availableSchematicAsset.title} e localizar a linha ou referência citada antes de medir o próximo ponto.`
+      : availableBoardviewAsset
+        ? `Abrir o boardview ${availableBoardviewAsset.title} e seguir a linha ou componente citado antes de medir o próximo ponto.`
+        : "Selecionar um boardview ou esquema associado para localizar a linha citada e definir o próximo ponto de medição.";
+    validationGoal =
+      "Transformar a pergunta da bancada em um ponto, linha ou componente concreto antes de abrir novas hipóteses.";
   } else if (!context.tests.length) {
     nextTest = `Executar o teste ${nextTestName} e registrar procedimento e resultado observado.`;
     validationGoal = `${activeScenario.summary} ${strategy.firstMove}`;
@@ -936,6 +1062,7 @@ async function buildStructuredResponse(
 
   const evidence = [
     `Resumo atual do caso: ${context.summary}`,
+    context.benchPrompt ? `Pergunta atual da bancada: ${context.benchPrompt}` : null,
     `Cenário ativo de bancada: ${activeScenario.title}.`,
     `Primeiras medições esperadas no cenário: ${activeScenario.firstMeasurements.join("; ")}.`,
     `Estratégia da categoria: ${strategy.summaryFocus}`,
@@ -958,17 +1085,28 @@ async function buildStructuredResponse(
     relatedDocuments[0]
       ? `Documento relacionado recuperado: ${relatedDocuments[0].title} (${relatedDocuments[0].similarityLabel}).`
       : null,
+    context.technicalAssets.length
+      ? `Arquivos técnicos disponíveis para consulta: ${context.technicalAssets
+          .map((item) => `${item.title} (${item.fileFormat.toUpperCase()})`)
+          .join("; ")}.`
+      : "Ainda não há boardview, esquema ou arquivo técnico associado a este diagnóstico.",
   ].filter((item): item is string => Boolean(item));
 
   const technicalSummary = [
     `O diagnóstico ${context.label} está em ${context.category} da ${context.manufacturer}.`,
     `O foco atual permanece em ${context.summary}.`,
+    context.benchPrompt ? `Pergunta ativa do técnico: ${context.benchPrompt}.` : null,
     `Cenário ativo identificado: ${activeScenario.title}. ${activeScenario.summary}`,
     strategy.summaryFocus,
     latestTest
       ? `Já existe histórico de teste suficiente para orientar o próximo passo sem reiniciar a triagem.`
       : `Ainda falta um primeiro teste objetivo para sair da fase de coleta inicial.`,
-  ].join(" ");
+    context.technicalAssets.length
+      ? `A bancada tem ${context.technicalAssets.length} arquivo(s) técnico(s) associado(s) disponível(is) para consulta.`
+      : `Ainda não existem arquivos técnicos associados diretamente ao caso.`,
+  ]
+    .filter((item): item is string => Boolean(item))
+    .join(" ");
 
   const safetyNote = /voltage|current|consumption|linha|fonte|primar/i.test(
     nextTest + " " + context.summary,
@@ -1000,6 +1138,7 @@ async function buildStructuredResponse(
           category: context.category,
           manufacturer: context.manufacturer,
           summary: context.summary,
+          benchPrompt: context.benchPrompt,
           activeScenario,
           categoryStrategyFocus: strategy.summaryFocus,
           categoryFirstMove: strategy.firstMove,
@@ -1029,6 +1168,12 @@ async function buildStructuredResponse(
           relatedDocuments: relatedDocuments.map((item) => ({
             title: item.title,
             excerpt: item.excerpt,
+          })),
+          technicalAssets: context.technicalAssets.map((item) => ({
+            title: item.title,
+            fileFormat: item.fileFormat,
+            boardName: item.boardName,
+            modelName: item.modelName,
           })),
           symptomGroupInsight:
             primarySymptomInsight && primarySymptomEntry?.group
@@ -1076,9 +1221,12 @@ async function buildStructuredResponse(
   };
 }
 
-export async function generateDiagnosticAssistantResponse(diagnosticId: string) {
+export async function generateDiagnosticAssistantResponse(
+  diagnosticId: string,
+  benchPrompt: string | null = null,
+) {
   const supabase = await createClient();
-  const context = await getDiagnosticAssistantContext(diagnosticId, supabase);
+  const context = await getDiagnosticAssistantContext(diagnosticId, supabase, benchPrompt);
 
   if (!context) {
     throw new Error("Diagnóstico não encontrado para gerar recomendação.");
@@ -1128,7 +1276,7 @@ export async function getDiagnosticAssistantSnapshot(
   client?: SupabaseServerClient,
 ): Promise<AssistantSnapshot> {
   const supabase = client ?? (await createClient());
-  const context = await getDiagnosticAssistantContext(diagnosticId, supabase);
+  const context = await getDiagnosticAssistantContext(diagnosticId, supabase, null);
 
   if (!context) {
     return {

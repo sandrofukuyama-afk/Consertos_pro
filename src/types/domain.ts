@@ -347,6 +347,20 @@ export type DiagnosticDetail = {
     name: string | null;
   }>;
   referenceMeasurements: BoardMeasurement[];
+  technicalAssets: Array<{
+    id: string;
+    title: string;
+    documentType: string;
+    fileFormat: string;
+    fileSizeLabel: string | null;
+    uploadedAt: string;
+    boardId: string | null;
+    equipmentModelId: string | null;
+    boardName: string | null;
+    modelName: string | null;
+    associationLabel: string;
+    boardviewLabHref: string | null;
+  }>;
 };
 
 export type SemanticMatchResult = {

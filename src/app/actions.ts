@@ -724,13 +724,14 @@ export async function generateDiagnosticAssistantAction(formData: FormData) {
   await requireCurrentUser();
 
   const diagnosticId = String(formData.get("diagnostic_id") ?? "");
+  const assistantPrompt = String(formData.get("assistant_prompt") ?? "").trim() || null;
 
   if (!diagnosticId) {
     redirect("/?error=Diagnóstico inválido para recomendação.");
   }
 
   try {
-    const result = await generateDiagnosticAssistantResponse(diagnosticId);
+    const result = await generateDiagnosticAssistantResponse(diagnosticId, assistantPrompt);
     revalidatePath(`/diagnosticos/${diagnosticId}`);
     redirect(
       `/diagnosticos/${diagnosticId}?message=${encodeURIComponent(

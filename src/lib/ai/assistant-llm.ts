@@ -7,6 +7,7 @@ export type AssistantNarrativeFacts = {
   category: string;
   manufacturer: string;
   summary: string;
+  benchPrompt?: string | null;
   activeScenario: {
     id: string;
     title: string;
@@ -34,6 +35,12 @@ export type AssistantNarrativeFacts = {
   heuristicValidationGoal: string;
   similarCases: Array<{ title: string; excerpt: string; similarityLabel: string }>;
   relatedDocuments: Array<{ title: string; excerpt: string }>;
+  technicalAssets?: Array<{
+    title: string;
+    fileFormat: string;
+    boardName: string | null;
+    modelName: string | null;
+  }>;
   symptomGroupInsight: { group: string; topCause: string; count: number } | null;
 };
 

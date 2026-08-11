@@ -110,6 +110,38 @@ type TechnicalAssetRow = {
     | null;
 };
 
+type DiagnosticTechnicalAssetLinkRow = {
+  technical_asset_id: string;
+  board_id: string | null;
+  equipment_model_id: string | null;
+  boards:
+    | { board_code: string | null }
+    | Array<{ board_code: string | null }>
+    | null;
+  equipment_models:
+    | { model_name: string | null }
+    | Array<{ model_name: string | null }>
+    | null;
+  technical_assets:
+    | {
+        id: string;
+        original_filename: string;
+        asset_type: string;
+        file_format: string;
+        file_size_bytes: number;
+        created_at: string;
+      }
+    | Array<{
+        id: string;
+        original_filename: string;
+        asset_type: string;
+        file_format: string;
+        file_size_bytes: number;
+        created_at: string;
+      }>
+    | null;
+};
+
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -179,9 +211,26 @@ function buildBoardLabel(
   return board.name ?? board.boardCode ?? board.roleLabel;
 }
 
-function formatEquipmentDetailValue(value: string | number | boolean) {
+function formatEquipmentDetailValue(
+  key: string,
+  value: string | number | boolean,
+) {
   if (typeof value === "boolean") {
-    return value ? "Sim" : "Nao";
+    return value ? "Sim" : "Não";
+  }
+
+  if (key === "screenCondition") {
+    if (value === "good") {
+      return "Boa";
+    }
+
+    if (value === "broken") {
+      return "Quebrada";
+    }
+
+    if (value === "no_image") {
+      return "Sem imagem";
+    }
   }
 
   return String(value);
@@ -193,13 +242,16 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
   }
 
   const labels: Record<string, string> = {
-    manufacturingYear: "Ano de fabricacao",
-    accessoriesIncluded: "Acessorios",
+    manufacturingYear: "Ano de fabricação",
+    accessoriesIncluded: "Acessórios",
+    powerPresent: "Alimentação",
+    powersOn: "Liga",
+    screenCondition: "Condição da tela",
     tvScreenSizeInches: "Tela (pol)",
     tvScreenType: "Tipo de tela",
     tvKind: "Tipo de TV",
-    tvResolution: "Resolucao",
-    tvPanelCode: "Codigo do painel",
+    tvResolution: "Resolução",
+    tvPanelCode: "Código do painel",
     notebookProcessor: "Processador",
     notebookRamGb: "RAM (GB)",
     notebookStorageType: "Armazenamento",
@@ -215,7 +267,7 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
     desktopRamGb: "RAM (GB)",
     desktopStorageType: "Armazenamento",
     desktopStorageCapacityGb: "Capacidade (GB)",
-    desktopDedicatedGpu: "Placa de video",
+    desktopDedicatedGpu: "Placa de vídeo",
     desktopPsuWatts: "Fonte (W)",
   };
 
@@ -226,7 +278,7 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
     )
     .map(([key, value]) => ({
       label: labels[key] ?? key,
-      value: formatEquipmentDetailValue(value as string | number | boolean),
+      value: formatEquipmentDetailValue(key, value as string | number | boolean),
     }));
 }
 
@@ -357,6 +409,15 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const testRuns = [...(data.diagnostic_test_runs ?? [])].sort(
     (a, b) => new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime(),
   );
+  const measurementRows = [...(data.measurements ?? [])].sort(
+    (a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime(),
+  );
+  const hypothesisRows = [...(data.hypotheses ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+  const attachmentRows = [...(data.attachments ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
 
   const path: Array<{
     id: string;
@@ -440,7 +501,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   const guidedFlow = path;
 
-  const attachmentItems = (data.attachments ?? []) as AttachmentRow[];
+  const attachmentItems = attachmentRows as AttachmentRow[];
   const attachmentPaths = attachmentItems.map((item) => item.storage_path);
 
   const signedUrlsMap: Record<string, string> = {};
@@ -478,7 +539,23 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     .map((board) => board.boardId)
     .filter((id): id is string => Boolean(id));
 
-  const [attachmentsList, assistantSnapshot, preventiveInsight, referenceMeasurements] =
+  const technicalAssetLinkFilters: string[] = [];
+
+  if (data.equipment_model_id) {
+    technicalAssetLinkFilters.push(`equipment_model_id.eq.${data.equipment_model_id}`);
+  }
+
+  if (boardIds.length) {
+    technicalAssetLinkFilters.push(`board_id.in.(${boardIds.join(",")})`);
+  }
+
+  const [
+    attachmentsList,
+    assistantSnapshot,
+    preventiveInsight,
+    referenceMeasurements,
+    technicalAssetLinksResult,
+  ] =
     await Promise.all([
       Promise.resolve(
         attachmentItems.map((item) => {
@@ -545,6 +622,28 @@ export async function getDiagnosticDetail(diagnosticId: string) {
               });
             })
         : Promise.resolve([]),
+      technicalAssetLinkFilters.length > 0
+        ? supabase
+            .from("technical_asset_links")
+            .select(
+              `
+                technical_asset_id,
+                board_id,
+                equipment_model_id,
+                boards(board_code),
+                equipment_models(model_name),
+                technical_assets(
+                  id,
+                  original_filename,
+                  asset_type,
+                  file_format,
+                  file_size_bytes,
+                  created_at
+                )
+              `,
+            )
+            .or(technicalAssetLinkFilters.join(","))
+        : Promise.resolve({ data: [] as DiagnosticTechnicalAssetLinkRow[] }),
     ]);
 
   const attachments = attachmentsList;
@@ -620,6 +719,53 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       happenedAt: formatRelativeTime(item.happenedAt),
     }));
 
+  const technicalAssets = Array.from(
+    new Map(
+      ((technicalAssetLinksResult.data ?? []) as DiagnosticTechnicalAssetLinkRow[])
+        .map((linkRow) => {
+          const asset = pickRelation(linkRow.technical_assets);
+          if (!asset) {
+            return null;
+          }
+
+          const boardName = pickRelation(linkRow.boards)?.board_code ?? null;
+          const modelName = pickRelation(linkRow.equipment_models)?.model_name ?? null;
+          const boardviewLabHref =
+            asset.file_format === "brd" || asset.file_format === "bdv"
+              ? `/boardview/lab?diagnostic_id=${data.id}&boardview_asset_id=${asset.id}`
+              : asset.file_format === "pdf"
+                ? `/boardview/lab?diagnostic_id=${data.id}&schematic_asset_id=${asset.id}`
+                : null;
+
+          return [
+            asset.id,
+            {
+              id: asset.id,
+              title: asset.original_filename,
+              documentType: getTechnicalAssetTypeLabel(asset.file_format, asset.asset_type),
+              fileFormat: asset.file_format,
+              fileSizeLabel: formatBytesLabel(asset.file_size_bytes),
+              uploadedAt: formatRelativeTime(asset.created_at),
+              boardId: linkRow.board_id ?? null,
+              equipmentModelId: linkRow.equipment_model_id ?? null,
+              boardName,
+              modelName,
+              associationLabel: modelName ?? boardName ?? "Não associado",
+              boardviewLabHref,
+            },
+          ] as const;
+        })
+        .filter(
+          (
+            entry,
+          ): entry is readonly [
+            string,
+            DiagnosticDetail["technicalAssets"][number],
+          ] => Boolean(entry),
+        ),
+    ).values(),
+  ).sort((left, right) => left.title.localeCompare(right.title));
+
   return {
     id: data.id,
     manufacturerId: data.manufacturer_id ?? null,
@@ -659,7 +805,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         capturedAt: formatRelativeTime(item.captured_at),
       };
     }),
-    tests: (data.diagnostic_test_runs ?? []).map((item) => {
+    tests: [...testRuns].reverse().map((item) => {
       const test = pickRelation(item.tests);
       const tech = pickRelation(item.users);
 
@@ -679,9 +825,9 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         requestedByAiResponseId: item.requested_by_ai_response_id ?? null,
       };
     }),
-    measurements: (data.measurements ?? []).map((item) => {
+    measurements: measurementRows.map((item) => {
       const tech = pickRelation(item.users);
-      const linkedTest = (data.diagnostic_test_runs ?? []).find(
+      const linkedTest = testRuns.find(
         (testRun) => testRun.id === item.diagnostic_test_run_id,
       );
       const linkedTestRelation = linkedTest ? pickRelation(linkedTest.tests) : null;
@@ -710,7 +856,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         technician: tech?.full_name ?? "Tecnico interno",
       };
     }),
-    hypotheses: (data.hypotheses ?? []).map((item) => ({
+    hypotheses: hypothesisRows.map((item) => ({
       id: item.id,
       title: item.title,
       description: item.description ?? "Sem descricao complementar.",
@@ -727,6 +873,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     assistantSnapshot,
     boards: diagnosticBoards,
     referenceMeasurements,
+    technicalAssets,
   } satisfies DiagnosticDetail;
 }
 
