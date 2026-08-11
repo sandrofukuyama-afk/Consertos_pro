@@ -7,11 +7,13 @@ import {
   startTransition,
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 
 import {
+  type BoardviewLabComponent,
   type BoardviewLabModel,
   type BoardviewLabSelection,
   type BoardviewLabSideFilter,
@@ -20,6 +22,9 @@ import {
   canvasToBoardPoint,
   findNearestBoardviewSelection,
   fitBoardviewViewport,
+  focusBoardviewViewportOnComponent,
+  getComponentPadPins,
+  getNetDetails,
   getSelectionHighlightNetName,
   getSelectionVisibleComponents,
   isSelectionOnVisibleSide,
@@ -59,6 +64,22 @@ function selectionTitle(selection: BoardviewLabSelection | null) {
   }
 }
 
+function getSelectionComponent(selection: BoardviewLabSelection | null) {
+  if (!selection) {
+    return null;
+  }
+
+  if (selection.kind === "component") {
+    return selection.component;
+  }
+
+  if (selection.kind === "padPin") {
+    return selection.component;
+  }
+
+  return null;
+}
+
 export function BoardviewLab() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -91,12 +112,42 @@ export function BoardviewLab() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isReadingFile, setIsReadingFile] = useState(false);
   const deferredQuery = useDeferredValue(query);
+
   const visibleSelected =
     selected && isSelectionOnVisibleSide(selected, sideFilter) ? selected : null;
+  const selectedComponent = getSelectionComponent(visibleSelected);
 
   const searchHits = model
     ? searchBoardviewLabModel(model, deferredQuery, sideFilter)
     : [];
+
+  const componentPadPins = useMemo(
+    () =>
+      model && selectedComponent
+        ? getComponentPadPins(model, selectedComponent)
+        : [],
+    [model, selectedComponent],
+  );
+
+  const selectedNetDetails = useMemo(() => {
+    if (!model) {
+      return null;
+    }
+
+    if (visibleSelected?.kind === "net") {
+      return getNetDetails(model, visibleSelected.net.name);
+    }
+
+    if (visibleSelected?.kind === "padPin") {
+      return getNetDetails(model, visibleSelected.padPin.netName);
+    }
+
+    if (visibleSelected?.kind === "testPoint") {
+      return getNetDetails(model, visibleSelected.testPoint.netName);
+    }
+
+    return null;
+  }, [model, visibleSelected]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -110,18 +161,17 @@ export function BoardviewLab() {
         return;
       }
 
+      const nextWidth = Math.round(entry.contentRect.width);
+      const nextHeight = Math.round(entry.contentRect.height);
+
       setCanvasSize({
-        width: Math.round(entry.contentRect.width),
-        height: Math.round(entry.contentRect.height),
+        width: nextWidth,
+        height: nextHeight,
       });
 
       if (model) {
         setViewport(
-          fitBoardviewViewport(
-            model.parsed.contour,
-            Math.round(entry.contentRect.width),
-            Math.round(entry.contentRect.height),
-          ),
+          fitBoardviewViewport(model.parsed.contour, nextWidth, nextHeight),
         );
       }
     });
@@ -129,6 +179,30 @@ export function BoardviewLab() {
     observer.observe(element);
     return () => observer.disconnect();
   }, [model]);
+
+  function focusOnComponent(component: BoardviewLabComponent) {
+    if (!model || !canvasSize.width || !canvasSize.height) {
+      return;
+    }
+
+    setViewport(
+      focusBoardviewViewportOnComponent(
+        component,
+        model.parsed.metadata.bounds,
+        canvasSize.width,
+        canvasSize.height,
+      ),
+    );
+  }
+
+  function selectEntry(selection: BoardviewLabSelection, autoFocus = false) {
+    setSelected(selection);
+
+    const component = getSelectionComponent(selection);
+    if (autoFocus && component) {
+      focusOnComponent(component);
+    }
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -218,7 +292,8 @@ export function BoardviewLab() {
 
         return sideFilter === "both"
           ? true
-          : component.mountingSide === "both" || component.mountingSide === sideFilter;
+          : component.mountingSide === "both" ||
+              component.mountingSide === sideFilter;
       });
 
       const visiblePads = model.padPins.filter((padPin) => {
@@ -255,14 +330,17 @@ export function BoardviewLab() {
           : testPoint.side === "both" || testPoint.side === sideFilter;
       });
 
-      context.fillStyle = "rgba(113, 221, 199, 0.85)";
       for (const padPin of visiblePads) {
         const point = boardToCanvasPoint(padPin, viewport, bounds, mirrorX);
+        const isPadOnSelectedComponent =
+          visibleSelected?.kind === "component" &&
+          visibleSelected.component.ref === padPin.partRef;
         const size =
-          padPin.netName === highlightNetName || selectedComponents.has(padPin.partRef)
-            ? 4
+          padPin.netName === highlightNetName ||
+          selectedComponents.has(padPin.partRef)
+            ? 4.4
             : viewport.scale > 0.45
-              ? 2.6
+              ? 2.7
               : 1.5;
         context.fillStyle =
           padPin.netName === highlightNetName
@@ -271,6 +349,21 @@ export function BoardviewLab() {
               ? "rgba(109,94,242,0.95)"
               : "rgba(113,221,199,0.85)";
         context.fillRect(point.x - size / 2, point.y - size / 2, size, size);
+
+        if (
+          viewport.scale > 2.35 &&
+          (isPadOnSelectedComponent ||
+            (padPin.netName === highlightNetName &&
+              viewport.scale > 3.2))
+        ) {
+          context.fillStyle = "rgba(230,228,245,0.86)";
+          context.font = "10px monospace";
+          context.fillText(
+            String(padPin.pinOrdinalWithinPart),
+            point.x + 4,
+            point.y - 4,
+          );
+        }
       }
 
       for (const testPoint of visibleTestPoints) {
@@ -294,7 +387,6 @@ export function BoardviewLab() {
           bounds,
           mirrorX,
         );
-
         const min = boardToCanvasPoint(
           {
             xMil: component.minXMil,
@@ -313,46 +405,67 @@ export function BoardviewLab() {
           bounds,
           mirrorX,
         );
-
         const width = Math.max(4, Math.abs(max.x - min.x));
         const height = Math.max(4, Math.abs(max.y - min.y));
-        const isHighlighted =
-          selectedComponents.has(component.ref) ||
-          (visibleSelected?.kind === "component" &&
-            visibleSelected.component.ref === component.ref);
+        const isPrimarySelectedComponent =
+          visibleSelected?.kind === "component" &&
+          visibleSelected.component.ref === component.ref;
+        const isConnectedToSelection =
+          !isPrimarySelectedComponent && selectedComponents.has(component.ref);
 
-        context.strokeStyle = isHighlighted
-          ? "rgba(109,94,242,0.95)"
-          : "rgba(255,255,255,0.2)";
-        context.lineWidth = isHighlighted ? 1.6 : 1;
+        context.strokeStyle = isPrimarySelectedComponent
+          ? "rgba(109,94,242,0.98)"
+          : isConnectedToSelection
+            ? "rgba(216,166,84,0.66)"
+            : "rgba(255,255,255,0.16)";
+        context.lineWidth = isPrimarySelectedComponent
+          ? 2.2
+          : isConnectedToSelection
+            ? 1.35
+            : 1;
         context.strokeRect(
-          Math.min(min.x, max.x) - 4,
-          Math.min(min.y, max.y) - 4,
-          width + 8,
-          height + 8,
+          Math.min(min.x, max.x) - 6,
+          Math.min(min.y, max.y) - 6,
+          width + 12,
+          height + 12,
         );
 
-        context.fillStyle = isHighlighted
+        context.fillStyle = isPrimarySelectedComponent
           ? "rgba(109,94,242,0.98)"
+          : isConnectedToSelection
+            ? "rgba(216,166,84,0.92)"
           : component.mountingSide === "top"
-            ? "rgba(85, 192, 150, 0.9)"
+            ? "rgba(85,192,150,0.9)"
             : component.mountingSide === "bottom"
-              ? "rgba(120, 170, 255, 0.9)"
+              ? "rgba(120,170,255,0.9)"
               : "rgba(255,255,255,0.75)";
         context.fillRect(center.x - 2, center.y - 2, 4, 4);
 
-        if (viewport.scale > 0.72 || isHighlighted) {
-          context.fillStyle = isHighlighted
-            ? "rgba(255,255,255,0.95)"
-            : "rgba(230,228,245,0.74)";
+        if (
+          viewport.scale > 0.9 ||
+          (isPrimarySelectedComponent && viewport.scale > 0.45) ||
+          (isConnectedToSelection && viewport.scale > 1.45)
+        ) {
+          context.fillStyle = isPrimarySelectedComponent
+            ? "rgba(255,255,255,0.98)"
+            : isConnectedToSelection
+              ? "rgba(255,244,214,0.92)"
+            : "rgba(230,228,245,0.72)";
           context.font = "11px monospace";
-          context.fillText(component.ref, center.x + 6, center.y - 6);
+          context.fillText(component.ref, center.x + 6, center.y - 8);
         }
       }
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [canvasSize.height, canvasSize.width, model, sideFilter, viewport, visibleSelected]);
+  }, [
+    canvasSize.height,
+    canvasSize.width,
+    model,
+    sideFilter,
+    viewport,
+    visibleSelected,
+  ]);
 
   function handleFitToScreen() {
     if (!model || !canvasSize.width || !canvasSize.height) {
@@ -429,7 +542,8 @@ export function BoardviewLab() {
     );
     const nextScale = Math.min(6, Math.max(0.04, viewport.scale * multiplier));
     const boardWidthMil =
-      model.parsed.metadata.bounds.maxXMil - model.parsed.metadata.bounds.minXMil;
+      model.parsed.metadata.bounds.maxXMil -
+      model.parsed.metadata.bounds.minXMil;
     const normalizedX = mirrorX
       ? boardWidthMil - (boardPoint.xMil - model.parsed.metadata.bounds.minXMil)
       : boardPoint.xMil - model.parsed.metadata.bounds.minXMil;
@@ -521,7 +635,10 @@ export function BoardviewLab() {
       sideFilter,
       radiusMil,
     );
-    setSelected(nearest);
+
+    if (nearest) {
+      selectEntry(nearest, nearest.kind === "component" || nearest.kind === "padPin");
+    }
   }
 
   function handlePointerCancel(event: ReactPointerEvent<HTMLCanvasElement>) {
@@ -558,7 +675,15 @@ export function BoardviewLab() {
                 onClick={handleFitToScreen}
                 className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5"
               >
-                Ajustar a tela
+                Voltar a placa inteira
+              </button>
+              <button
+                type="button"
+                onClick={() => selectedComponent && focusOnComponent(selectedComponent)}
+                disabled={!selectedComponent}
+                className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Voltar ao componente selecionado
               </button>
               <label className="cursor-pointer rounded-full bg-[var(--accent-copper)] px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]">
                 {isReadingFile ? "Lendo arquivo..." : "Abrir .brd local"}
@@ -651,7 +776,13 @@ export function BoardviewLab() {
                     <button
                       key={hit.id}
                       type="button"
-                      onClick={() => setSelected(hit.selection)}
+                      onClick={() =>
+                        selectEntry(
+                          hit.selection,
+                          hit.selection.kind === "component" ||
+                            hit.selection.kind === "padPin",
+                        )
+                      }
                       className="w-full rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-3 text-left transition hover:bg-white/5"
                     >
                       <p className="text-sm font-semibold text-[var(--foreground)]">
@@ -731,7 +862,16 @@ export function BoardviewLab() {
             <div className="mt-4 grid gap-2 text-sm text-[var(--foreground)]">
               <p>Pad/pino: {visibleSelected.padPin.id}</p>
               <p>Componente: {visibleSelected.padPin.partRef}</p>
-              <p>Net: {visibleSelected.padPin.netName}</p>
+              <button
+                type="button"
+                onClick={() =>
+                  visibleSelected.net &&
+                  selectEntry({ kind: "net", net: visibleSelected.net })
+                }
+                className="text-left text-[var(--accent-copper)] underline decoration-transparent transition hover:decoration-current"
+              >
+                Net: {visibleSelected.padPin.netName}
+              </button>
               <p>Lado: {visibleSelected.padPin.side}</p>
               <p>Probe: {visibleSelected.padPin.probe}</p>
               <p>
@@ -753,7 +893,16 @@ export function BoardviewLab() {
           {visibleSelected?.kind === "testPoint" ? (
             <div className="mt-4 grid gap-2 text-sm text-[var(--foreground)]">
               <p>Test point: {visibleSelected.testPoint.id}</p>
-              <p>Net: {visibleSelected.testPoint.netName}</p>
+              <button
+                type="button"
+                onClick={() =>
+                  visibleSelected.net &&
+                  selectEntry({ kind: "net", net: visibleSelected.net })
+                }
+                className="text-left text-[var(--accent-copper)] underline decoration-transparent transition hover:decoration-current"
+              >
+                Net: {visibleSelected.testPoint.netName}
+              </button>
               <p>Lado: {visibleSelected.testPoint.side}</p>
               <p>Probe: {visibleSelected.testPoint.probe}</p>
               <p>
@@ -764,18 +913,164 @@ export function BoardviewLab() {
           ) : null}
         </section>
 
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
-            Como usar
-          </p>
-          <div className="mt-3 grid gap-2 text-sm leading-6 text-[var(--muted)]">
-            <p>1. Abra um arquivo .brd local Landrex/Testlink.</p>
-            <p>2. Use o mouse para zoom e arraste para pan.</p>
-            <p>3. Clique em componentes, pads ou test points para inspecionar.</p>
-            <p>4. Busque por referencia ou net para destacar o resultado.</p>
-            <p>5. Alterne entre lado superior, inferior ou ambos.</p>
-          </div>
-        </section>
+        {model ? (
+          <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
+              Detalhamento tecnico
+            </p>
+
+            {!visibleSelected ? (
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                Abra um boardview e selecione um item para ver pinos, nets e conexoes tecnicas.
+              </p>
+            ) : null}
+
+            {selectedComponent ? (
+              <div className="mt-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-semibold text-[var(--foreground)]">
+                    Pads/pinos do componente
+                  </h4>
+                  <span className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                    {componentPadPins.length} itens
+                  </span>
+                </div>
+                <div className="max-h-[280px] space-y-2 overflow-y-auto pr-1">
+                  {componentPadPins.map((padPin) => (
+                    <div
+                      key={padPin.id}
+                      className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] px-3 py-3"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          selectEntry(
+                            {
+                              kind: "padPin",
+                              padPin,
+                              component: selectedComponent,
+                              net: model.netsByName.get(padPin.netName) ?? null,
+                            },
+                            true,
+                          )
+                        }
+                        className="w-full text-left transition hover:text-white"
+                      >
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        Pin {padPin.pinOrdinalWithinPart}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                        Nome: {padPin.id}
+                      </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const net = model.netsByName.get(padPin.netName);
+                          if (net) {
+                            selectEntry({ kind: "net", net });
+                          }
+                        }}
+                        className="mt-2 text-xs text-[var(--accent-copper)] underline decoration-transparent transition hover:decoration-current"
+                      >
+                        Net ligada: {padPin.netName}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {selectedNetDetails ? (
+              <div className="mt-4 grid gap-4">
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="text-sm font-semibold text-[var(--foreground)]">
+                      Componentes conectados na net
+                    </h4>
+                    <span className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                      {selectedNetDetails.components.length}
+                    </span>
+                  </div>
+                  <div className="max-h-[180px] space-y-2 overflow-y-auto pr-1">
+                    {selectedNetDetails.components.map((component) => (
+                      <button
+                        key={component.ref}
+                        type="button"
+                        onClick={() =>
+                          selectEntry({ kind: "component", component }, true)
+                        }
+                        className="w-full rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] px-3 py-3 text-left transition hover:bg-white/5"
+                      >
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          {component.ref}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                          {component.pinCount} pads • {component.mountingSide}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="text-sm font-semibold text-[var(--foreground)]">
+                      Pads desta net
+                    </h4>
+                    <span className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
+                      {selectedNetDetails.padPins.length}
+                    </span>
+                  </div>
+                  <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                    {selectedNetDetails.padPins.map((padPin) => {
+                      const component =
+                        model.componentsByIndex.get(padPin.partIndex) ?? null;
+                      return (
+                        <button
+                          key={`${padPin.id}:${padPin.netName}`}
+                          type="button"
+                          onClick={() =>
+                            selectEntry(
+                              {
+                                kind: "padPin",
+                                padPin,
+                                component,
+                                net: selectedNetDetails.net,
+                              },
+                              true,
+                            )
+                          }
+                          className="w-full rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] px-3 py-3 text-left transition hover:bg-white/5"
+                        >
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            {padPin.partRef} • Pin {padPin.pinOrdinalWithinPart}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                            Nome: {padPin.id}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : (
+          <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-5">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
+              Como usar
+            </p>
+            <div className="mt-3 grid gap-2 text-sm leading-6 text-[var(--muted)]">
+              <p>1. Abra um arquivo .brd local Landrex/Testlink.</p>
+              <p>2. Use o mouse para zoom e arraste para pan.</p>
+              <p>3. Clique em componentes, pads ou test points para inspecionar.</p>
+              <p>4. Busque por referencia ou net para destacar o resultado.</p>
+              <p>5. Alterne entre lado superior, inferior ou ambos.</p>
+            </div>
+          </section>
+        )}
       </aside>
     </div>
   );

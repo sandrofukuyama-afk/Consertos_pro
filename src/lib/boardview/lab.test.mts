@@ -9,6 +9,9 @@ import {
   canvasToBoardPoint,
   findNearestBoardviewSelection,
   fitBoardviewViewport,
+  focusBoardviewViewportOnComponent,
+  getComponentPadPins,
+  getNetDetails,
   getSelectionHighlightNetName,
   searchBoardviewLabModel,
 } from "./lab.ts";
@@ -180,4 +183,37 @@ test("findNearestBoardviewSelection prioritizes pad pins and exposes highlight n
   assert.ok(selection);
   assert.equal(selection?.kind, "padPin");
   assert.equal(getSelectionHighlightNetName(selection ?? null), "GND");
+});
+
+test("component focus viewport zooms into the selected geometry", () => {
+  const model = buildBoardviewLabModel(parsedFixture);
+  const component = model.componentsByRef.get("u1");
+
+  assert.ok(component);
+
+  const viewport = focusBoardviewViewportOnComponent(
+    component!,
+    parsedFixture.metadata.bounds,
+    1000,
+    500,
+  );
+
+  assert.ok(viewport.scale > 0.5);
+});
+
+test("net and component detail helpers expose connected pads quickly", () => {
+  const model = buildBoardviewLabModel(parsedFixture);
+  const component = model.componentsByRef.get("u1");
+
+  assert.ok(component);
+
+  const pins = getComponentPadPins(model, component!);
+  assert.equal(pins.length, 2);
+  assert.equal(pins[0]?.pinOrdinalWithinPart, 1);
+
+  const netDetails = getNetDetails(model, "GND");
+  assert.equal(netDetails.components.length, 1);
+  assert.equal(netDetails.components[0]?.ref, "U1");
+  assert.equal(netDetails.padPins.length, 1);
+  assert.equal(netDetails.testPoints.length, 1);
 });

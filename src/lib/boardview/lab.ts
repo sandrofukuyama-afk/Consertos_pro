@@ -53,6 +53,27 @@ export type BoardviewSearchHit = {
   selection: BoardviewLabSelection;
 };
 
+type SpatialItemKind = "padPin" | "testPoint" | "component";
+
+type SpatialItem = {
+  id: string;
+  kind: SpatialItemKind;
+  xMil: number;
+  yMil: number;
+};
+
+type SpatialIndex = {
+  cellSizeMil: number;
+  buckets: Map<string, SpatialItem[]>;
+};
+
+export type BoardviewLabNetDetails = {
+  net: BoardviewNet;
+  components: BoardviewLabComponent[];
+  padPins: BoardviewPadPin[];
+  testPoints: BoardviewTestPoint[];
+};
+
 export type BoardviewLabModel = {
   parsed: ParsedBoardview;
   components: BoardviewLabComponent[];
@@ -60,16 +81,24 @@ export type BoardviewLabModel = {
   componentsByRef: Map<string, BoardviewLabComponent>;
   padPins: BoardviewPadPin[];
   padPinsById: Map<string, BoardviewPadPin>;
+  padPinsByPartIndex: Map<number, BoardviewPadPin[]>;
   testPoints: BoardviewTestPoint[];
   testPointsById: Map<string, BoardviewTestPoint>;
   nets: BoardviewNet[];
   netsByName: Map<string, BoardviewNet>;
+  testPointsByNetName: Map<string, BoardviewTestPoint[]>;
+  padPinsByNetName: Map<string, BoardviewPadPin[]>;
+  spatialIndex: SpatialIndex;
 };
 
 function average(values: number[]) {
   return values.length
     ? values.reduce((sum, value) => sum + value, 0) / values.length
     : 0;
+}
+
+function bucketKey(x: number, y: number) {
+  return `${x}:${y}`;
 }
 
 function matchesSide(
@@ -87,7 +116,9 @@ function buildComponentGeometry(
   component: BoardviewComponent,
   padPins: BoardviewPadPin[],
 ): BoardviewLabComponent {
-  const componentPins = padPins.filter((padPin) => padPin.partIndex === component.partIndex);
+  const componentPins = padPins.filter(
+    (padPin) => padPin.partIndex === component.partIndex,
+  );
   const xs = componentPins.map((padPin) => padPin.xMil);
   const ys = componentPins.map((padPin) => padPin.yMil);
   const centerXMil = xs.length ? average(xs) : 0;
@@ -104,6 +135,56 @@ function buildComponentGeometry(
   };
 }
 
+function buildSpatialIndex(
+  components: BoardviewLabComponent[],
+  padPins: BoardviewPadPin[],
+  testPoints: BoardviewTestPoint[],
+): SpatialIndex {
+  const cellSizeMil = 160;
+  const buckets = new Map<string, SpatialItem[]>();
+
+  function add(item: SpatialItem) {
+    const bucketX = Math.floor(item.xMil / cellSizeMil);
+    const bucketY = Math.floor(item.yMil / cellSizeMil);
+    const key = bucketKey(bucketX, bucketY);
+    const current = buckets.get(key) ?? [];
+    current.push(item);
+    buckets.set(key, current);
+  }
+
+  for (const component of components) {
+    add({
+      id: component.ref,
+      kind: "component",
+      xMil: component.centerXMil,
+      yMil: component.centerYMil,
+    });
+  }
+
+  for (const padPin of padPins) {
+    add({
+      id: padPin.id,
+      kind: "padPin",
+      xMil: padPin.xMil,
+      yMil: padPin.yMil,
+    });
+  }
+
+  for (const testPoint of testPoints) {
+    add({
+      id: testPoint.id,
+      kind: "testPoint",
+      xMil: testPoint.xMil,
+      yMil: testPoint.yMil,
+    });
+  }
+
+  return {
+    cellSizeMil,
+    buckets,
+  };
+}
+
 export function buildBoardviewLabModel(
   parsed: ParsedBoardview,
 ): BoardviewLabModel {
@@ -116,6 +197,25 @@ export function buildBoardviewLabModel(
   const componentsByRef = new Map(
     components.map((component) => [component.ref.toLowerCase(), component] as const),
   );
+  const padPinsByPartIndex = new Map<number, BoardviewPadPin[]>();
+  const padPinsByNetName = new Map<string, BoardviewPadPin[]>();
+  const testPointsByNetName = new Map<string, BoardviewTestPoint[]>();
+
+  for (const padPin of parsed.padPins) {
+    const byPart = padPinsByPartIndex.get(padPin.partIndex) ?? [];
+    byPart.push(padPin);
+    padPinsByPartIndex.set(padPin.partIndex, byPart);
+
+    const byNet = padPinsByNetName.get(padPin.netName) ?? [];
+    byNet.push(padPin);
+    padPinsByNetName.set(padPin.netName, byNet);
+  }
+
+  for (const testPoint of parsed.testPoints) {
+    const byNet = testPointsByNetName.get(testPoint.netName) ?? [];
+    byNet.push(testPoint);
+    testPointsByNetName.set(testPoint.netName, byNet);
+  }
 
   return {
     parsed,
@@ -124,12 +224,16 @@ export function buildBoardviewLabModel(
     componentsByRef,
     padPins: parsed.padPins,
     padPinsById: new Map(parsed.padPins.map((padPin) => [padPin.id, padPin] as const)),
+    padPinsByPartIndex,
     testPoints: parsed.testPoints,
     testPointsById: new Map(
       parsed.testPoints.map((testPoint) => [testPoint.id, testPoint] as const),
     ),
     nets: parsed.nets,
     netsByName: new Map(parsed.nets.map((net) => [net.name, net] as const)),
+    testPointsByNetName,
+    padPinsByNetName,
+    spatialIndex: buildSpatialIndex(components, parsed.padPins, parsed.testPoints),
   };
 }
 
@@ -171,6 +275,57 @@ export function fitBoardviewViewport(
     offsetX,
     offsetY,
   };
+}
+
+export function focusBoardviewViewportOnBounds(
+  boundsMil: {
+    minXMil: number;
+    maxXMil: number;
+    minYMil: number;
+    maxYMil: number;
+  },
+  boardBounds: ParsedBoardview["metadata"]["bounds"],
+  canvasWidth: number,
+  canvasHeight: number,
+  padding = 48,
+): BoardviewViewport {
+  const widthMil = Math.max(1, boundsMil.maxXMil - boundsMil.minXMil);
+  const heightMil = Math.max(1, boundsMil.maxYMil - boundsMil.minYMil);
+  const availableWidth = Math.max(1, canvasWidth - padding * 2);
+  const availableHeight = Math.max(1, canvasHeight - padding * 2);
+  const scale = Math.max(
+    0.04,
+    Math.min(6, Math.min(availableWidth / widthMil, availableHeight / heightMil)),
+  );
+  const centerXMil = (boundsMil.minXMil + boundsMil.maxXMil) / 2;
+  const centerYMil = (boundsMil.minYMil + boundsMil.maxYMil) / 2;
+  const normalizedX = centerXMil - boardBounds.minXMil;
+  const normalizedY = boardBounds.maxYMil - centerYMil;
+
+  return {
+    scale,
+    offsetX: canvasWidth / 2 - normalizedX * scale,
+    offsetY: canvasHeight / 2 - normalizedY * scale,
+  };
+}
+
+export function focusBoardviewViewportOnComponent(
+  component: BoardviewLabComponent,
+  boardBounds: ParsedBoardview["metadata"]["bounds"],
+  canvasWidth: number,
+  canvasHeight: number,
+) {
+  return focusBoardviewViewportOnBounds(
+    {
+      minXMil: component.minXMil - 120,
+      maxXMil: component.maxXMil + 120,
+      minYMil: component.minYMil - 120,
+      maxYMil: component.maxYMil + 120,
+    },
+    boardBounds,
+    canvasWidth,
+    canvasHeight,
+  );
 }
 
 export function boardToCanvasPoint(
@@ -230,9 +385,13 @@ export function searchBoardviewLabModel(
   const results: Array<BoardviewSearchHit & { score: number }> = [];
 
   for (const component of model.components) {
-    const haystack = `${component.ref} ${component.kind} ${component.mountingSide}`.toLowerCase();
+    const haystack =
+      `${component.ref} ${component.kind} ${component.mountingSide}`.toLowerCase();
 
-    if (!haystack.includes(normalized) || !matchesSide(component.mountingSide, sideFilter)) {
+    if (
+      !haystack.includes(normalized) ||
+      !matchesSide(component.mountingSide, sideFilter)
+    ) {
       continue;
     }
 
@@ -290,6 +449,29 @@ export function searchBoardviewLabModel(
   return results.slice(0, limit);
 }
 
+function collectSpatialCandidates(
+  spatialIndex: SpatialIndex,
+  point: { xMil: number; yMil: number },
+  radiusMil: number,
+) {
+  const minBucketX = Math.floor((point.xMil - radiusMil) / spatialIndex.cellSizeMil);
+  const maxBucketX = Math.floor((point.xMil + radiusMil) / spatialIndex.cellSizeMil);
+  const minBucketY = Math.floor((point.yMil - radiusMil) / spatialIndex.cellSizeMil);
+  const maxBucketY = Math.floor((point.yMil + radiusMil) / spatialIndex.cellSizeMil);
+  const candidates: SpatialItem[] = [];
+
+  for (let bucketX = minBucketX; bucketX <= maxBucketX; bucketX += 1) {
+    for (let bucketY = minBucketY; bucketY <= maxBucketY; bucketY += 1) {
+      const bucket = spatialIndex.buckets.get(bucketKey(bucketX, bucketY));
+      if (bucket) {
+        candidates.push(...bucket);
+      }
+    }
+  }
+
+  return candidates;
+}
+
 export function findNearestBoardviewSelection(
   model: BoardviewLabModel,
   point: { xMil: number; yMil: number },
@@ -299,50 +481,53 @@ export function findNearestBoardviewSelection(
   let closestDistance = radiusMil * radiusMil;
   let selected: BoardviewLabSelection | null = null;
 
-  for (const padPin of model.padPins) {
-    if (!matchesSide(padPin.side, sideFilter)) {
+  const candidates = collectSpatialCandidates(model.spatialIndex, point, radiusMil);
+
+  for (const candidate of candidates) {
+    if (candidate.kind === "padPin") {
+      const padPin = model.padPinsById.get(candidate.id);
+      if (!padPin || !matchesSide(padPin.side, sideFilter)) {
+        continue;
+      }
+
+      const squared = distanceSquared(point, padPin);
+      if (squared > closestDistance) {
+        continue;
+      }
+
+      closestDistance = squared;
+      const component = model.componentsByIndex.get(padPin.partIndex) ?? null;
+      selected = {
+        kind: "padPin",
+        padPin,
+        component,
+        net: model.netsByName.get(padPin.netName) ?? null,
+      };
       continue;
     }
 
-    const squared = distanceSquared(point, padPin);
-    if (squared > closestDistance) {
+    if (candidate.kind === "testPoint") {
+      const testPoint = model.testPointsById.get(candidate.id);
+      if (!testPoint || !matchesSide(testPoint.side, sideFilter)) {
+        continue;
+      }
+
+      const squared = distanceSquared(point, testPoint);
+      if (squared > closestDistance) {
+        continue;
+      }
+
+      closestDistance = squared;
+      selected = {
+        kind: "testPoint",
+        testPoint,
+        net: model.netsByName.get(testPoint.netName) ?? null,
+      };
       continue;
     }
 
-    closestDistance = squared;
-    const component = model.componentsByIndex.get(padPin.partIndex) ?? null;
-    selected = {
-      kind: "padPin",
-      padPin,
-      component,
-      net: model.netsByName.get(padPin.netName) ?? null,
-    };
-  }
-
-  for (const testPoint of model.testPoints) {
-    if (!matchesSide(testPoint.side, sideFilter)) {
-      continue;
-    }
-
-    const squared = distanceSquared(point, testPoint);
-    if (squared > closestDistance) {
-      continue;
-    }
-
-    closestDistance = squared;
-    selected = {
-      kind: "testPoint",
-      testPoint,
-      net: model.netsByName.get(testPoint.netName) ?? null,
-    };
-  }
-
-  if (selected) {
-    return selected;
-  }
-
-  for (const component of model.components) {
-    if (!matchesSide(component.mountingSide, sideFilter)) {
+    const component = model.componentsByRef.get(candidate.id.toLowerCase());
+    if (!component || !matchesSide(component.mountingSide, sideFilter)) {
       continue;
     }
 
@@ -400,16 +585,55 @@ export function getSelectionVisibleComponents(
   }
 
   if (selection.kind === "net") {
-    const refs = new Set(
-      model.padPins
-        .filter((padPin) => padPin.netName === selection.net.name)
-        .map((padPin) => padPin.partRef),
-    );
-
-    return model.components.filter((component) => refs.has(component.ref));
+    return getNetDetails(model, selection.net.name).components;
   }
 
   return [];
+}
+
+export function getComponentPadPins(
+  model: BoardviewLabModel,
+  component: BoardviewLabComponent,
+) {
+  return (model.padPinsByPartIndex.get(component.partIndex) ?? []).slice().sort(
+    (left, right) => left.pinOrdinalWithinPart - right.pinOrdinalWithinPart,
+  );
+}
+
+export function getNetDetails(
+  model: BoardviewLabModel,
+  netName: string,
+): BoardviewLabNetDetails {
+  const net = model.netsByName.get(netName);
+
+  if (!net) {
+    return {
+      net: {
+        name: netName,
+        padPinCount: 0,
+        testPointCount: 0,
+        probeIds: [],
+      },
+      components: [],
+      padPins: [],
+      testPoints: [],
+    };
+  }
+
+  const padPins = (model.padPinsByNetName.get(netName) ?? []).slice();
+  const testPoints = (model.testPointsByNetName.get(netName) ?? []).slice();
+  const componentIndexes = new Set(padPins.map((padPin) => padPin.partIndex));
+  const components = [...componentIndexes]
+    .map((partIndex) => model.componentsByIndex.get(partIndex))
+    .filter((component): component is BoardviewLabComponent => Boolean(component))
+    .sort((left, right) => left.ref.localeCompare(right.ref));
+
+  return {
+    net,
+    components,
+    padPins,
+    testPoints,
+  };
 }
 
 export function isSelectionOnVisibleSide(
