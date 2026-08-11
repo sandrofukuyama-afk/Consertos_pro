@@ -65,13 +65,13 @@ export default async function Home({ searchParams }: HomePageProps) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--accent-teal)]">
-                LaboratÃ³rio
+                Laboratório
               </p>
               <h2 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                 Boardview e esquema lado a lado
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                Abra o workspace tÃ©cnico para cruzar boardview, PDF do esquema e seleÃ§Ãµes do reparo sem sair do fluxo principal.
+                Abra o workspace técnico para cruzar boardview, PDF do esquema e seleções do reparo sem sair do fluxo principal.
               </p>
             </div>
             <div className="flex shrink-0">
