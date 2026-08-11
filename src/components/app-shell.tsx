@@ -65,7 +65,7 @@ export function AppShell({
         .toUpperCase()
     : "U";
 
-  const renderSidebarContent = () => (
+const renderSidebarContent = () => (
     <div className="relative flex h-full flex-col p-6">
       <div className="border-b border-white/10 pb-5">
         <div className="flex items-center gap-2.5">
@@ -74,12 +74,6 @@ export function AppShell({
             ConsertosPro
           </p>
         </div>
-        <h1 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-semibold tracking-tight text-white">
-          Bancada com memória técnica
-        </h1>
-        <p className="mt-3 max-w-xs text-sm leading-6 text-[rgba(230,228,245,0.72)]">
-          Fundação do MVP orientada pelo plano do projeto, pronta para ganhar dados reais e integração com Supabase.
-        </p>
       </div>
 
       <nav className="mt-6 flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
