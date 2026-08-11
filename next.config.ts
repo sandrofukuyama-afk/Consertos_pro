@@ -4,9 +4,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "25mb",
+      bodySizeLimit: "220mb",
     },
-    proxyClientMaxBodySize: "25mb",
+    proxyClientMaxBodySize: "220mb",
   },
   serverExternalPackages: ["pdf-parse"],
   async headers() {

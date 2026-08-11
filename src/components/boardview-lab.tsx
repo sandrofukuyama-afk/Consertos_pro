@@ -84,6 +84,28 @@ type SaveableTechnicalFileState = {
   associationLinked: boolean;
 };
 
+async function readApiResponsePayload(response: Response) {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText) as {
+      error?: string;
+      exists?: boolean;
+      assetId?: string;
+      associationLinked?: boolean;
+      message?: string;
+    };
+  } catch {
+    return {
+      error: rawText.trim(),
+    };
+  }
+}
+
 function describeAssociationLabel(association: BoardviewLabAssociation) {
   const parts = [
     association.boardName ? `Placa ${association.boardName}` : null,
@@ -441,14 +463,7 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
         const response = await fetch(`/api/technical-assets?${params.toString()}`, {
           cache: "no-store",
         });
-        const payload = (await response.json()) as
-          | {
-              error?: string;
-              exists?: boolean;
-              assetId?: string;
-              associationLinked?: boolean;
-            }
-          | undefined;
+        const payload = await readApiResponsePayload(response);
 
         if (cancelled) {
           return;
@@ -561,14 +576,7 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
         const response = await fetch(`/api/technical-assets?${params.toString()}`, {
           cache: "no-store",
         });
-        const payload = (await response.json()) as
-          | {
-              error?: string;
-              exists?: boolean;
-              assetId?: string;
-              associationLinked?: boolean;
-            }
-          | undefined;
+        const payload = await readApiResponsePayload(response);
 
         if (cancelled) {
           return;
@@ -670,13 +678,7 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
         body: formData,
       });
 
-      const payload = (await response.json()) as
-        | {
-            error?: string;
-            assetId?: string;
-            message?: string;
-          }
-        | undefined;
+      const payload = await readApiResponsePayload(response);
 
       if (!response.ok) {
         throw new Error(payload?.error ?? "Falha ao salvar o arquivo técnico.");
