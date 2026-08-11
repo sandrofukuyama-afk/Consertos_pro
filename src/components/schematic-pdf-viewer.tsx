@@ -128,6 +128,8 @@ export function SchematicPdfViewer({
 
   const effectiveSearchQuery = searchQuery.trim() || linkedSearchTerm || "";
   const normalizedSearchQuery = normalizeSchematicSearchQuery(effectiveSearchQuery);
+  const normalizedManualSearchQuery = normalizeSchematicSearchQuery(searchQuery);
+  const normalizedLinkedQuery = normalizeSchematicSearchQuery(linkedSearchTerm ?? "");
   const searchMatches = useMemo(
     () => findSchematicPdfMatches(pageTexts, effectiveSearchQuery),
     [effectiveSearchQuery, pageTexts],
@@ -648,19 +650,30 @@ export function SchematicPdfViewer({
                 >
                   {renderedTextItems.map((item) => {
                     const normalizedItemText = normalizeSchematicSearchQuery(item.text);
-                    const isHighlighted =
+                    const isSelectedHighlight =
+                      normalizedLinkedQuery.length > 0 &&
+                      (normalizedItemText.includes(normalizedLinkedQuery) ||
+                        normalizedLinkedQuery.includes(normalizedItemText));
+                    const isRelatedHighlight =
+                      normalizedManualSearchQuery.length > 0 &&
+                      (normalizedItemText.includes(normalizedManualSearchQuery) ||
+                        normalizedManualSearchQuery.includes(normalizedItemText));
+                    const isFallbackHighlight =
+                      !normalizedManualSearchQuery.length &&
+                      !normalizedLinkedQuery.length &&
                       normalizedSearchQuery.length > 0 &&
                       (normalizedItemText.includes(normalizedSearchQuery) ||
                         normalizedSearchQuery.includes(normalizedItemText));
+                    const highlightClass = isSelectedHighlight
+                      ? "rounded border-2 border-[rgba(66,226,255,0.98)] bg-[rgba(66,226,255,0.28)] text-[#f4fdff] shadow-[0_0_0_1px_rgba(66,226,255,0.55),0_0_18px_rgba(66,226,255,0.34)]"
+                      : isRelatedHighlight || isFallbackHighlight
+                        ? "rounded border border-[rgba(255,73,185,0.92)] bg-[rgba(255,73,185,0.18)] text-[#fff7fc] shadow-[0_0_0_1px_rgba(255,73,185,0.28)]"
+                        : "text-transparent";
 
                     return (
                       <span
                         key={item.id}
-                        className={`absolute whitespace-pre ${
-                          isHighlighted
-                            ? "rounded border border-[rgba(255,73,185,0.92)] bg-[rgba(255,73,185,0.22)] text-[#fff7fc] shadow-[0_0_0_1px_rgba(255,73,185,0.38)]"
-                            : "text-transparent"
-                        }`}
+                        className={`absolute whitespace-pre ${highlightClass}`}
                         style={{
                           left: item.left,
                           top: item.top,
@@ -669,6 +682,7 @@ export function SchematicPdfViewer({
                           transform: `rotate(${item.rotationDeg}deg)`,
                           transformOrigin: "left top",
                           lineHeight: 1,
+                          zIndex: isSelectedHighlight ? 2 : 1,
                         }}
                       >
                         {item.text}
