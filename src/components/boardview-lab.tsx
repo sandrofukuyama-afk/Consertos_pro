@@ -35,6 +35,8 @@ import {
   LandrexBoardviewParserError,
   parseLandrexTestlinkBoardview,
 } from "@/lib/boardview/landrex-testlink";
+import { getBoardviewSelectionSchematicQuery } from "@/lib/boardview/schematic-pdf";
+import { SchematicPdfViewer } from "@/components/schematic-pdf-viewer";
 
 const DEFAULT_VIEWPORT: BoardviewViewport = {
   scale: 1,
@@ -46,6 +48,8 @@ type CanvasSize = {
   width: number;
   height: number;
 };
+
+type LabViewerMode = "split" | "boardview" | "schematic";
 
 function selectionTitle(selection: BoardviewLabSelection | null) {
   if (!selection) {
@@ -111,6 +115,11 @@ export function BoardviewLab() {
   const [selected, setSelected] = useState<BoardviewLabSelection | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isReadingFile, setIsReadingFile] = useState(false);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  const [pdfErrorMessage, setPdfErrorMessage] = useState<string | null>(null);
+  const [isReadingPdfFile, setIsReadingPdfFile] = useState(false);
+  const [viewerMode, setViewerMode] = useState<LabViewerMode>("split");
   const deferredQuery = useDeferredValue(query);
 
   const visibleSelected =
@@ -148,6 +157,11 @@ export function BoardviewLab() {
 
     return null;
   }, [model, visibleSelected]);
+
+  const linkedSchematicQuery = useMemo(
+    () => getBoardviewSelectionSchematicQuery(selected),
+    [selected],
+  );
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -523,6 +537,38 @@ export function BoardviewLab() {
     }
   }
 
+  async function handlePdfFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setIsReadingPdfFile(true);
+    setPdfErrorMessage(null);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+
+      startTransition(() => {
+        setPdfFileName(file.name);
+        setPdfBytes(new Uint8Array(arrayBuffer));
+        setViewerMode("split");
+      });
+    } catch (error) {
+      setPdfBytes(null);
+      setPdfFileName(file.name);
+      setPdfErrorMessage(
+        error instanceof Error
+          ? `Falha ao abrir o PDF local. Detalhe: ${error.message}`
+          : "Falha ao abrir o PDF local.",
+      );
+    } finally {
+      setIsReadingPdfFile(false);
+      event.target.value = "";
+    }
+  }
+
   function updateZoom(clientX: number, clientY: number, multiplier: number) {
     if (!model || !canvasRef.current) {
       return;
@@ -652,6 +698,96 @@ export function BoardviewLab() {
     }
   }
 
+  const boardviewPanel = (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div
+        ref={containerRef}
+        className="relative min-h-[420px] overflow-hidden rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] md:min-h-[560px]"
+      >
+        <canvas
+          ref={canvasRef}
+          className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
+          onWheel={handleWheel}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+        />
+      </div>
+
+      <aside className="grid gap-4">
+        <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+            Busca local
+          </p>
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar referencia ou net"
+            className="mt-3 w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[rgba(109,94,242,0.55)]"
+          />
+
+          <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+            {searchHits.length ? (
+              searchHits.map((hit) => (
+                <button
+                  key={hit.id}
+                  type="button"
+                  onClick={() =>
+                    selectEntry(
+                      hit.selection,
+                      hit.selection.kind === "component" ||
+                        hit.selection.kind === "padPin",
+                    )
+                  }
+                  className="w-full rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-3 text-left transition hover:bg-white/5"
+                >
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    {hit.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                    {hit.subtitle}
+                  </p>
+                </button>
+              ))
+            ) : query.trim() ? (
+              <div className="rounded-[18px] border border-dashed border-[var(--panel-border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
+                Nenhum resultado para esta busca.
+              </div>
+            ) : (
+              <div className="rounded-[18px] border border-dashed border-[var(--panel-border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
+                Digite uma referencia ou net para localizar itens no boardview.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
+          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+            Totais lidos
+          </p>
+          {model ? (
+            <div className="mt-3 grid gap-2 text-sm text-[var(--foreground)]">
+              <p>Componentes: {model.parsed.metadata.parsedCounts.components}</p>
+              <p>Pads/pinos: {model.parsed.metadata.parsedCounts.padPins}</p>
+              <p>Test points: {model.parsed.metadata.parsedCounts.testPoints}</p>
+              <p>Nets: {model.parsed.metadata.parsedCounts.nets}</p>
+              <p>
+                Placa: {model.parsed.metadata.boardWidthMm.toFixed(2)} x{" "}
+                {model.parsed.metadata.boardHeightMm.toFixed(2)} mm
+              </p>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              Nenhum boardview carregado.
+            </p>
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_380px]">
       <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-5">
@@ -662,10 +798,10 @@ export function BoardviewLab() {
                 Boardview lab
               </p>
               <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                Laboratorio local de arquivos .brd
+                Laboratorio local de arquivos .brd e .pdf
               </h3>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-                O arquivo e lido somente no navegador. Nada e enviado ao servidor ou ao Supabase.
+                Os arquivos sao lidos somente no navegador. Nada e enviado ao servidor ou ao Supabase.
               </p>
             </div>
 
@@ -694,13 +830,22 @@ export function BoardviewLab() {
                   onChange={handleFileSelection}
                 />
               </label>
+              <label className="cursor-pointer rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5">
+                {isReadingPdfFile ? "Lendo PDF..." : "Abrir PDF local"}
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={handlePdfFileSelection}
+                />
+              </label>
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:items-center">
             <div className="rounded-[20px] border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)]">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">
-                Arquivo atual
+                Boardview atual
               </p>
               <p className="mt-1 truncate">{fileName ?? "Nenhum arquivo aberto"}</p>
             </div>
@@ -732,6 +877,27 @@ export function BoardviewLab() {
               </p>
               <p className="mt-1">{viewport.scale.toFixed(2)} px/mil</p>
             </div>
+
+            <div className="flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] p-1">
+              {[
+                { value: "split", label: "Lado a lado" },
+                { value: "boardview", label: "Boardview" },
+                { value: "schematic", label: "Esquema" },
+              ].map((entry) => (
+                <button
+                  key={entry.value}
+                  type="button"
+                  onClick={() => setViewerMode(entry.value as LabViewerMode)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                    viewerMode === entry.value
+                      ? "bg-[var(--accent-copper)] text-white"
+                      : "text-[var(--muted)] hover:text-white"
+                  }`}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {errorMessage ? (
@@ -741,92 +907,29 @@ export function BoardviewLab() {
           ) : null}
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div
-            ref={containerRef}
-            className="relative min-h-[420px] overflow-hidden rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] md:min-h-[560px]"
-          >
-            <canvas
-              ref={canvasRef}
-              className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
-              onWheel={handleWheel}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerCancel}
-            />
-          </div>
-
-          <aside className="grid gap-4">
-            <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Busca local
-              </p>
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar referencia ou net"
-                className="mt-3 w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[rgba(109,94,242,0.55)]"
+        <div className="mt-4">
+          {viewerMode === "split" ? (
+            <div className="grid gap-4 2xl:grid-cols-2">
+              {boardviewPanel}
+              <SchematicPdfViewer
+                fileBytes={pdfBytes}
+                fileName={pdfFileName}
+                linkedSearchTerm={linkedSchematicQuery}
+                isReadingFile={isReadingPdfFile}
+                errorMessage={pdfErrorMessage}
               />
-
-              <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
-                {searchHits.length ? (
-                  searchHits.map((hit) => (
-                    <button
-                      key={hit.id}
-                      type="button"
-                      onClick={() =>
-                        selectEntry(
-                          hit.selection,
-                          hit.selection.kind === "component" ||
-                            hit.selection.kind === "padPin",
-                        )
-                      }
-                      className="w-full rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-3 text-left transition hover:bg-white/5"
-                    >
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        {hit.title}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-                        {hit.subtitle}
-                      </p>
-                    </button>
-                  ))
-                ) : query.trim() ? (
-                  <div className="rounded-[18px] border border-dashed border-[var(--panel-border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
-                    Nenhum resultado para esta busca.
-                  </div>
-                ) : (
-                  <div className="rounded-[18px] border border-dashed border-[var(--panel-border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
-                    Digite uma referencia ou net para localizar itens no boardview.
-                  </div>
-                )}
-              </div>
             </div>
-
-            <div className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                Totais lidos
-              </p>
-              {model ? (
-                <div className="mt-3 grid gap-2 text-sm text-[var(--foreground)]">
-                  <p>Componentes: {model.parsed.metadata.parsedCounts.components}</p>
-                  <p>Pads/pinos: {model.parsed.metadata.parsedCounts.padPins}</p>
-                  <p>Test points: {model.parsed.metadata.parsedCounts.testPoints}</p>
-                  <p>Nets: {model.parsed.metadata.parsedCounts.nets}</p>
-                  <p>
-                    Placa: {model.parsed.metadata.boardWidthMm.toFixed(2)} x{" "}
-                    {model.parsed.metadata.boardHeightMm.toFixed(2)} mm
-                  </p>
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-[var(--muted)]">
-                  Nenhum boardview carregado.
-                </p>
-              )}
-            </div>
-          </aside>
+          ) : viewerMode === "schematic" ? (
+            <SchematicPdfViewer
+              fileBytes={pdfBytes}
+              fileName={pdfFileName}
+              linkedSearchTerm={linkedSchematicQuery}
+              isReadingFile={isReadingPdfFile}
+              errorMessage={pdfErrorMessage}
+            />
+          ) : (
+            boardviewPanel
+          )}
         </div>
       </section>
 
