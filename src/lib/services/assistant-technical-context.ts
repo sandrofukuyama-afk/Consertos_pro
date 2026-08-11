@@ -1,5 +1,3 @@
-import { PDFParse } from "pdf-parse";
-
 import {
   buildBoardviewLabModel,
   getComponentPadPins,
@@ -382,6 +380,7 @@ function buildBoardviewSearchContext(
 }
 
 async function extractSchematicPageTexts(bytes: Uint8Array) {
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({
     data: Buffer.from(bytes),
   });
