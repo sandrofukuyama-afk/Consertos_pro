@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 Acesso técnico
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[rgba(230,228,245,0.74)]">
-                Entre com seu usuário da oficina ou crie um novo acesso técnico para começar a usar o sistema.
+                Entre com seu usuário da oficina. Novos acessos técnicos devem ser liberados internamente por um usuário autorizado.
               </p>
             </div>
 

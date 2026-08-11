@@ -4,7 +4,7 @@ const AUTH_ERROR_MAP: Array<[RegExp, string]> = [
   [/invalid login credentials/i, "E-mail ou senha inválidos."],
   [/email address .* is invalid/i, "Informe um e-mail válido para continuar."],
   [/user already registered/i, "Já existe uma conta cadastrada com este e-mail."],
-  [/signup is disabled/i, "O cadastro de novos usuários está desativado no Supabase."],
+  [/signup is disabled/i, "Novos acessos não podem ser criados nesta tela. Solicite a liberação a um usuário autorizado nas configurações internas."],
   [/password should be at least/i, "A senha precisa ter pelo menos 6 caracteres."],
 ];
 

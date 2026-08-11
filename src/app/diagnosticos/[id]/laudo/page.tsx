@@ -149,8 +149,8 @@ export default async function LaudoPage({ params }: LaudoPageProps) {
         </div>
         <div className="text-center">
           <div className="border-b border-gray-400 mx-auto w-4/5 h-8"></div>
-          <p className="mt-2 font-semibold text-gray-700">Assinatura do Cliente</p>
-          <p className="text-xs text-gray-500">Aprovação do Serviço</p>
+          <p className="mt-2 font-semibold text-gray-700">Validação Interna</p>
+          <p className="text-xs text-gray-500">Revisão técnica do laudo</p>
         </div>
       </footer>
 

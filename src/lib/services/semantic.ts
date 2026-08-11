@@ -8,8 +8,11 @@ import {
   isExternalEmbeddingConfigured,
 } from "@/lib/ai/embeddings";
 import {
+  assertExtractedTechnicalDocumentText,
   buildTechnicalDocumentIndexPayload,
   extractTechnicalDocumentText,
+  resolveTechnicalDocumentFileName,
+  TechnicalDocumentIndexingError,
 } from "@/lib/services/document-indexing";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
@@ -41,6 +44,49 @@ function hashContent(value: string) {
 
 async function resolveClient(client?: SupabaseServerClient) {
   return client ?? createClient();
+}
+
+async function loadTechnicalDocumentFileFromStorage(
+  supabase: SupabaseServerClient,
+  storagePath: string,
+  mimeType: string,
+) {
+  const { data, error } = await supabase.storage
+    .from("technical-documents")
+    .download(storagePath);
+
+  if (error || !data) {
+    throw new TechnicalDocumentIndexingError(
+      `Nao foi possivel baixar o arquivo ${storagePath} do storage para reindexacao.`,
+    );
+  }
+
+  const fileName = resolveTechnicalDocumentFileName(storagePath);
+
+  return new File([data], fileName, {
+    type: mimeType || data.type || "application/octet-stream",
+  });
+}
+
+async function markTechnicalDocumentIndexFailure(
+  supabase: SupabaseServerClient,
+  documentId: string,
+  reason: string,
+) {
+  await supabase
+    .from("technical_documents")
+    .update({ is_indexed: false })
+    .eq("id", documentId);
+
+  await supabase.from("change_history").insert({
+    entity_type: "technical_document",
+    entity_id: documentId,
+    change_type: "update",
+    field_name: "semantic_indexing",
+    new_value_text: reason,
+    change_reason: "Falha clara registrada para nova tentativa de indexacao",
+    changed_by_user_id: null,
+  });
 }
 
 async function findEmbeddingSource(
@@ -283,21 +329,26 @@ export async function syncTechnicalDocumentSemanticSource(
     };
   }
 
-  const manufacturer = pickRelation(data.manufacturers);
-  const extractedText = file ? await extractTechnicalDocumentText(file) : "";
-  const payload = buildTechnicalDocumentIndexPayload({
-    title: data.title,
-    documentType: data.document_type,
-    manufacturerName: manufacturer?.name ?? null,
-    notes: data.notes,
-    fileName: data.storage_path,
-    mimeType: data.mime_type,
-    extractedText,
-  });
+  try {
+    const documentFile =
+      file ?? (await loadTechnicalDocumentFileFromStorage(supabase, data.storage_path, data.mime_type));
+    const manufacturer = pickRelation(data.manufacturers);
+    const extractedText = assertExtractedTechnicalDocumentText(
+      await extractTechnicalDocumentText(documentFile),
+      documentFile.name,
+    );
+    const payload = buildTechnicalDocumentIndexPayload({
+      title: data.title,
+      documentType: data.document_type,
+      manufacturerName: manufacturer?.name ?? null,
+      notes: data.notes,
+      fileName: documentFile.name,
+      mimeType: documentFile.type || data.mime_type,
+      extractedText,
+    });
 
-  await supabase.from("document_chunks").delete().eq("technical_document_id", data.id);
+    await supabase.from("document_chunks").delete().eq("technical_document_id", data.id);
 
-  if (payload.chunks.length) {
     const { error: chunkError } = await supabase.from("document_chunks").insert(
       payload.chunks.map((chunk) => ({
         technical_document_id: data.id,
@@ -311,25 +362,33 @@ export async function syncTechnicalDocumentSemanticSource(
     if (chunkError) {
       throw chunkError;
     }
+
+    const model = await upsertEmbeddingSource(supabase, {
+      sourceType: "technical_document",
+      sourceId: data.id,
+      contentRole: "summary",
+      contentText: payload.summaryText,
+    });
+
+    await supabase
+      .from("technical_documents")
+      .update({ is_indexed: true })
+      .eq("id", data.id);
+
+    return {
+      indexed: true,
+      chunksCount: payload.chunks.length,
+      model,
+    };
+  } catch (error) {
+    const reason =
+      error instanceof Error
+        ? error.message
+        : "Falha ao obter o conteudo real do documento para indexacao.";
+
+    await markTechnicalDocumentIndexFailure(supabase, data.id, reason);
+    throw error;
   }
-
-  const model = await upsertEmbeddingSource(supabase, {
-    sourceType: "technical_document",
-    sourceId: data.id,
-    contentRole: "summary",
-    contentText: payload.summaryText,
-  });
-
-  await supabase
-    .from("technical_documents")
-    .update({ is_indexed: payload.chunks.length > 0 })
-    .eq("id", data.id);
-
-  return {
-    indexed: payload.chunks.length > 0,
-    chunksCount: payload.chunks.length,
-    model,
-  };
 }
 
 export async function syncSemanticBacklog(

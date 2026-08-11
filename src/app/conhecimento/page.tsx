@@ -24,7 +24,7 @@ export default async function ConhecimentoPage({
   const { data: profile } = await supabase
     .from("technician_profiles")
     .select("is_reviewer")
-    .eq("id", user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
   const isReviewer = profile?.is_reviewer ?? false;
 

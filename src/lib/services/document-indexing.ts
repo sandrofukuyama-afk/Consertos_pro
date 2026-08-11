@@ -9,6 +9,13 @@ const TEXT_EXTENSIONS = [".txt", ".md", ".csv", ".json", ".xml", ".log"];
 const CHUNK_SIZE = 1200;
 const CHUNK_OVERLAP = 180;
 
+export class TechnicalDocumentIndexingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TechnicalDocumentIndexingError";
+  }
+}
+
 type DocumentIndexInput = {
   title: string;
   documentType: string;
@@ -32,6 +39,12 @@ type DocumentIndexPayload = {
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+export function resolveTechnicalDocumentFileName(storagePath: string) {
+  const normalized = storagePath.replaceAll("\\", "/");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1] || "technical-document";
 }
 
 function hashContent(value: string) {
@@ -106,6 +119,21 @@ export async function extractTechnicalDocumentText(file: File) {
   }
 
   return "";
+}
+
+export function assertExtractedTechnicalDocumentText(
+  extractedText: string | null | undefined,
+  fileName: string,
+) {
+  const normalized = normalizeWhitespace(extractedText ?? "");
+
+  if (!normalized) {
+    throw new TechnicalDocumentIndexingError(
+      `Nao foi possivel extrair texto real do arquivo ${fileName}. O documento continuara pendente para nova tentativa de indexacao.`,
+    );
+  }
+
+  return normalized;
 }
 
 export function buildTechnicalDocumentIndexPayload(
