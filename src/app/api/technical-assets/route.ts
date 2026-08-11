@@ -1,14 +1,16 @@
-import { createHash } from "node:crypto";
-
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  TECHNICAL_ASSET_BUCKET,
   buildTechnicalAssetStoragePath,
+  getTechnicalAssetExtractedTextStatus,
+  getTechnicalAssetMimeType,
+  getTechnicalAssetParserStatus,
+  mapTechnicalAssetType,
   normalizeTechnicalAssetHash,
   planTechnicalAssetPersistence,
+  TECHNICAL_ASSET_BUCKET,
   validateTechnicalAssetFile,
 } from "@/lib/technical-assets.mjs";
 
@@ -22,6 +24,17 @@ type TechnicalAssetRow = {
     board_id: string | null;
     equipment_model_id: string | null;
   }> | null;
+};
+
+type TechnicalAssetMetadataPayload = {
+  fileName?: string;
+  fileSizeBytes?: number;
+  format?: string;
+  hashSha256?: string;
+  mimeType?: string;
+  boardId?: string | null;
+  equipmentModelId?: string | null;
+  diagnosticId?: string | null;
 };
 
 function matchesLinkContext(
@@ -120,7 +133,7 @@ async function ensureAssetLink({
 
 function buildAssociationMessage(boardId: string | null, equipmentModelId: string | null) {
   if (!boardId && !equipmentModelId) {
-    return "Arquivo salvo sem associação.";
+    return "Arquivo salvo sem associacao.";
   }
 
   return "Arquivo salvo e associado ao contexto atual.";
@@ -129,7 +142,7 @@ function buildAssociationMessage(boardId: string | null, equipmentModelId: strin
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Autenticação necessária." }, { status: 401 });
+    return NextResponse.json({ error: "Autenticacao necessaria." }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -138,7 +151,7 @@ export async function GET(request: Request) {
   const equipmentModelId = searchParams.get("equipment_model_id")?.trim() || null;
 
   if (!rawHash) {
-    return NextResponse.json({ error: "Hash SHA-256 é obrigatório." }, { status: 400 });
+    return NextResponse.json({ error: "Hash SHA-256 e obrigatorio." }, { status: 400 });
   }
 
   let hash: string;
@@ -146,7 +159,7 @@ export async function GET(request: Request) {
     hash = normalizeTechnicalAssetHash(rawHash);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Hash inválido." },
+      { error: error instanceof Error ? error.message : "Hash invalido." },
       { status: 400 },
     );
   }
@@ -178,7 +191,7 @@ export async function GET(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Não foi possível verificar a biblioteca técnica.",
+            : "Nao foi possivel verificar a biblioteca tecnica.",
       },
       { status: 500 },
     );
@@ -188,27 +201,34 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Autenticação necessária." }, { status: 401 });
+    return NextResponse.json({ error: "Autenticacao necessaria." }, { status: 401 });
   }
 
   const supabase = await createClient();
-  const formData = await request.formData();
-  const file = formData.get("file");
-  const boardId = String(formData.get("board_id") ?? "").trim() || null;
-  const equipmentModelId =
-    String(formData.get("equipment_model_id") ?? "").trim() || null;
-  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim() || null;
+  const payload = (await request.json().catch(() => null)) as TechnicalAssetMetadataPayload | null;
 
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Arquivo técnico ausente." }, { status: 400 });
+  if (!payload?.fileName || !payload?.format || !payload?.hashSha256) {
+    return NextResponse.json(
+      { error: "Metadados do arquivo tecnico estao incompletos." },
+      { status: 400 },
+    );
   }
 
+  const boardId = String(payload.boardId ?? "").trim() || null;
+  const equipmentModelId = String(payload.equipmentModelId ?? "").trim() || null;
+  const diagnosticId = String(payload.diagnosticId ?? "").trim() || null;
+
   try {
-    const validation = validateTechnicalAssetFile(file);
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const hash = normalizeTechnicalAssetHash(
-      createHash("sha256").update(bytes).digest("hex"),
-    );
+    const validation = validateTechnicalAssetFile({
+      name: payload.fileName,
+      size: payload.fileSizeBytes,
+      type: payload.mimeType,
+    });
+    const hash = normalizeTechnicalAssetHash(payload.hashSha256);
+    const storagePath = buildTechnicalAssetStoragePath({
+      hash,
+      format: validation.format,
+    });
 
     let asset = await findAssetByHash(hash);
     let matchingLink =
@@ -225,82 +245,59 @@ export async function POST(request: Request) {
       existingLinkId: matchingLink?.id ?? null,
     });
 
-    if (plan.shouldUploadBinary) {
-      const storagePath = buildTechnicalAssetStoragePath({
-        hash,
-        format: validation.format,
-      });
+    if (plan.shouldInsertAsset) {
+      const { data: insertedAsset, error: insertAssetError } = await supabase
+        .from("technical_assets")
+        .insert({
+          asset_type: mapTechnicalAssetType(validation.format),
+          file_format: validation.format,
+          original_filename: payload.fileName,
+          storage_bucket: TECHNICAL_ASSET_BUCKET,
+          storage_path: storagePath,
+          file_size_bytes: validation.fileSizeBytes,
+          file_hash_sha256: hash,
+          mime_type: getTechnicalAssetMimeType(validation.format, payload.mimeType),
+          parser_status: getTechnicalAssetParserStatus(validation.format),
+          extracted_text_status: getTechnicalAssetExtractedTextStatus(validation.format),
+          metadata: {
+            source: "boardview_lab",
+            diagnostic_id: diagnosticId,
+          },
+          uploaded_by_user_id: user.id,
+        })
+        .select(`
+          id,
+          original_filename,
+          asset_type,
+          file_format,
+          technical_asset_links (
+            id,
+            board_id,
+            equipment_model_id
+          )
+        `)
+        .single<TechnicalAssetRow>();
 
-      const { error: uploadError } = await supabase.storage
-        .from(TECHNICAL_ASSET_BUCKET)
-        .upload(storagePath, bytes, {
-          contentType: validation.mimeType,
-          upsert: false,
-        });
-
-      if (uploadError) {
+      if (insertAssetError || !insertedAsset) {
         asset = await findAssetByHash(hash);
         if (!asset) {
-          return NextResponse.json({ error: uploadError.message }, { status: 500 });
-        }
-      }
-
-      if (!asset) {
-        const { data: insertedAsset, error: insertAssetError } = await supabase
-          .from("technical_assets")
-          .insert({
-            asset_type: validation.assetType,
-            file_format: validation.format,
-            original_filename: file.name,
-            storage_bucket: TECHNICAL_ASSET_BUCKET,
-            storage_path: storagePath,
-            file_size_bytes: validation.fileSizeBytes,
-            file_hash_sha256: hash,
-            mime_type: validation.mimeType,
-            parser_status: validation.parserStatus,
-            extracted_text_status: validation.extractedTextStatus,
-            metadata: {
-              source: "boardview_lab",
-              diagnostic_id: diagnosticId,
+          return NextResponse.json(
+            {
+              error:
+                insertAssetError?.message ??
+                "Falha ao registrar os metadados do arquivo tecnico no banco.",
             },
-            uploaded_by_user_id: user.id,
-          })
-          .select(`
-            id,
-            original_filename,
-            asset_type,
-            file_format,
-            technical_asset_links (
-              id,
-              board_id,
-              equipment_model_id
-            )
-          `)
-          .single<TechnicalAssetRow>();
-
-        if (insertAssetError || !insertedAsset) {
-          await supabase.storage.from(TECHNICAL_ASSET_BUCKET).remove([storagePath]);
-
-          asset = await findAssetByHash(hash);
-          if (!asset) {
-            return NextResponse.json(
-              {
-                error:
-                  insertAssetError?.message ??
-                  "Falha ao registrar o arquivo técnico no banco.",
-              },
-              { status: 500 },
-            );
-          }
-        } else {
-          asset = insertedAsset;
+            { status: 500 },
+          );
         }
+      } else {
+        asset = insertedAsset;
       }
     }
 
     if (!asset) {
       return NextResponse.json(
-        { error: "Falha ao localizar o arquivo técnico após o upload." },
+        { error: "Falha ao localizar o arquivo tecnico apos o upload." },
         { status: 500 },
       );
     }
@@ -337,8 +334,8 @@ export async function POST(request: Request) {
       associationCreated,
       message: alreadySaved
         ? associationCreated
-          ? "Arquivo já estava salvo e foi vinculado ao contexto atual."
-          : "Arquivo já salvo."
+          ? "Arquivo ja estava salvo e foi vinculado ao contexto atual."
+          : "Arquivo ja salvo."
         : buildAssociationMessage(boardId, equipmentModelId),
     });
   } catch (error) {
@@ -347,7 +344,7 @@ export async function POST(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Falha ao salvar o arquivo técnico.",
+            : "Falha ao salvar o arquivo tecnico.",
       },
       { status: 400 },
     );

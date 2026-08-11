@@ -33,9 +33,12 @@ import {
 } from "@/lib/boardview/landrex-testlink";
 import { getBoardviewSelectionSchematicQuery } from "@/lib/boardview/schematic-pdf";
 import { calculateAvailableViewportHeight } from "@/lib/boardview/viewer-utils";
+import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  buildTechnicalAssetStoragePath,
   formatTechnicalAssetSize,
   getTechnicalAssetDisplayType,
+  TECHNICAL_ASSET_BUCKET,
   validateTechnicalAssetFile,
 } from "@/lib/technical-assets.mjs";
 
@@ -245,6 +248,7 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [splitRatio, setSplitRatio] = useState(0.52);
   const deferredQuery = useDeferredValue(query);
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const visibleSelected =
     selected && isSelectionOnVisibleSide(selected, sideFilter) ? selected : null;
@@ -650,6 +654,19 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
       return;
     }
 
+    if (!currentFile.hashSha256) {
+      updateTechnicalFileState(slot, (value) =>
+        value
+          ? {
+              ...value,
+              status: "error",
+              message: "Aguarde o hash SHA-256 terminar antes de salvar.",
+            }
+          : value,
+      );
+      return;
+    }
+
     updateTechnicalFileState(slot, (value) =>
       value
         ? {
@@ -661,21 +678,47 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
     );
 
     try {
-      const formData = new FormData();
-      formData.append("file", currentFile.file);
-      if (initialAssociation.boardId) {
-        formData.append("board_id", initialAssociation.boardId);
-      }
-      if (initialAssociation.equipmentModelId) {
-        formData.append("equipment_model_id", initialAssociation.equipmentModelId);
-      }
-      if (initialAssociation.diagnosticId) {
-        formData.append("diagnostic_id", initialAssociation.diagnosticId);
+      const storagePath = buildTechnicalAssetStoragePath({
+        hash: currentFile.hashSha256,
+        format: currentFile.format,
+      });
+
+      if (!currentFile.existingAssetId) {
+        const { error: uploadError } = await supabase.storage
+          .from(TECHNICAL_ASSET_BUCKET)
+          .upload(storagePath, currentFile.file, {
+            contentType: currentFile.mimeType,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          const normalizedMessage = uploadError.message.toLowerCase();
+          const isDuplicateObject =
+            normalizedMessage.includes("already exists") ||
+            normalizedMessage.includes("duplicate") ||
+            normalizedMessage.includes("the resource already exists");
+
+          if (!isDuplicateObject) {
+            throw new Error(uploadError.message);
+          }
+        }
       }
 
       const response = await fetch("/api/technical-assets", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileName: currentFile.fileName,
+          fileSizeBytes: currentFile.fileSizeBytes,
+          format: currentFile.format,
+          hashSha256: currentFile.hashSha256,
+          mimeType: currentFile.mimeType,
+          boardId: initialAssociation.boardId,
+          equipmentModelId: initialAssociation.equipmentModelId,
+          diagnosticId: initialAssociation.diagnosticId,
+        }),
       });
 
       const payload = await readApiResponsePayload(response);
