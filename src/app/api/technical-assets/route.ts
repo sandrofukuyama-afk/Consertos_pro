@@ -19,6 +19,7 @@ type TechnicalAssetRow = {
   original_filename: string;
   asset_type: string;
   file_format: string;
+  metadata?: Record<string, unknown> | null;
   technical_asset_links?: Array<{
     id: string;
     board_id: string | null;
@@ -46,6 +47,10 @@ type TechnicalAssetAssociationPayload = {
   assetIds?: string[];
   boardId?: string | null;
   equipmentModelId?: string | null;
+  displayName?: string | null;
+  description?: string | null;
+  manufacturerId?: string | null;
+  manufacturerName?: string | null;
   createBoard?: {
     boardCode?: string;
     description?: string | null;
@@ -144,6 +149,7 @@ async function findAssetByHash(hash: string) {
       original_filename,
       asset_type,
       file_format,
+      metadata,
       technical_asset_links (
         id,
         board_id,
@@ -171,6 +177,7 @@ async function findAssetsByIds(assetIds: string[]) {
       original_filename,
       asset_type,
       file_format,
+      metadata,
       technical_asset_links (
         id,
         board_id,
@@ -244,6 +251,18 @@ async function ensureAssetLink({
   }
 
   return { linkId: insertedLink.id, created: true };
+}
+
+async function clearAssetLinks(assetId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("technical_asset_links")
+    .delete()
+    .eq("technical_asset_id", assetId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 function buildAssociationMessage(boardId: string | null, equipmentModelId: string | null) {
@@ -636,6 +655,100 @@ async function trySyncPrimaryAssociation(
   throw new Error(error.message);
 }
 
+async function resolveManufacturerMetadata(
+  manufacturerId: string | null,
+  manufacturerName: string | null,
+) {
+  const normalizedManufacturerId = String(manufacturerId ?? "").trim() || null;
+  const normalizedManufacturerName = String(manufacturerName ?? "").trim() || null;
+
+  if (normalizedManufacturerId) {
+    const supabase = await createClient();
+    const { data: manufacturer, error } = await supabase
+      .from("manufacturers")
+      .select("id, name")
+      .eq("id", normalizedManufacturerId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!manufacturer) {
+      throw new Error("O fabricante selecionado nao foi encontrado.");
+    }
+
+    return {
+      manufacturerId: manufacturer.id,
+      manufacturerName: manufacturer.name ?? normalizedManufacturerName,
+    };
+  }
+
+  return {
+    manufacturerId: null,
+    manufacturerName: normalizedManufacturerName,
+  };
+}
+
+async function updateTechnicalAssetMetadata({
+  assetId,
+  displayName,
+  description,
+  manufacturerId,
+  manufacturerName,
+}: {
+  assetId: string;
+  displayName: string | null;
+  description: string | null;
+  manufacturerId: string | null;
+  manufacturerName: string | null;
+}) {
+  const assets = await findAssetsByIds([assetId]);
+  const asset = assets[0] ?? null;
+
+  if (!asset) {
+    throw new Error("Arquivo tecnico nao encontrado.");
+  }
+
+  const metadata = { ...(asset.metadata ?? {}) } as Record<string, unknown>;
+
+  if (displayName) {
+    metadata.display_name = displayName;
+  } else {
+    delete metadata.display_name;
+  }
+
+  if (description) {
+    metadata.description = description;
+  } else {
+    delete metadata.description;
+  }
+
+  if (manufacturerId) {
+    metadata.manufacturer_id = manufacturerId;
+  } else {
+    delete metadata.manufacturer_id;
+  }
+
+  if (manufacturerName) {
+    metadata.manufacturer_name = manufacturerName;
+  } else {
+    delete metadata.manufacturer_name;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("technical_assets")
+    .update({
+      metadata,
+    })
+    .eq("id", assetId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -879,26 +992,70 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const board = await ensureBoardAssociationTarget(payload ?? {});
-    const equipmentModel = await ensureEquipmentModelAssociationTarget(payload ?? {});
+    const associationRequestProvided =
+      payload !== null &&
+      (Object.prototype.hasOwnProperty.call(payload, "boardId") ||
+        Object.prototype.hasOwnProperty.call(payload, "equipmentModelId") ||
+        Boolean(payload?.createBoard) ||
+        Boolean(payload?.createEquipmentModel));
+    const board = associationRequestProvided
+      ? await ensureBoardAssociationTarget(payload ?? {})
+      : { boardId: null, boardName: null };
+    const equipmentModel = associationRequestProvided
+      ? await ensureEquipmentModelAssociationTarget(payload ?? {})
+      : { equipmentModelId: null, equipmentModelName: null };
+    const manufacturer = await resolveManufacturerMetadata(
+      String(payload?.manufacturerId ?? "").trim() || null,
+      String(payload?.manufacturerName ?? "").trim() || null,
+    );
+    const displayName = String(payload?.displayName ?? "").trim() || null;
+    const description = String(payload?.description ?? "").trim() || null;
+    const hasAssociationUpdate = associationRequestProvided;
+    const hasMetadataUpdate = Boolean(
+      displayName ||
+        description ||
+        manufacturer.manufacturerId ||
+        manufacturer.manufacturerName,
+    );
 
-    if (!board.boardId && !equipmentModel.equipmentModelId) {
+    if (
+      !hasAssociationUpdate &&
+      !hasMetadataUpdate
+    ) {
       return NextResponse.json(
-        { error: "Selecione uma placa, um modelo ou informe os dados para criar a associacao." },
+        {
+          error:
+            "Informe ao menos um campo de metadado ou uma associacao de placa/modelo para salvar.",
+        },
         { status: 400 },
       );
     }
 
-    await ensureModelBoardLink(board.boardId, equipmentModel.equipmentModelId);
+    if (hasAssociationUpdate) {
+      await ensureModelBoardLink(board.boardId, equipmentModel.equipmentModelId);
+    }
 
     for (const asset of assets) {
-      await ensureAssetLink({
+      if (hasAssociationUpdate) {
+        await clearAssetLinks(asset.id);
+        if (board.boardId || equipmentModel.equipmentModelId) {
+          await ensureAssetLink({
+            assetId: asset.id,
+            boardId: board.boardId,
+            equipmentModelId: equipmentModel.equipmentModelId,
+            linkedByUserId: user.id,
+          });
+        }
+        await trySyncPrimaryAssociation(asset.id, board.boardId, equipmentModel.equipmentModelId);
+      }
+
+      await updateTechnicalAssetMetadata({
         assetId: asset.id,
-        boardId: board.boardId,
-        equipmentModelId: equipmentModel.equipmentModelId,
-        linkedByUserId: user.id,
+        displayName,
+        description,
+        manufacturerId: manufacturer.manufacturerId,
+        manufacturerName: manufacturer.manufacturerName,
       });
-      await trySyncPrimaryAssociation(asset.id, board.boardId, equipmentModel.equipmentModelId);
     }
 
     const updatedAssets = await findAssetsByIds(assetIds);
@@ -912,9 +1069,13 @@ export async function PATCH(request: Request) {
       assetIds,
       association,
       message:
-        assetIds.length > 1
-          ? "Arquivos tecnicos associados ao contexto selecionado."
-          : "Arquivo tecnico associado ao contexto selecionado.",
+        hasAssociationUpdate
+          ? assetIds.length > 1
+            ? "Arquivos tecnicos associados ao contexto selecionado."
+            : "Arquivo tecnico associado ao contexto selecionado."
+          : assetIds.length > 1
+            ? "Metadados dos arquivos tecnicos atualizados."
+            : "Metadados do arquivo tecnico atualizados.",
     });
   } catch (error) {
     return NextResponse.json(

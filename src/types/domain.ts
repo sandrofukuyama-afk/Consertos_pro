@@ -68,9 +68,13 @@ export type TechnicalLibraryItem = {
   id: string;
   source: "technical_document" | "technical_asset";
   title: string;
+  originalFileName: string | null;
   documentType: string;
   manufacturer: string;
+  manufacturerId: string | null;
   relation: string;
+  boardId: string | null;
+  equipmentModelId: string | null;
   uploadedAt: string;
   uploadedAtIso: string;
   signedUrl: string | null;
@@ -80,6 +84,7 @@ export type TechnicalLibraryItem = {
   associationStatus: "associated" | "unassociated" | "legacy";
   associationLabel: string | null;
   boardviewLabHref: string | null;
+  description: string | null;
 };
 
 export type KnowledgeItem = {

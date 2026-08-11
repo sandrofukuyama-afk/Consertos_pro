@@ -9,7 +9,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Autenticacao necessaria." }, { status: 401 });
@@ -17,6 +17,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const { assetId } = await context.params;
   const normalizedAssetId = assetId.trim();
+  const shouldDownload = new URL(request.url).searchParams.get("download") === "1";
 
   if (!normalizedAssetId) {
     return NextResponse.json({ error: "Asset invalido." }, { status: 400 });
@@ -54,7 +55,7 @@ export async function GET(_request: Request, context: RouteContext) {
     status: 200,
     headers: {
       "Content-Type": asset.mime_type || "application/octet-stream",
-      "Content-Disposition": `inline; filename="${encodeURIComponent(asset.original_filename)}"`,
+      "Content-Disposition": `${shouldDownload ? "attachment" : "inline"}; filename="${encodeURIComponent(asset.original_filename)}"`,
       "Cache-Control": "private, no-store, max-age=0",
     },
   });

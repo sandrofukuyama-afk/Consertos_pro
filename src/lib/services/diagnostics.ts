@@ -93,6 +93,7 @@ type TechnicalAssetRow = {
   file_format: string;
   file_size_bytes: number;
   created_at: string;
+  metadata: Record<string, unknown> | null;
   technical_asset_links:
     | Array<{
         board_id: string | null;
@@ -836,6 +837,7 @@ export async function getTechnicalLibraryItems() {
         file_format,
         file_size_bytes,
         created_at,
+        metadata,
         technical_asset_links(
           board_id,
           equipment_model_id,
@@ -850,6 +852,25 @@ export async function getTechnicalLibraryItems() {
   const assetItems = ((technicalAssetsResult.data ?? []) as TechnicalAssetRow[]).map((row) => {
     const association = buildTechnicalAssetAssociation(row);
     const associationLabel = association.modelName ?? association.boardName ?? "Nao associado";
+    const metadata = row.metadata ?? {};
+    const displayName =
+      typeof metadata.display_name === "string" && metadata.display_name.trim()
+        ? metadata.display_name.trim()
+        : row.original_filename;
+    const description =
+      typeof metadata.description === "string" && metadata.description.trim()
+        ? metadata.description.trim()
+        : null;
+    const manufacturerName =
+      typeof metadata.manufacturer_name === "string" && metadata.manufacturer_name.trim()
+        ? metadata.manufacturer_name.trim()
+        : "Biblioteca tecnica";
+    const manufacturerId =
+      typeof metadata.manufacturer_id === "string" && metadata.manufacturer_id.trim()
+        ? metadata.manufacturer_id.trim()
+        : null;
+    const boardId = row.technical_asset_links?.[0]?.board_id ?? null;
+    const equipmentModelId = row.technical_asset_links?.[0]?.equipment_model_id ?? null;
     const boardviewLabHref =
       row.file_format === "brd" || row.file_format === "bdv"
         ? `/boardview/lab?boardview_asset_id=${row.id}`
@@ -860,10 +881,14 @@ export async function getTechnicalLibraryItems() {
     return {
       id: row.id,
       source: "technical_asset",
-      title: row.original_filename,
+      title: displayName,
+      originalFileName: row.original_filename,
       documentType: getTechnicalAssetTypeLabel(row.file_format, row.asset_type),
-      manufacturer: "Biblioteca tecnica",
+      manufacturer: manufacturerName,
+      manufacturerId,
       relation: association.modelName ?? association.boardName ?? "Nao associado",
+      boardId,
+      equipmentModelId,
       uploadedAt: formatRelativeTime(row.created_at),
       uploadedAtIso: row.created_at,
       signedUrl: null,
@@ -874,6 +899,7 @@ export async function getTechnicalLibraryItems() {
         association.boardName || association.modelName ? "associated" : "unassociated",
       associationLabel,
       boardviewLabHref,
+      description,
     } satisfies TechnicalLibraryItem;
   });
 
@@ -881,18 +907,23 @@ export async function getTechnicalLibraryItems() {
     id: item.id,
     source: "technical_document",
     title: item.title,
+    originalFileName: null,
     documentType: item.documentType,
     manufacturer: item.manufacturer,
-      relation: item.relation,
-      uploadedAt: item.uploadedAt,
-      uploadedAtIso: item.uploadedAtIso,
-      signedUrl: item.signedUrl,
+    manufacturerId: null,
+    relation: item.relation,
+    boardId: null,
+    equipmentModelId: null,
+    uploadedAt: item.uploadedAt,
+    uploadedAtIso: item.uploadedAtIso,
+    signedUrl: item.signedUrl,
     chunksCount: item.chunksCount,
     isIndexed: item.isIndexed,
     fileSizeLabel: null,
     associationStatus: "legacy" as const,
     associationLabel: null,
     boardviewLabHref: null,
+    description: null,
   })) satisfies TechnicalLibraryItem[];
 
   return [...assetItems, ...legacyItems].sort((left, right) =>
