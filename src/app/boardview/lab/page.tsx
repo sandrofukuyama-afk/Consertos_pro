@@ -7,9 +7,9 @@ export default async function BoardviewLabPage() {
 
   return (
     <AppShell
-      title="Laboratorio boardview"
+      title="Laboratório boardview"
       description="Abrir e inspecionar arquivos .brd e esquemas .pdf localmente, sem upload."
-      actionLabel="Voltar aos casos"
+      actionLabel="Voltar ao início"
       actionHref="/"
       user={user}
       shellMode="workspace"
