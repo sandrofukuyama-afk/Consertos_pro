@@ -77,7 +77,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <div className="flex shrink-0">
               <Link
                 href="/boardview/lab"
-                className="inline-flex items-center justify-center rounded-full border border-[rgba(45,139,130,0.3)] bg-[var(--card-surface)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[rgba(45,139,130,0.45)] hover:bg-white/80"
+                className="inline-flex items-center justify-center rounded-full border border-[rgba(109,94,242,0.68)] bg-[var(--accent-copper)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(109,94,242,0.32)] transition hover:border-[rgba(109,94,242,0.9)] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(109,94,242,0.35)]"
               >
                 Abrir boardview
               </Link>
