@@ -7,7 +7,8 @@
     "check:encoding": "node scripts/check-encoding.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "npm run check:encoding && eslint"
+    "lint": "npm run check:encoding && eslint",
+    "test:technical-assets": "node --test src/lib/technical-assets.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

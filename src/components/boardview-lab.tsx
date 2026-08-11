@@ -4,6 +4,7 @@ import {
   type ChangeEvent,
   type PointerEvent as ReactPointerEvent,
   startTransition,
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -32,6 +33,11 @@ import {
 } from "@/lib/boardview/landrex-testlink";
 import { getBoardviewSelectionSchematicQuery } from "@/lib/boardview/schematic-pdf";
 import { calculateAvailableViewportHeight } from "@/lib/boardview/viewer-utils";
+import {
+  formatTechnicalAssetSize,
+  getTechnicalAssetDisplayType,
+  validateTechnicalAssetFile,
+} from "@/lib/technical-assets.mjs";
 
 type CanvasSize = {
   width: number;
@@ -40,6 +46,110 @@ type CanvasSize = {
 
 type LabViewerMode = "split" | "boardview" | "schematic";
 type MobileWorkspaceTab = "boardview" | "schematic" | "details";
+type SaveableTechnicalFileSlot = "boardview" | "schematic";
+type TechnicalAssetStateStatus =
+  | "idle"
+  | "hashing"
+  | "checking"
+  | "ready"
+  | "saving"
+  | "saved"
+  | "error";
+
+type BoardviewLabAssociation = {
+  boardId: string | null;
+  boardName: string | null;
+  equipmentModelId: string | null;
+  equipmentModelName: string | null;
+  diagnosticId: string | null;
+};
+
+type BoardviewLabProps = {
+  initialAssociation: BoardviewLabAssociation;
+};
+
+type SaveableTechnicalFileState = {
+  slot: SaveableTechnicalFileSlot;
+  file: File;
+  fileName: string;
+  format: "brd" | "bdv" | "pdf";
+  assetType: "boardview" | "schematic_pdf";
+  mimeType: string;
+  fileSizeBytes: number;
+  maxSizeBytes: number;
+  hashSha256: string | null;
+  status: TechnicalAssetStateStatus;
+  message: string | null;
+  existingAssetId: string | null;
+  associationLinked: boolean;
+};
+
+function describeAssociationLabel(association: BoardviewLabAssociation) {
+  const parts = [
+    association.boardName ? `Placa ${association.boardName}` : null,
+    association.equipmentModelName ? `Modelo ${association.equipmentModelName}` : null,
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(" • ") : "Não associado";
+}
+
+async function computeFileSha256(file: File) {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await window.crypto.subtle.digest("SHA-256", buffer);
+  return [...new Uint8Array(hashBuffer)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function buildSaveableTechnicalFileState(
+  slot: SaveableTechnicalFileSlot,
+  file: File,
+) : SaveableTechnicalFileState {
+  const validation = validateTechnicalAssetFile(file);
+  const format = validation.format as SaveableTechnicalFileState["format"];
+  const assetType = validation.assetType as SaveableTechnicalFileState["assetType"];
+
+  return {
+    slot,
+    file,
+    fileName: file.name,
+    format,
+    assetType,
+    mimeType: validation.mimeType,
+    fileSizeBytes: validation.fileSizeBytes,
+    maxSizeBytes: validation.maxSizeBytes,
+    hashSha256: null,
+    status: "idle" as const,
+    message: null,
+    existingAssetId: null,
+    associationLinked: false,
+  };
+}
+
+function buildErroredSaveableTechnicalFileState(
+  slot: SaveableTechnicalFileSlot,
+  file: File,
+  message: string,
+): SaveableTechnicalFileState {
+  const normalizedFormat =
+    file.name.toLowerCase().endsWith(".pdf") ? "pdf" : file.name.toLowerCase().endsWith(".bdv") ? "bdv" : "brd";
+
+  return {
+    slot,
+    file,
+    fileName: file.name,
+    format: normalizedFormat,
+    assetType: normalizedFormat === "pdf" ? "schematic_pdf" : "boardview",
+    mimeType: file.type || (normalizedFormat === "pdf" ? "application/pdf" : "application/octet-stream"),
+    fileSizeBytes: file.size,
+    maxSizeBytes: normalizedFormat === "pdf" ? 200 * 1024 * 1024 : 100 * 1024 * 1024,
+    hashSha256: null,
+    status: "error",
+    message,
+    existingAssetId: null,
+    associationLinked: false,
+  };
+}
 
 function selectionTitle(selection: BoardviewLabSelection | null) {
   if (!selection) {
@@ -74,7 +184,7 @@ function getSelectionComponent(selection: BoardviewLabSelection | null) {
   return null;
 }
 
-export function BoardviewLab() {
+export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const boardviewCanvasRef = useRef<BoardviewCanvasHandle | null>(null);
@@ -100,10 +210,14 @@ export function BoardviewLab() {
   const [selected, setSelected] = useState<BoardviewLabSelection | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isReadingFile, setIsReadingFile] = useState(false);
+  const [boardviewTechnicalFile, setBoardviewTechnicalFile] =
+    useState<SaveableTechnicalFileState | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
   const [pdfErrorMessage, setPdfErrorMessage] = useState<string | null>(null);
   const [isReadingPdfFile, setIsReadingPdfFile] = useState(false);
+  const [pdfTechnicalFile, setPdfTechnicalFile] =
+    useState<SaveableTechnicalFileState | null>(null);
   const [viewerMode, setViewerMode] = useState<LabViewerMode>("split");
   const [mobileTab, setMobileTab] = useState<MobileWorkspaceTab>("boardview");
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -142,6 +256,16 @@ export function BoardviewLab() {
   const searchHits = model
     ? searchBoardviewLabModel(model, deferredQuery, sideFilter)
     : [];
+  const saveableTechnicalFiles = [boardviewTechnicalFile, pdfTechnicalFile].filter(
+    (file): file is SaveableTechnicalFileState => Boolean(file),
+  );
+  const associationLabel = describeAssociationLabel(initialAssociation);
+  const boardviewFileForHashing =
+    boardviewTechnicalFile?.status === "error"
+      ? null
+      : boardviewTechnicalFile?.file ?? null;
+  const pdfFileForHashing =
+    pdfTechnicalFile?.status === "error" ? null : pdfTechnicalFile?.file ?? null;
 
   const componentPadPins = useMemo(
     () =>
@@ -253,6 +377,338 @@ export function BoardviewLab() {
     };
   }, []);
 
+  const updateTechnicalFileState = useCallback(
+    (
+      slot: SaveableTechnicalFileSlot,
+      updater: (
+        current: SaveableTechnicalFileState | null,
+      ) => SaveableTechnicalFileState | null,
+    ) => {
+      if (slot === "boardview") {
+        setBoardviewTechnicalFile((current) => updater(current));
+        return;
+      }
+
+      setPdfTechnicalFile((current) => updater(current));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!boardviewFileForHashing) {
+      return;
+    }
+
+    const fileForHashing = boardviewFileForHashing;
+    let cancelled = false;
+
+    async function syncBoardviewTechnicalFile() {
+      updateTechnicalFileState("boardview", (current) =>
+          current?.file === fileForHashing
+          ? {
+              ...current,
+              status: "hashing",
+              message: "Calculando hash SHA-256 para a biblioteca técnica...",
+            }
+          : current,
+      );
+
+      try {
+        const hashSha256 = await computeFileSha256(fileForHashing);
+        if (cancelled) {
+          return;
+        }
+
+        updateTechnicalFileState("boardview", (current) =>
+          current?.file === fileForHashing
+            ? {
+                ...current,
+                hashSha256,
+                status: "checking",
+                message: "Verificando se o arquivo já existe na biblioteca técnica...",
+              }
+            : current,
+        );
+
+        const params = new URLSearchParams({ hash: hashSha256 });
+        if (initialAssociation.boardId) {
+          params.set("board_id", initialAssociation.boardId);
+        }
+        if (initialAssociation.equipmentModelId) {
+          params.set("equipment_model_id", initialAssociation.equipmentModelId);
+        }
+
+        const response = await fetch(`/api/technical-assets?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as
+          | {
+              error?: string;
+              exists?: boolean;
+              assetId?: string;
+              associationLinked?: boolean;
+            }
+          | undefined;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.error ?? "Falha ao verificar a biblioteca técnica.");
+        }
+
+        updateTechnicalFileState("boardview", (current) =>
+          current?.file === fileForHashing
+            ? {
+                ...current,
+                hashSha256,
+                existingAssetId: payload?.exists ? payload.assetId ?? null : null,
+                associationLinked: Boolean(payload?.associationLinked),
+                status:
+                  payload?.exists && (!initialAssociation.boardId && !initialAssociation.equipmentModelId
+                    ? true
+                    : Boolean(payload.associationLinked))
+                    ? "saved"
+                    : "ready",
+                message:
+                  payload?.exists && (!initialAssociation.boardId && !initialAssociation.equipmentModelId
+                    ? true
+                    : Boolean(payload.associationLinked))
+                    ? "Arquivo já salvo."
+                    : payload?.exists
+                      ? "Arquivo já salvo. Salve novamente para vincular à associação atual."
+                      : "Pronto para salvar na biblioteca técnica.",
+              }
+            : current,
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        updateTechnicalFileState("boardview", (current) =>
+          current?.file === fileForHashing
+            ? {
+                ...current,
+                status: "error",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "Falha ao preparar o arquivo técnico.",
+              }
+            : current,
+        );
+      }
+    }
+
+    void syncBoardviewTechnicalFile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    boardviewFileForHashing,
+    initialAssociation.boardId,
+    initialAssociation.equipmentModelId,
+    updateTechnicalFileState,
+  ]);
+
+  useEffect(() => {
+    if (!pdfFileForHashing) {
+      return;
+    }
+
+    const fileForHashing = pdfFileForHashing;
+    let cancelled = false;
+
+    async function syncPdfTechnicalFile() {
+      updateTechnicalFileState("schematic", (current) =>
+          current?.file === fileForHashing
+          ? {
+              ...current,
+              status: "hashing",
+              message: "Calculando hash SHA-256 para a biblioteca técnica...",
+            }
+          : current,
+      );
+
+      try {
+        const hashSha256 = await computeFileSha256(fileForHashing);
+        if (cancelled) {
+          return;
+        }
+
+        updateTechnicalFileState("schematic", (current) =>
+          current?.file === fileForHashing
+            ? {
+                ...current,
+                hashSha256,
+                status: "checking",
+                message: "Verificando se o arquivo já existe na biblioteca técnica...",
+              }
+            : current,
+        );
+
+        const params = new URLSearchParams({ hash: hashSha256 });
+        if (initialAssociation.boardId) {
+          params.set("board_id", initialAssociation.boardId);
+        }
+        if (initialAssociation.equipmentModelId) {
+          params.set("equipment_model_id", initialAssociation.equipmentModelId);
+        }
+
+        const response = await fetch(`/api/technical-assets?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as
+          | {
+              error?: string;
+              exists?: boolean;
+              assetId?: string;
+              associationLinked?: boolean;
+            }
+          | undefined;
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.error ?? "Falha ao verificar a biblioteca técnica.");
+        }
+
+        updateTechnicalFileState("schematic", (current) =>
+          current?.file === fileForHashing
+            ? {
+                ...current,
+                hashSha256,
+                existingAssetId: payload?.exists ? payload.assetId ?? null : null,
+                associationLinked: Boolean(payload?.associationLinked),
+                status:
+                  payload?.exists && (!initialAssociation.boardId && !initialAssociation.equipmentModelId
+                    ? true
+                    : Boolean(payload.associationLinked))
+                    ? "saved"
+                    : "ready",
+                message:
+                  payload?.exists && (!initialAssociation.boardId && !initialAssociation.equipmentModelId
+                    ? true
+                    : Boolean(payload.associationLinked))
+                    ? "Arquivo já salvo."
+                    : payload?.exists
+                      ? "Arquivo já salvo. Salve novamente para vincular à associação atual."
+                      : "Pronto para salvar na biblioteca técnica.",
+              }
+            : current,
+        );
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        updateTechnicalFileState("schematic", (current) =>
+          current?.file === fileForHashing
+            ? {
+                ...current,
+                status: "error",
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : "Falha ao preparar o arquivo técnico.",
+              }
+            : current,
+        );
+      }
+    }
+
+    void syncPdfTechnicalFile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    initialAssociation.boardId,
+    initialAssociation.equipmentModelId,
+    pdfFileForHashing,
+    updateTechnicalFileState,
+  ]);
+
+  async function handleSaveTechnicalFile(slot: SaveableTechnicalFileSlot) {
+    const currentFile =
+      slot === "boardview" ? boardviewTechnicalFile : pdfTechnicalFile;
+
+    if (!currentFile || currentFile.status === "saving") {
+      return;
+    }
+
+    updateTechnicalFileState(slot, (value) =>
+      value
+        ? {
+            ...value,
+            status: "saving",
+            message: "Salvando na biblioteca técnica...",
+          }
+        : value,
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("file", currentFile.file);
+      if (initialAssociation.boardId) {
+        formData.append("board_id", initialAssociation.boardId);
+      }
+      if (initialAssociation.equipmentModelId) {
+        formData.append("equipment_model_id", initialAssociation.equipmentModelId);
+      }
+      if (initialAssociation.diagnosticId) {
+        formData.append("diagnostic_id", initialAssociation.diagnosticId);
+      }
+
+      const response = await fetch("/api/technical-assets", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = (await response.json()) as
+        | {
+            error?: string;
+            assetId?: string;
+            message?: string;
+          }
+        | undefined;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Falha ao salvar o arquivo técnico.");
+      }
+
+      updateTechnicalFileState(slot, (value) =>
+        value
+          ? {
+              ...value,
+              existingAssetId: payload?.assetId ?? value.existingAssetId,
+              associationLinked: true,
+              status: "saved",
+              message: payload?.message ?? "Arquivo salvo na biblioteca técnica.",
+            }
+          : value,
+      );
+    } catch (error) {
+      updateTechnicalFileState(slot, (value) =>
+        value
+          ? {
+              ...value,
+              status: "error",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Falha ao salvar o arquivo técnico.",
+            }
+          : value,
+      );
+    }
+  }
+
   function selectEntry(selection: BoardviewLabSelection, autoFocus = false) {
     setSelected(selection);
     setDetailsOpen(true);
@@ -277,6 +733,19 @@ export function BoardviewLab() {
       const arrayBuffer = await file.arrayBuffer();
       const parsed = parseLandrexTestlinkBoardview(new Uint8Array(arrayBuffer));
       const nextModel = buildBoardviewLabModel(parsed);
+      let nextTechnicalFile: SaveableTechnicalFileState;
+
+      try {
+        nextTechnicalFile = buildSaveableTechnicalFileState("boardview", file);
+      } catch (validationError) {
+        nextTechnicalFile = buildErroredSaveableTechnicalFileState(
+          "boardview",
+          file,
+          validationError instanceof Error
+            ? validationError.message
+            : "Falha ao preparar este arquivo para salvar na biblioteca técnica.",
+        );
+      }
 
       startTransition(() => {
         setFileName(file.name);
@@ -285,18 +754,20 @@ export function BoardviewLab() {
         setQuery("");
         setSideFilter("both");
         setBoardScale(1);
+        setBoardviewTechnicalFile(nextTechnicalFile);
       });
     } catch (error) {
       const message =
         error instanceof LandrexBoardviewParserError || error instanceof Error
           ? error.message
-          : "Nao foi possivel abrir este arquivo .brd.";
+          : "Não foi possível abrir este arquivo de boardview.";
       setErrorMessage(
-        `Falha ao abrir o boardview. Confirme se o arquivo e um Landrex/Testlink valido. Detalhe: ${message}`,
+        `Falha ao abrir o boardview. Confirme se o arquivo é um Landrex/Testlink válido. Detalhe: ${message}`,
       );
       setModel(null);
       setFileName(file.name);
       setSelected(null);
+      setBoardviewTechnicalFile(null);
     } finally {
       setIsReadingFile(false);
       event.target.value = "";
@@ -315,15 +786,30 @@ export function BoardviewLab() {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
+      let nextTechnicalFile: SaveableTechnicalFileState;
+
+      try {
+        nextTechnicalFile = buildSaveableTechnicalFileState("schematic", file);
+      } catch (validationError) {
+        nextTechnicalFile = buildErroredSaveableTechnicalFileState(
+          "schematic",
+          file,
+          validationError instanceof Error
+            ? validationError.message
+            : "Falha ao preparar este arquivo para salvar na biblioteca técnica.",
+        );
+      }
 
       startTransition(() => {
         setPdfFileName(file.name);
         setPdfBytes(new Uint8Array(arrayBuffer));
         setViewerMode("split");
+        setPdfTechnicalFile(nextTechnicalFile);
       });
     } catch (error) {
       setPdfBytes(null);
       setPdfFileName(file.name);
+      setPdfTechnicalFile(null);
       setPdfErrorMessage(
         error instanceof Error
           ? `Falha ao abrir o PDF local. Detalhe: ${error.message}`
@@ -665,17 +1151,17 @@ export function BoardviewLab() {
   const emptyWorkspace = (
     <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-[28px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-6 text-center">
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-        Laboratorio tecnico
+        Laboratório técnico
       </p>
       <h3 className="mt-4 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
-        Abra um BRD ou esquema local
+        Abra um BRD, BDV ou esquema local
       </h3>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <label className="cursor-pointer rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]">
-          Abrir BRD
+          Abrir BRD/BDV
           <input
             type="file"
-            accept=".brd"
+            accept=".brd,.bdv"
             className="hidden"
             onChange={handleFileSelection}
           />
@@ -704,10 +1190,10 @@ export function BoardviewLab() {
       <div className="border-b border-[var(--panel-border)] px-3 py-2.5 sm:px-3.5">
         <div className="flex flex-wrap items-center gap-2">
           <label className="cursor-pointer rounded-full bg-[var(--accent-copper)] px-3.5 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]">
-            {isReadingFile ? "Lendo BRD..." : "Abrir BRD"}
+            {isReadingFile ? "Lendo BRD/BDV..." : "Abrir BRD/BDV"}
             <input
               type="file"
-              accept=".brd"
+              accept=".brd,.bdv"
               className="hidden"
               onChange={handleFileSelection}
             />
@@ -883,6 +1369,74 @@ export function BoardviewLab() {
             </button>
           ))}
         </div>
+
+        {saveableTechnicalFiles.length ? (
+          <div className="mt-3 grid gap-2">
+            {saveableTechnicalFiles.map((technicalFile) => {
+              const isBusy =
+                technicalFile.status === "hashing" ||
+                technicalFile.status === "checking" ||
+                technicalFile.status === "saving";
+              const canSave =
+                technicalFile.status === "ready" ||
+                (technicalFile.status === "saved" &&
+                  technicalFile.existingAssetId &&
+                  !technicalFile.associationLinked &&
+                  Boolean(
+                    initialAssociation.boardId || initialAssociation.equipmentModelId,
+                  ));
+
+              return (
+                <div
+                  key={`${technicalFile.slot}:${technicalFile.fileName}:${technicalFile.fileSizeBytes}`}
+                  className="flex flex-col gap-3 rounded-[20px] border border-[var(--panel-border)] bg-[var(--background)] px-3.5 py-3 lg:flex-row lg:items-center lg:justify-between"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                        {technicalFile.fileName}
+                      </p>
+                      <span className="rounded-full bg-[rgba(109,94,242,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-copper)]">
+                        {getTechnicalAssetDisplayType(technicalFile.format)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                      {formatTechnicalAssetSize(technicalFile.fileSizeBytes)} • {associationLabel}
+                    </p>
+                    <p
+                      className={`mt-1 text-xs leading-5 ${
+                        technicalFile.status === "error"
+                          ? "text-[var(--danger)]"
+                          : "text-[var(--muted)]"
+                      }`}
+                    >
+                      {technicalFile.message ??
+                        "Pronto para salvar na biblioteca técnica."}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {technicalFile.status === "saved" && !canSave ? (
+                      <span className="rounded-full border border-[rgba(45,139,130,0.3)] bg-[rgba(45,139,130,0.08)] px-3.5 py-2 text-sm font-semibold text-[var(--accent-teal)]">
+                        Arquivo já salvo
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSaveTechnicalFile(technicalFile.slot)}
+                        disabled={!canSave || isBusy}
+                        className="rounded-full bg-[var(--accent-copper)] px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        {technicalFile.status === "saving"
+                          ? "Salvando..."
+                          : "Salvar na biblioteca técnica"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       {(errorMessage || pdfErrorMessage) && hasAnyFileOpen ? (

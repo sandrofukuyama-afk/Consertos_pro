@@ -1,20 +1,62 @@
 import { AppShell } from "@/components/app-shell";
 import { BoardviewLab } from "@/components/boardview-lab";
 import { requireCurrentUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
-export default async function BoardviewLabPage() {
-  const user = await requireCurrentUser();
+type BoardviewLabPageProps = {
+  searchParams: Promise<{
+    board_id?: string;
+    model_id?: string;
+    diagnostic_id?: string;
+  }>;
+};
+
+export default async function BoardviewLabPage({
+  searchParams,
+}: BoardviewLabPageProps) {
+  const userPromise = requireCurrentUser();
+  const supabasePromise = createClient();
+  const query = await searchParams;
+  const boardId = query.board_id?.trim() || null;
+  const equipmentModelId = query.model_id?.trim() || null;
+  const diagnosticId = query.diagnostic_id?.trim() || null;
+  const [user, supabase] = await Promise.all([userPromise, supabasePromise]);
+
+  const [boardResult, modelResult] = await Promise.all([
+    boardId
+      ? supabase
+          .from("boards")
+          .select("id, board_code")
+          .eq("id", boardId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    equipmentModelId
+      ? supabase
+          .from("equipment_models")
+          .select("id, model_name")
+          .eq("id", equipmentModelId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   return (
     <AppShell
       title="Laboratório boardview"
-      description="Abrir e inspecionar arquivos .brd e esquemas .pdf localmente, sem upload."
+      description="Abrir, inspecionar e salvar arquivos .brd, .bdv e .pdf localmente."
       actionLabel="Voltar ao início"
       actionHref="/"
       user={user}
       shellMode="workspace"
     >
-      <BoardviewLab />
+      <BoardviewLab
+        initialAssociation={{
+          boardId,
+          boardName: boardResult.data?.board_code ?? null,
+          equipmentModelId,
+          equipmentModelName: modelResult.data?.model_name ?? null,
+          diagnosticId,
+        }}
+      />
     </AppShell>
   );
 }
