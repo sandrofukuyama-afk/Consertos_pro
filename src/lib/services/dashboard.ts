@@ -1,7 +1,3 @@
-import {
-  documents as fallbackDocuments,
-  knowledgeItems as fallbackKnowledge,
-} from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
 import { extractFirstSentence, formatRelativeTime } from "@/lib/utils";
 import type { DashboardData, DiagnosticCase, Kpi } from "@/types/domain";
@@ -17,6 +13,10 @@ function pickRelation<T>(value: T | T[] | null | undefined) {
 function mapStatus(status: string): DiagnosticCase["status"] {
   if (status === "waiting_input") {
     return "Aguardando teste";
+  }
+
+  if (status === "unresolved") {
+    return "Encerrado sem solução";
   }
 
   if (status === "resolved") {
@@ -88,24 +88,24 @@ export async function getDashboardData(): Promise<DashboardData> {
     return {
       id: row.id.slice(0, 8).toUpperCase(),
       recordId: row.id,
-      category: category?.name ?? "Não classificado",
+      category: category?.name ?? "NÃ£o classificado",
       equipment: modelName,
       symptom: extractFirstSentence(
         row.current_summary ?? row.initial_problem_report,
       ),
-      board: "Análise geral",
-      technician: technician?.display_name ?? "Não atribuído",
+      board: "AnÃ¡lise geral",
+      technician: technician?.display_name ?? "NÃ£o atribuÃ­do",
       updatedAt: formatRelativeTime(row.updated_at),
       status: mapStatus(row.status),
     } satisfies DiagnosticCase;
   });
 
-  const activeCount = diagnosticsRows.filter((item) => item.status === "active").length;
-  const waitingCount = diagnosticsRows.filter(
-    (item) => item.status === "waiting_input",
+  const activeCount = diagnostics.filter((item) => item.status === "Ativo").length;
+  const waitingCount = diagnostics.filter(
+    (item) => item.status === "Aguardando teste",
   ).length;
-  const resolvedCount = diagnosticsRows.filter(
-    (item) => item.status === "resolved",
+  const resolvedCount = diagnostics.filter(
+    (item) => item.status === "Resolvido hoje",
   ).length;
 
   const kpis: Kpi[] = [
@@ -132,27 +132,21 @@ export async function getDashboardData(): Promise<DashboardData> {
   return {
     kpis,
     diagnostics,
-    documents:
-      documentsRows.length > 0
-        ? documentsRows.map((row) => {
-            const model = pickRelation(row.equipment_models);
-            const board = pickRelation(row.boards);
+    documents: documentsRows.map((row) => {
+      const model = pickRelation(row.equipment_models);
+      const board = pickRelation(row.boards);
 
-            return {
-              title: row.title,
-              type: row.document_type,
-              relation: model?.model_name ?? board?.board_code ?? "Referência geral",
-            };
-          })
-        : fallbackDocuments,
-    knowledgeItems:
-      causesRows.length > 0
-        ? causesRows.map((row) => ({
-            cause: row.title,
-            incidence: row.cause_type,
-            note: "Conhecimento confirmado e pronto para consulta interna.",
-          }))
-        : fallbackKnowledge,
+      return {
+        title: row.title,
+        type: row.document_type,
+        relation: model?.model_name ?? board?.board_code ?? "ReferÃªncia geral",
+      };
+    }),
+    knowledgeItems: causesRows.map((row) => ({
+      cause: row.title,
+      incidence: row.cause_type,
+      note: "Conhecimento confirmado e pronto para consulta interna.",
+    })),
     hasLiveData: diagnosticsRows.length > 0,
   };
 }

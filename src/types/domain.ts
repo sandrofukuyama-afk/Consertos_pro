@@ -27,7 +27,7 @@ export type DiagnosticCase = {
   board: string;
   technician: string;
   updatedAt: string;
-  status: "Ativo" | "Aguardando teste" | "Resolvido hoje";
+  status: "Ativo" | "Aguardando teste" | "Resolvido hoje" | "Encerrado sem solução";
 };
 
 export type TimelineEntry = {
