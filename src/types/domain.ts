@@ -25,8 +25,10 @@ export type DiagnosticCase = {
   equipment: string;
   symptom: string;
   board: string;
-  technician: string;
+  technician?: string;
   updatedAt: string;
+  lastTest?: string;
+  nextStep?: string;
   status: "Ativo" | "Aguardando teste" | "Resolvido hoje" | "Encerrado sem solução";
 };
 
@@ -49,6 +51,18 @@ export type DocumentItem = {
   relation: string;
 };
 
+export type TechnicalDocumentListItem = {
+  id: string;
+  title: string;
+  documentType: string;
+  manufacturer: string;
+  relation: string;
+  uploadedAt: string;
+  chunksCount: number;
+  isIndexed: boolean;
+  signedUrl: string | null;
+};
+
 export type KnowledgeItem = {
   cause: string;
   incidence: string;
@@ -66,6 +80,47 @@ export type DashboardData = {
   documents: DocumentItem[];
   knowledgeItems: KnowledgeItem[];
   hasLiveData: boolean;
+};
+
+export type SearchFilters = {
+  q: string;
+  scope: "all" | "diagnostics" | "documents";
+  status: string;
+  categoryId: string;
+};
+
+export type SearchDiagnosticResult = {
+  id: string;
+  label: string;
+  category: string;
+  manufacturer: string;
+  status: string;
+  summary: string;
+  updatedAt: string;
+};
+
+export type SearchDocumentResult = {
+  id: string;
+  title: string;
+  documentType: string;
+  manufacturer: string;
+  relation: string;
+  uploadedAt: string;
+  signedUrl: string | null;
+};
+
+export type SearchPageData = {
+  filters: SearchFilters;
+  categories: CatalogOption[];
+  diagnostics: SearchDiagnosticResult[];
+  documents: SearchDocumentResult[];
+  semanticMatches: Array<
+    SemanticMatchResult & {
+      similarityLabel: string;
+    }
+  >;
+  semanticProvider: string;
+  externalProviderConfigured: boolean;
 };
 
 export type CatalogOption = {
@@ -101,10 +156,7 @@ export type AssistantStructuredResponse = {
   recommendedTestName: string | null;
 };
 
-export type AiFeedbackRating =
-  | "helpful"
-  | "partially_helpful"
-  | "not_helpful";
+export type AiFeedbackRating = "helpful" | "partially_helpful" | "not_helpful";
 
 export type ComponentAnnotation = {
   id: string;
@@ -271,118 +323,55 @@ export type DiagnosticDetail = {
   referenceMeasurements: BoardMeasurement[];
 };
 
-export type TechnicalDocumentListItem = {
-  id: string;
-  title: string;
-  documentType: string;
-  manufacturer: string;
-  relation: string;
-  uploadedAt: string;
-  chunksCount: number;
-  isIndexed: boolean;
-  signedUrl: string | null;
-};
-
-export type SearchFilters = {
-  q: string;
-  scope: "all" | "diagnostics" | "documents";
-  status: string;
-  categoryId: string;
-};
-
-export type SearchDiagnosticResult = {
-  id: string;
-  label: string;
-  category: string;
-  manufacturer: string;
-  status: string;
-  summary: string;
-  updatedAt: string;
-};
-
-export type SearchDocumentResult = {
-  id: string;
-  title: string;
-  documentType: string;
-  manufacturer: string;
-  relation: string;
-  uploadedAt: string;
-  signedUrl: string | null;
-};
-
 export type SemanticMatchResult = {
   id: string;
-  sourceType: "diagnostic" | "resolved_case" | "technical_document";
   title: string;
   subtitle: string;
   excerpt: string;
-  similarityLabel: string;
   href: string | null;
+  sourceType: "diagnostic" | "resolved_case" | "technical_document";
+  confidence?: string;
+  similarityLabel: string;
 };
 
-export type SearchPageData = {
-  filters: SearchFilters;
-  categories: CatalogOption[];
-  diagnostics: SearchDiagnosticResult[];
-  documents: SearchDocumentResult[];
-  semanticMatches: SemanticMatchResult[];
-  semanticProvider: string;
-  externalProviderConfigured: boolean;
+export type PreventiveInsight = {
+  causeType: string;
+  causeLabel: string;
+  occurrences: number;
+  totalCases: number;
+  componentRef: string | null;
 };
 
-export type KnowledgeOverviewData = {
-  provider: string;
-  externalProviderConfigured: boolean;
-  sourceCount: number;
-  embeddingCount: number;
-  pendingDocumentCount: number;
-  aiMetrics: {
-    totalResponses: number;
-    feedbackCount: number;
-    followedCount: number;
-    helpfulCount: number;
-    partiallyHelpfulCount: number;
-    notHelpfulCount: number;
+export type TechnicianProfile = {
+  id: string;
+  userId: string;
+  displayName: string;
+  jobTitle: string | null;
+  specialtiesSummary: string | null;
+  isReviewer: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AuditReviewItem = {
+  id: string;
+  entityType: string;
+  entityId: string;
+  reviewStatus: string;
+  reviewerName: string;
+  reviewedAt: string;
+  notes: string | null;
+};
+
+export type StatisticsSummary = {
+  topSymptoms: Array<{ label: string; value: number }>;
+  topManufacturers: Array<{ label: string; value: number }>;
+  resolutionRate: {
+    confirmed: number;
+    probable: number;
+    unresolved: number;
   };
-  aiCategoryBreakdown: Array<{
-    category: string;
-    feedbackCount: number;
-    helpfulCount: number;
-    followedCount: number;
-    helpfulRate: number;
-    acceptanceRate: number;
-  }>;
-  topFollowedTests: Array<{
-    testName: string;
-    count: number;
-  }>;
-  aiFeedbackTrend: Array<{
-    weekLabel: string;
-    feedbackCount: number;
-    helpfulCount: number;
-    followedCount: number;
-    helpfulRate: number;
-    acceptanceRate: number;
-  }>;
-  recentResolvedCases: Array<{
-    id: string;
-    label: string;
-    status: string;
-    summary: string;
-    createdAt: string;
-    reviewedByUserId: string | null;
-    reviewedAt: string | null;
-    knowledgePromotedAt: string | null;
-  }>;
-  recentAiFeedback: Array<{
-    id: string;
-    diagnosticId: string;
-    rating: AiFeedbackRating;
-    wasFollowed: boolean | null;
-    note: string;
-    submittedBy: string;
-    createdAt: string;
-  }>;
+  totalResolvedCases: number;
 };
 
 export type WorkshopStatistics = {
@@ -437,10 +426,57 @@ export type WorkshopStatistics = {
   };
 };
 
-export type PreventiveInsight = {
-  causeType: string;
-  causeLabel: string;
-  occurrences: number;
-  totalCases: number;
-  componentRef: string | null;
+export type KnowledgeOverviewData = {
+  provider: string;
+  externalProviderConfigured: boolean;
+  sourceCount: number;
+  embeddingCount: number;
+  pendingDocumentCount: number;
+  aiMetrics: {
+    totalResponses: number;
+    feedbackCount: number;
+    followedCount: number;
+    helpfulCount: number;
+    partiallyHelpfulCount: number;
+    notHelpfulCount: number;
+  };
+  aiCategoryBreakdown: Array<{
+    category: string;
+    feedbackCount: number;
+    helpfulCount: number;
+    followedCount: number;
+    helpfulRate: number;
+    acceptanceRate: number;
+  }>;
+  topFollowedTests: Array<{
+    testName: string;
+    count: number;
+  }>;
+  aiFeedbackTrend: Array<{
+    weekLabel: string;
+    feedbackCount: number;
+    helpfulCount: number;
+    followedCount: number;
+    helpfulRate: number;
+    acceptanceRate: number;
+  }>;
+  recentResolvedCases: Array<{
+    id: string;
+    label: string;
+    status: string;
+    summary: string;
+    createdAt: string;
+    reviewedByUserId: string | null;
+    reviewedAt: string | null;
+    knowledgePromotedAt: string | null;
+  }>;
+  recentAiFeedback: Array<{
+    id: string;
+    diagnosticId: string;
+    rating: "helpful" | "partially_helpful" | "not_helpful";
+    wasFollowed: boolean | null;
+    note: string;
+    submittedBy: string;
+    createdAt: string;
+  }>;
 };

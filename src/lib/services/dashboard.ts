@@ -26,56 +26,94 @@ function mapStatus(status: string): DiagnosticCase["status"] {
   return "Ativo";
 }
 
+function isComputerQueueCategory(categoryName: string | null | undefined) {
+  const normalized = (categoryName ?? "")
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return ["computador", "desktop", "notebook"].some((term) =>
+    normalized.includes(term),
+  );
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await createClient();
 
-  const [diagnosticsResult, documentsResult, causesResult] = await Promise.all([
-    supabase
-      .from("diagnostics")
-      .select(
-        `
-          id,
-          status,
-          equipment_label,
-          equipment_serial_number,
-          current_summary,
-          initial_problem_report,
-          updated_at,
-          equipment_categories(name),
-          equipment_models(model_name),
-          manufacturers(name),
-          technician_profiles(display_name)
-        `,
-      )
-      .order("updated_at", { ascending: false })
-      .limit(8),
-    supabase
-      .from("technical_documents")
-      .select(
-        `
-          title,
-          document_type,
-          equipment_models(model_name),
-          boards(board_code)
-        `,
-      )
-      .order("created_at", { ascending: false })
-      .limit(3),
-    supabase
-      .from("confirmed_causes")
-      .select("title, cause_type")
-      .order("created_at", { ascending: false })
-      .limit(3),
-  ]);
+  const diagnosticsResult = await supabase
+    .from("diagnostics")
+    .select(
+      `
+        id,
+        status,
+        equipment_label,
+        equipment_serial_number,
+        current_summary,
+        initial_problem_report,
+        updated_at,
+        equipment_categories(name),
+        equipment_models(model_name),
+        manufacturers(name)
+      `,
+    )
+    .order("updated_at", { ascending: false })
+    .limit(24);
 
   const diagnosticsRows = diagnosticsResult.data ?? [];
-  const documentsRows = documentsResult.data ?? [];
-  const causesRows = causesResult.data ?? [];
+
+  const diagnosticIds = diagnosticsRows.map((row) => row.id);
+
+  const [testRunsResult, aiResponsesResult] = diagnosticIds.length
+    ? await Promise.all([
+        supabase
+          .from("diagnostic_test_runs")
+          .select(
+            `
+              diagnostic_id,
+              performed_at,
+              procedure_notes,
+              conclusion,
+              tests(name)
+            `,
+          )
+          .in("diagnostic_id", diagnosticIds)
+          .order("performed_at", { ascending: false }),
+        supabase
+          .from("ai_responses")
+          .select("diagnostic_id, recommended_next_step, created_at")
+          .in("diagnostic_id", diagnosticIds)
+          .order("created_at", { ascending: false }),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const latestTestByDiagnostic = new Map<string, string>();
+  for (const row of testRunsResult.data ?? []) {
+    if (latestTestByDiagnostic.has(row.diagnostic_id)) {
+      continue;
+    }
+
+    const test = pickRelation(row.tests);
+    latestTestByDiagnostic.set(
+      row.diagnostic_id,
+      test?.name ?? row.conclusion ?? row.procedure_notes ?? "Não registrado",
+    );
+  }
+
+  const nextStepByDiagnostic = new Map<string, string>();
+  for (const row of aiResponsesResult.data ?? []) {
+    if (nextStepByDiagnostic.has(row.diagnostic_id)) {
+      continue;
+    }
+
+    nextStepByDiagnostic.set(
+      row.diagnostic_id,
+      row.recommended_next_step?.trim() || "Não registrado",
+    );
+  }
 
   const diagnostics = diagnosticsRows.map((row) => {
     const model = pickRelation(row.equipment_models);
     const manufacturer = pickRelation(row.manufacturers);
-    const technician = pickRelation(row.technician_profiles);
     const category = pickRelation(row.equipment_categories);
 
     const modelName =
@@ -88,20 +126,28 @@ export async function getDashboardData(): Promise<DashboardData> {
     return {
       id: row.id.slice(0, 8).toUpperCase(),
       recordId: row.id,
-      category: category?.name ?? "NÃ£o classificado",
+      category: category?.name ?? "Não classificado",
       equipment: modelName,
       symptom: extractFirstSentence(
         row.current_summary ?? row.initial_problem_report,
       ),
-      board: "AnÃ¡lise geral",
-      technician: technician?.display_name ?? "NÃ£o atribuÃ­do",
+      board: "Não registrado",
       updatedAt: formatRelativeTime(row.updated_at),
+      lastTest: latestTestByDiagnostic.get(row.id) ?? "Não registrado",
+      nextStep: nextStepByDiagnostic.get(row.id) ?? "Não registrado",
       status: mapStatus(row.status),
     } satisfies DiagnosticCase;
   });
 
-  const activeCount = diagnostics.filter((item) => item.status === "Ativo").length;
-  const waitingCount = diagnostics.filter(
+  const queueDiagnostics = diagnostics.filter((item) => {
+    const isOpenStatus =
+      item.status === "Ativo" || item.status === "Aguardando teste";
+
+    return isOpenStatus && isComputerQueueCategory(item.category);
+  });
+
+  const activeCount = queueDiagnostics.filter((item) => item.status === "Ativo").length;
+  const waitingCount = queueDiagnostics.filter(
     (item) => item.status === "Aguardando teste",
   ).length;
   const resolvedCount = diagnostics.filter(
@@ -112,13 +158,13 @@ export async function getDashboardData(): Promise<DashboardData> {
     {
       label: "Ativos",
       value: String(activeCount),
-      change: activeCount ? "casos em progresso" : "sem casos em progresso",
+      change: activeCount ? "na fila principal" : "sem itens ativos",
       tone: "teal",
     },
     {
       label: "Aguardando teste",
       value: String(waitingCount),
-      change: waitingCount ? "itens aguardando retorno" : "fila vazia",
+      change: waitingCount ? "pendentes de retorno" : "fila vazia",
       tone: "copper",
     },
     {
@@ -131,22 +177,9 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   return {
     kpis,
-    diagnostics,
-    documents: documentsRows.map((row) => {
-      const model = pickRelation(row.equipment_models);
-      const board = pickRelation(row.boards);
-
-      return {
-        title: row.title,
-        type: row.document_type,
-        relation: model?.model_name ?? board?.board_code ?? "ReferÃªncia geral",
-      };
-    }),
-    knowledgeItems: causesRows.map((row) => ({
-      cause: row.title,
-      incidence: row.cause_type,
-      note: "Conhecimento confirmado e pronto para consulta interna.",
-    })),
+    diagnostics: queueDiagnostics,
+    documents: [],
+    knowledgeItems: [],
     hasLiveData: diagnosticsRows.length > 0,
   };
 }
