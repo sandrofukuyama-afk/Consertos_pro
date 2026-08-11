@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { BoardviewLab } from "@/components/boardview-lab";
 import { requireCurrentUser } from "@/lib/auth";
+import { getLibraryCatalog } from "@/lib/services/catalog";
 import { createClient } from "@/lib/supabase/server";
 
 type BoardviewLabPageProps = {
@@ -20,7 +21,11 @@ export default async function BoardviewLabPage({
   const boardId = query.board_id?.trim() || null;
   const equipmentModelId = query.model_id?.trim() || null;
   const diagnosticId = query.diagnostic_id?.trim() || null;
-  const [user, supabase] = await Promise.all([userPromise, supabasePromise]);
+  const [user, supabase, catalog] = await Promise.all([
+    userPromise,
+    supabasePromise,
+    getLibraryCatalog(),
+  ]);
 
   const [boardResult, modelResult] = await Promise.all([
     boardId
@@ -55,6 +60,11 @@ export default async function BoardviewLabPage({
           equipmentModelId,
           equipmentModelName: modelResult.data?.model_name ?? null,
           diagnosticId,
+        }}
+        catalogOptions={{
+          boards: catalog.boards,
+          models: catalog.models,
+          manufacturers: catalog.manufacturers,
         }}
       />
     </AppShell>

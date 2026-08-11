@@ -153,3 +153,40 @@ export function getTechnicalAssetDisplayType(format) {
       return "Arquivo tecnico";
   }
 }
+
+export function normalizeTechnicalAssetSearch(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function buildTechnicalAssetAssociationLabel(association) {
+  const parts = [
+    association?.boardName ? `Placa ${association.boardName}` : null,
+    association?.equipmentModelName ? `Modelo ${association.equipmentModelName}` : null,
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(" • ") : "Nao associado";
+}
+
+export function areTechnicalAssetNamesRelated(leftName, rightName) {
+  const left = normalizeTechnicalAssetSearch(leftName)
+    .replace(/\b(brd|bdv|pdf|boardview|schematic|esquema)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const right = normalizeTechnicalAssetSearch(rightName)
+    .replace(/\b(brd|bdv|pdf|boardview|schematic|esquema)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return left === right || left.includes(right) || right.includes(left);
+}

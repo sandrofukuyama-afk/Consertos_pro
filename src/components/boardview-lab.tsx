@@ -35,12 +35,15 @@ import { getBoardviewSelectionSchematicQuery } from "@/lib/boardview/schematic-p
 import { calculateAvailableViewportHeight } from "@/lib/boardview/viewer-utils";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  areTechnicalAssetNamesRelated,
+  buildTechnicalAssetAssociationLabel,
   buildTechnicalAssetStoragePath,
   formatTechnicalAssetSize,
   getTechnicalAssetDisplayType,
   TECHNICAL_ASSET_BUCKET,
   validateTechnicalAssetFile,
 } from "@/lib/technical-assets.mjs";
+import type { CatalogOption, EquipmentModelCatalogOption } from "@/types/domain";
 
 type CanvasSize = {
   width: number;
@@ -69,6 +72,34 @@ type BoardviewLabAssociation = {
 
 type BoardviewLabProps = {
   initialAssociation: BoardviewLabAssociation;
+  catalogOptions: {
+    boards: CatalogOption[];
+    models: EquipmentModelCatalogOption[];
+    manufacturers: CatalogOption[];
+  };
+};
+
+type TechnicalFileAssociation = {
+  boardId: string | null;
+  boardName: string | null;
+  equipmentModelId: string | null;
+  equipmentModelName: string | null;
+};
+
+type TechnicalAssetAssociationEditorState = {
+  slot: SaveableTechnicalFileSlot | null;
+  boardQuery: string;
+  selectedBoardId: string;
+  modelQuery: string;
+  selectedEquipmentModelId: string;
+  newBoardCode: string;
+  newBoardDescription: string;
+  selectedManufacturerId: string;
+  manufacturerName: string;
+  newEquipmentModelName: string;
+  applyToRelatedFiles: boolean;
+  isSubmitting: boolean;
+  error: string | null;
 };
 
 type SaveableTechnicalFileState = {
@@ -85,6 +116,7 @@ type SaveableTechnicalFileState = {
   message: string | null;
   existingAssetId: string | null;
   associationLinked: boolean;
+  association: TechnicalFileAssociation;
 };
 
 async function readApiResponsePayload(response: Response) {
@@ -101,6 +133,8 @@ async function readApiResponsePayload(response: Response) {
       assetId?: string;
       associationLinked?: boolean;
       message?: string;
+      association?: TechnicalFileAssociation;
+      assetIds?: string[];
     };
   } catch {
     return {
@@ -109,13 +143,15 @@ async function readApiResponsePayload(response: Response) {
   }
 }
 
-function describeAssociationLabel(association: BoardviewLabAssociation) {
-  const parts = [
-    association.boardName ? `Placa ${association.boardName}` : null,
-    association.equipmentModelName ? `Modelo ${association.equipmentModelName}` : null,
-  ].filter(Boolean);
-
-  return parts.length ? parts.join(" • ") : "Não associado";
+function buildAssociationSnapshot(
+  association: Partial<TechnicalFileAssociation> | BoardviewLabAssociation | null | undefined,
+): TechnicalFileAssociation {
+  return {
+    boardId: association?.boardId ?? null,
+    boardName: association?.boardName ?? null,
+    equipmentModelId: association?.equipmentModelId ?? null,
+    equipmentModelName: association?.equipmentModelName ?? null,
+  };
 }
 
 async function computeFileSha256(file: File) {
@@ -148,6 +184,7 @@ function buildSaveableTechnicalFileState(
     message: null,
     existingAssetId: null,
     associationLinked: false,
+    association: buildAssociationSnapshot(null),
   };
 }
 
@@ -173,6 +210,7 @@ function buildErroredSaveableTechnicalFileState(
     message,
     existingAssetId: null,
     associationLinked: false,
+    association: buildAssociationSnapshot(null),
   };
 }
 
@@ -209,7 +247,7 @@ function getSelectionComponent(selection: BoardviewLabSelection | null) {
   return null;
 }
 
-export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
+export function BoardviewLab({ initialAssociation, catalogOptions }: BoardviewLabProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const boardviewCanvasRef = useRef<BoardviewCanvasHandle | null>(null);
@@ -247,6 +285,22 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
   const [mobileTab, setMobileTab] = useState<MobileWorkspaceTab>("boardview");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [splitRatio, setSplitRatio] = useState(0.52);
+  const [associationEditor, setAssociationEditor] =
+    useState<TechnicalAssetAssociationEditorState>({
+      slot: null,
+      boardQuery: "",
+      selectedBoardId: "",
+      modelQuery: "",
+      selectedEquipmentModelId: "",
+      newBoardCode: "",
+      newBoardDescription: "",
+      selectedManufacturerId: "",
+      manufacturerName: "",
+      newEquipmentModelName: "",
+      applyToRelatedFiles: false,
+      isSubmitting: false,
+      error: null,
+    });
   const deferredQuery = useDeferredValue(query);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -285,13 +339,26 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
   const saveableTechnicalFiles = [boardviewTechnicalFile, pdfTechnicalFile].filter(
     (file): file is SaveableTechnicalFileState => Boolean(file),
   );
-  const associationLabel = describeAssociationLabel(initialAssociation);
   const boardviewFileForHashing =
     boardviewTechnicalFile?.status === "error"
       ? null
       : boardviewTechnicalFile?.file ?? null;
   const pdfFileForHashing =
     pdfTechnicalFile?.status === "error" ? null : pdfTechnicalFile?.file ?? null;
+  const filteredBoardOptions = useMemo(() => {
+    const normalizedQuery = associationEditor.boardQuery.trim().toLowerCase();
+
+    return catalogOptions.boards.filter((item) =>
+      !normalizedQuery || item.name.toLowerCase().includes(normalizedQuery),
+    );
+  }, [associationEditor.boardQuery, catalogOptions.boards]);
+  const filteredModelOptions = useMemo(() => {
+    const normalizedQuery = associationEditor.modelQuery.trim().toLowerCase();
+
+    return catalogOptions.models.filter((item) =>
+      !normalizedQuery || item.name.toLowerCase().includes(normalizedQuery),
+    );
+  }, [associationEditor.modelQuery, catalogOptions.models]);
 
   const componentPadPins = useMemo(
     () =>
@@ -420,6 +487,15 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
     [],
   );
 
+  const closeAssociationEditor = useCallback(() => {
+    setAssociationEditor((current) => ({
+      ...current,
+      slot: null,
+      isSubmitting: false,
+      error: null,
+    }));
+  }, []);
+
   useEffect(() => {
     if (!boardviewFileForHashing) {
       return;
@@ -484,6 +560,9 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
                 hashSha256,
                 existingAssetId: payload?.exists ? payload.assetId ?? null : null,
                 associationLinked: Boolean(payload?.associationLinked),
+                association: payload?.exists
+                  ? buildAssociationSnapshot(payload.association)
+                  : buildAssociationSnapshot(initialAssociation),
                 status:
                   payload?.exists && (!initialAssociation.boardId && !initialAssociation.equipmentModelId
                     ? true
@@ -528,6 +607,7 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
     };
   }, [
     boardviewFileForHashing,
+    initialAssociation,
     initialAssociation.boardId,
     initialAssociation.equipmentModelId,
     updateTechnicalFileState,
@@ -597,6 +677,9 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
                 hashSha256,
                 existingAssetId: payload?.exists ? payload.assetId ?? null : null,
                 associationLinked: Boolean(payload?.associationLinked),
+                association: payload?.exists
+                  ? buildAssociationSnapshot(payload.association)
+                  : buildAssociationSnapshot(initialAssociation),
                 status:
                   payload?.exists && (!initialAssociation.boardId && !initialAssociation.equipmentModelId
                     ? true
@@ -640,6 +723,7 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
       cancelled = true;
     };
   }, [
+    initialAssociation,
     initialAssociation.boardId,
     initialAssociation.equipmentModelId,
     pdfFileForHashing,
@@ -733,6 +817,9 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
               ...value,
               existingAssetId: payload?.assetId ?? value.existingAssetId,
               associationLinked: true,
+              association: buildAssociationSnapshot(
+                payload?.association ?? initialAssociation,
+              ),
               status: "saved",
               message: payload?.message ?? "Arquivo salvo na biblioteca técnica.",
             }
@@ -751,6 +838,142 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
             }
           : value,
       );
+    }
+  }
+
+  function openAssociationEditor(slot: SaveableTechnicalFileSlot) {
+    const currentFile = slot === "boardview" ? boardviewTechnicalFile : pdfTechnicalFile;
+    const siblingFile = slot === "boardview" ? pdfTechnicalFile : boardviewTechnicalFile;
+    const canApplyToSibling = Boolean(
+      currentFile?.existingAssetId &&
+        siblingFile?.existingAssetId &&
+        areTechnicalAssetNamesRelated(currentFile.fileName, siblingFile.fileName),
+    );
+
+    setAssociationEditor({
+      slot,
+      boardQuery: currentFile?.association.boardName ?? "",
+      selectedBoardId: currentFile?.association.boardId ?? "",
+      modelQuery: currentFile?.association.equipmentModelName ?? "",
+      selectedEquipmentModelId: currentFile?.association.equipmentModelId ?? "",
+      newBoardCode: "",
+      newBoardDescription: "",
+      selectedManufacturerId: "",
+      manufacturerName: "",
+      newEquipmentModelName: "",
+      applyToRelatedFiles: canApplyToSibling,
+      isSubmitting: false,
+      error: null,
+    });
+  }
+
+  async function handleAssociateTechnicalFile() {
+    if (!associationEditor.slot || associationEditor.isSubmitting) {
+      return;
+    }
+
+    const currentFile =
+      associationEditor.slot === "boardview" ? boardviewTechnicalFile : pdfTechnicalFile;
+    const siblingFile =
+      associationEditor.slot === "boardview" ? pdfTechnicalFile : boardviewTechnicalFile;
+
+    if (!currentFile?.existingAssetId) {
+      setAssociationEditor((current) => ({
+        ...current,
+        error: "Salve o arquivo na biblioteca tecnica antes de associar.",
+      }));
+      return;
+    }
+
+    const assetIds = [currentFile.existingAssetId];
+    if (
+      associationEditor.applyToRelatedFiles &&
+      siblingFile?.existingAssetId &&
+      areTechnicalAssetNamesRelated(currentFile.fileName, siblingFile.fileName)
+    ) {
+      assetIds.push(siblingFile.existingAssetId);
+    }
+
+    setAssociationEditor((current) => ({
+      ...current,
+      isSubmitting: true,
+      error: null,
+    }));
+
+    try {
+      const response = await fetch("/api/technical-assets", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assetIds,
+          boardId: associationEditor.selectedBoardId || null,
+          equipmentModelId: associationEditor.selectedEquipmentModelId || null,
+          createBoard: associationEditor.newBoardCode
+            ? {
+                boardCode: associationEditor.newBoardCode,
+                description: associationEditor.newBoardDescription || null,
+                manufacturerId: associationEditor.selectedManufacturerId || null,
+                manufacturerName: associationEditor.manufacturerName || null,
+              }
+            : null,
+          createEquipmentModel: associationEditor.newEquipmentModelName
+            ? {
+                modelName: associationEditor.newEquipmentModelName,
+                manufacturerId: associationEditor.selectedManufacturerId || null,
+                manufacturerName: associationEditor.manufacturerName || null,
+              }
+            : null,
+        }),
+      });
+
+      const payload = await readApiResponsePayload(response);
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Falha ao associar o arquivo tecnico.");
+      }
+
+      const nextAssociation = buildAssociationSnapshot(payload?.association);
+      const applyAssetIds = new Set(payload?.assetIds ?? assetIds);
+
+      if (boardviewTechnicalFile?.existingAssetId && applyAssetIds.has(boardviewTechnicalFile.existingAssetId)) {
+        updateTechnicalFileState("boardview", (value) =>
+          value
+            ? {
+                ...value,
+                associationLinked: true,
+                association: nextAssociation,
+                status: "saved",
+                message: "Arquivo ja salvo.",
+              }
+            : value,
+        );
+      }
+
+      if (pdfTechnicalFile?.existingAssetId && applyAssetIds.has(pdfTechnicalFile.existingAssetId)) {
+        updateTechnicalFileState("schematic", (value) =>
+          value
+            ? {
+                ...value,
+                associationLinked: true,
+                association: nextAssociation,
+                status: "saved",
+                message: "Arquivo ja salvo.",
+              }
+            : value,
+        );
+      }
+
+      closeAssociationEditor();
+    } catch (error) {
+      setAssociationEditor((current) => ({
+        ...current,
+        isSubmitting: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Falha ao associar o arquivo tecnico.",
+      }));
     }
   }
 
@@ -782,6 +1005,10 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
 
       try {
         nextTechnicalFile = buildSaveableTechnicalFileState("boardview", file);
+        nextTechnicalFile = {
+          ...nextTechnicalFile,
+          association: buildAssociationSnapshot(initialAssociation),
+        };
       } catch (validationError) {
         nextTechnicalFile = buildErroredSaveableTechnicalFileState(
           "boardview",
@@ -835,6 +1062,10 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
 
       try {
         nextTechnicalFile = buildSaveableTechnicalFileState("schematic", file);
+        nextTechnicalFile = {
+          ...nextTechnicalFile,
+          association: buildAssociationSnapshot(initialAssociation),
+        };
       } catch (validationError) {
         nextTechnicalFile = buildErroredSaveableTechnicalFileState(
           "schematic",
@@ -1422,6 +1653,9 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
                 technicalFile.status === "hashing" ||
                 technicalFile.status === "checking" ||
                 technicalFile.status === "saving";
+              const fileAssociationLabel = buildTechnicalAssetAssociationLabel(
+                technicalFile.association,
+              );
               const canSave =
                 technicalFile.status === "ready" ||
                 (technicalFile.status === "saved" &&
@@ -1430,53 +1664,281 @@ export function BoardviewLab({ initialAssociation }: BoardviewLabProps) {
                   Boolean(
                     initialAssociation.boardId || initialAssociation.equipmentModelId,
                   ));
+              const isAssociationEditorOpen =
+                associationEditor.slot === technicalFile.slot;
+              const siblingFile =
+                technicalFile.slot === "boardview"
+                  ? pdfTechnicalFile
+                  : boardviewTechnicalFile;
+              const canApplyToSibling = Boolean(
+                technicalFile.existingAssetId &&
+                  siblingFile?.existingAssetId &&
+                  areTechnicalAssetNamesRelated(
+                    technicalFile.fileName,
+                    siblingFile.fileName,
+                  ),
+              );
 
               return (
                 <div
                   key={`${technicalFile.slot}:${technicalFile.fileName}:${technicalFile.fileSizeBytes}`}
-                  className="flex flex-col gap-3 rounded-[20px] border border-[var(--panel-border)] bg-[var(--background)] px-3.5 py-3 lg:flex-row lg:items-center lg:justify-between"
+                  className="rounded-[20px] border border-[var(--panel-border)] bg-[var(--background)] px-3.5 py-3"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-                        {technicalFile.fileName}
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                          {technicalFile.fileName}
+                        </p>
+                        <span className="rounded-full bg-[rgba(109,94,242,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-copper)]">
+                          {getTechnicalAssetDisplayType(technicalFile.format)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                        {formatTechnicalAssetSize(technicalFile.fileSizeBytes)} • {fileAssociationLabel}
                       </p>
-                      <span className="rounded-full bg-[rgba(109,94,242,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-copper)]">
-                        {getTechnicalAssetDisplayType(technicalFile.format)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-                      {formatTechnicalAssetSize(technicalFile.fileSizeBytes)} • {associationLabel}
-                    </p>
-                    <p
-                      className={`mt-1 text-xs leading-5 ${
-                        technicalFile.status === "error"
-                          ? "text-[var(--danger)]"
-                          : "text-[var(--muted)]"
-                      }`}
-                    >
-                      {technicalFile.message ??
-                        "Pronto para salvar na biblioteca técnica."}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {technicalFile.status === "saved" && !canSave ? (
-                      <span className="rounded-full border border-[rgba(45,139,130,0.3)] bg-[rgba(45,139,130,0.08)] px-3.5 py-2 text-sm font-semibold text-[var(--accent-teal)]">
-                        Arquivo já salvo
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleSaveTechnicalFile(technicalFile.slot)}
-                        disabled={!canSave || isBusy}
-                        className="rounded-full bg-[var(--accent-copper)] px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+                      <p
+                        className={`mt-1 text-xs leading-5 ${
+                          technicalFile.status === "error"
+                            ? "text-[var(--danger)]"
+                            : "text-[var(--muted)]"
+                        }`}
                       >
-                        {technicalFile.status === "saving"
-                          ? "Salvando..."
-                          : "Salvar na biblioteca técnica"}
-                      </button>
-                    )}
+                        {technicalFile.message ??
+                          "Pronto para salvar na biblioteca técnica."}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      {technicalFile.status === "saved" && !canSave ? (
+                        <span className="rounded-full border border-[rgba(45,139,130,0.3)] bg-[rgba(45,139,130,0.08)] px-3.5 py-2 text-sm font-semibold text-[var(--accent-teal)]">
+                          Arquivo já salvo
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveTechnicalFile(technicalFile.slot)}
+                          disabled={!canSave || isBusy}
+                          className="rounded-full bg-[var(--accent-copper)] px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {technicalFile.status === "saving"
+                            ? "Salvando..."
+                            : "Salvar na biblioteca técnica"}
+                        </button>
+                      )}
+
+                      {technicalFile.existingAssetId ? (
+                        <button
+                          type="button"
+                          onClick={() => openAssociationEditor(technicalFile.slot)}
+                          className="rounded-full border border-[var(--panel-border)] bg-[rgba(109,94,242,0.12)] px-3.5 py-2 text-sm font-semibold text-[var(--accent-copper)] transition hover:bg-[rgba(109,94,242,0.2)]"
+                        >
+                          Associar placa/modelo
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
+
+                  {isAssociationEditorOpen ? (
+                    <div className="mt-4 grid gap-3 rounded-[18px] border border-[var(--panel-border)] bg-black/10 p-3">
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Buscar placa existente
+                          <input
+                            value={associationEditor.boardQuery}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                boardQuery: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                            placeholder="Ex.: 820-00239"
+                          />
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Placa selecionada
+                          <select
+                            value={associationEditor.selectedBoardId}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                selectedBoardId: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                          >
+                            <option value="">Criar ou deixar sem placa</option>
+                            {filteredBoardOptions.slice(0, 30).map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Buscar modelo existente
+                          <input
+                            value={associationEditor.modelQuery}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                modelQuery: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                            placeholder="Ex.: MacBook Air A1932"
+                          />
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Modelo selecionado
+                          <select
+                            value={associationEditor.selectedEquipmentModelId}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                selectedEquipmentModelId: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                          >
+                            <option value="">Criar ou deixar sem modelo</option>
+                            {filteredModelOptions.slice(0, 30).map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Nova placa
+                          <input
+                            value={associationEditor.newBoardCode}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                newBoardCode: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                            placeholder="Codigo da placa"
+                          />
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Descricao da placa
+                          <input
+                            value={associationEditor.newBoardDescription}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                newBoardDescription: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                            placeholder="Descricao opcional"
+                          />
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Fabricante
+                          <select
+                            value={associationEditor.selectedManufacturerId}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                selectedManufacturerId: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                          >
+                            <option value="">Selecionar fabricante</option>
+                            {catalogOptions.manufacturers.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)]">
+                          Novo fabricante
+                          <input
+                            value={associationEditor.manufacturerName}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                manufacturerName: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                            placeholder="Opcional para criar modelo"
+                          />
+                        </label>
+
+                        <label className="grid gap-1 text-xs text-[var(--muted)] lg:col-span-2">
+                          Novo modelo de equipamento
+                          <input
+                            value={associationEditor.newEquipmentModelName}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                newEquipmentModelName: event.target.value,
+                              }))
+                            }
+                            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+                            placeholder="Opcional"
+                          />
+                        </label>
+                      </div>
+
+                      {canApplyToSibling ? (
+                        <label className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                          <input
+                            type="checkbox"
+                            checked={associationEditor.applyToRelatedFiles}
+                            onChange={(event) =>
+                              setAssociationEditor((current) => ({
+                                ...current,
+                                applyToRelatedFiles: event.target.checked,
+                              }))
+                            }
+                          />
+                          Aplicar a mesma associação ao outro arquivo carregado
+                        </label>
+                      ) : null}
+
+                      {associationEditor.error ? (
+                        <p className="text-xs text-[var(--danger)]">
+                          {associationEditor.error}
+                        </p>
+                      ) : null}
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAssociateTechnicalFile}
+                          disabled={associationEditor.isSubmitting}
+                          className="rounded-full bg-[var(--accent-copper)] px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {associationEditor.isSubmitting ? "Associando..." : "Salvar associação"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={closeAssociationEditor}
+                          className="rounded-full border border-[var(--panel-border)] px-3.5 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

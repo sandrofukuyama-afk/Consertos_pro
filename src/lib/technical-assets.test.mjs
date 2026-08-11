@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  areTechnicalAssetNamesRelated,
+  buildTechnicalAssetAssociationLabel,
   buildTechnicalAssetStoragePath,
   formatTechnicalAssetSize,
   getTechnicalAssetDisplayType,
@@ -92,4 +94,35 @@ test("formata metadados visuais do arquivo tecnico", () => {
   assert.equal(getTechnicalAssetDisplayType("brd"), "Boardview BRD");
   assert.equal(formatTechnicalAssetSize(1536), "2 KB");
   assert.equal(formatTechnicalAssetSize(5 * 1024 * 1024), "5.0 MB");
+});
+
+test("identifica nomes relacionados entre boardview e esquema", () => {
+  assert.equal(
+    areTechnicalAssetNamesRelated(
+      "X362 MLB SCHEMATIC 820-00239.brd",
+      "X362 MLB SCHEMATIC 820-00239.pdf",
+    ),
+    true,
+  );
+  assert.equal(
+    areTechnicalAssetNamesRelated("placa-a.brd", "placa-b.pdf"),
+    false,
+  );
+});
+
+test("monta o rotulo visivel da associacao tecnica", () => {
+  assert.equal(
+    buildTechnicalAssetAssociationLabel({
+      boardName: "820-00239",
+      equipmentModelName: "MacBook Air A1932",
+    }),
+    "Placa 820-00239 • Modelo MacBook Air A1932",
+  );
+  assert.equal(
+    buildTechnicalAssetAssociationLabel({
+      boardName: null,
+      equipmentModelName: null,
+    }),
+    "Nao associado",
+  );
 });
