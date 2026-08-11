@@ -658,7 +658,7 @@ export function SchematicPdfViewer({
                         key={item.id}
                         className={`absolute whitespace-pre ${
                           isHighlighted
-                            ? "rounded bg-[rgba(216,166,84,0.65)] text-[#1a1628]"
+                            ? "rounded border border-[rgba(255,73,185,0.92)] bg-[rgba(255,73,185,0.22)] text-[#fff7fc] shadow-[0_0_0_1px_rgba(255,73,185,0.38)]"
                             : "text-transparent"
                         }`}
                         style={{
@@ -711,7 +711,7 @@ export function SchematicPdfViewer({
                     }}
                     className={`w-full rounded-[18px] border px-3 py-3 text-left transition ${
                       currentPage === match.pageNumber
-                        ? "border-[rgba(109,94,242,0.55)] bg-[rgba(109,94,242,0.12)]"
+                        ? "border-[rgba(255,73,185,0.88)] bg-[rgba(255,73,185,0.16)] shadow-[0_0_0_1px_rgba(255,73,185,0.32)]"
                         : "border-[var(--panel-border)] bg-[var(--background)] hover:bg-white/5"
                     }`}
                   >
