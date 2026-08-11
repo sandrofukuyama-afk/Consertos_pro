@@ -8,6 +8,7 @@ export type AssistantNarrativeFacts = {
   manufacturer: string;
   summary: string;
   benchPrompt?: string | null;
+  technicalContextSummary?: string | null;
   activeScenario: {
     id: string;
     title: string;
@@ -18,8 +19,18 @@ export type AssistantNarrativeFacts = {
   categoryStrategyFocus: string;
   categoryFirstMove: string;
   categorySafety: string;
-  symptoms: Array<{ name: string; severity: string | null; isPrimary: boolean; group: string | null }>;
-  tests: Array<{ testName: string; testGroup: string | null; resultStatus: string; actualResult: string | null }>;
+  symptoms: Array<{
+    name: string;
+    severity: string | null;
+    isPrimary: boolean;
+    group: string | null;
+  }>;
+  tests: Array<{
+    testName: string;
+    testGroup: string | null;
+    resultStatus: string;
+    actualResult: string | null;
+  }>;
   measurements: Array<{
     measurementType: string;
     pointLabel: string | null;
@@ -45,46 +56,120 @@ export type AssistantNarrativeFacts = {
 };
 
 export type AssistantNarrativeResult = {
+  probableDiagnosis: string;
+  probableArea: string;
   technicalSummary: string;
   mainHypothesis: string;
   evidence: string[];
+  relatedLines: Array<{
+    name: string;
+    expectedVoltage: string;
+    note: string;
+  }>;
+  componentsToMeasure: Array<{
+    reference: string;
+    measurementPoint: string;
+    expectedValue: string;
+    note: string;
+  }>;
+  recommendedTestSequence: string[];
   nextTest: string;
   validationGoal: string;
   safetyNote: string;
+  limitations: string[];
 };
 
 const NARRATIVE_SCHEMA = {
   type: "object",
   properties: {
+    probableDiagnosis: { type: "string" },
+    probableArea: { type: "string" },
     technicalSummary: { type: "string" },
     mainHypothesis: { type: "string" },
     evidence: {
       type: "array",
       items: { type: "string" },
       minItems: 1,
+      maxItems: 8,
+    },
+    relatedLines: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          expectedVoltage: { type: "string" },
+          note: { type: "string" },
+        },
+        required: ["name", "expectedVoltage", "note"],
+        additionalProperties: false,
+      },
+      minItems: 1,
+      maxItems: 5,
+    },
+    componentsToMeasure: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          reference: { type: "string" },
+          measurementPoint: { type: "string" },
+          expectedValue: { type: "string" },
+          note: { type: "string" },
+        },
+        required: ["reference", "measurementPoint", "expectedValue", "note"],
+        additionalProperties: false,
+      },
+      minItems: 1,
+      maxItems: 6,
+    },
+    recommendedTestSequence: {
+      type: "array",
+      items: { type: "string" },
+      minItems: 2,
       maxItems: 6,
     },
     nextTest: { type: "string" },
     validationGoal: { type: "string" },
     safetyNote: { type: "string" },
+    limitations: {
+      type: "array",
+      items: { type: "string" },
+      minItems: 1,
+      maxItems: 5,
+    },
   },
-  required: ["technicalSummary", "mainHypothesis", "evidence", "nextTest", "validationGoal", "safetyNote"],
+  required: [
+    "probableDiagnosis",
+    "probableArea",
+    "technicalSummary",
+    "mainHypothesis",
+    "evidence",
+    "relatedLines",
+    "componentsToMeasure",
+    "recommendedTestSequence",
+    "nextTest",
+    "validationGoal",
+    "safetyNote",
+    "limitations",
+  ],
   additionalProperties: false,
 };
 
 const SYSTEM_PROMPT = [
-  "Você é um assistente técnico sênior de bancada para conserto de eletrônicos de consumo",
-  "(desktop, notebook, televisão, smartphone). Responda sempre em português do Brasil,",
-  "em tom objetivo e técnico, como um técnico experiente orientando outro técnico.",
-  "Baseie-se estritamente nos fatos fornecidos no contexto: não invente sintomas, testes,",
-  "medições ou hipóteses que não estejam no contexto. O campo 'nextTest' deve obrigatoriamente",
-  "recomendar o teste indicado em 'recommendedTestName' do contexto, apenas explicando por que",
-  "e como executá-lo — não substitua por outro teste. Se houver 'symptomGroupInsight', use-o para",
-  "reforçar ou qualificar a hipótese principal, deixando claro que é um padrão histórico e não uma",
-  "certeza. Considere 'activeScenario' como o protocolo principal da bancada: priorize as medições",
-  "e checks desse cenário antes de abrir frentes paralelas. Se já existirem medições registradas,",
-  "use esses dados para refinar a hipótese e o próximo passo em vez de reiniciar a triagem.",
-  "Retorne apenas o JSON estruturado pedido.",
+  "Voce e um assistente tecnico senior de bancada para conserto de eletronicos de consumo",
+  "(desktop, notebook, televisao, smartphone). Responda sempre em portugues do Brasil,",
+  "em tom objetivo e tecnico, como um tecnico experiente orientando outro tecnico.",
+  "Baseie-se estritamente nos fatos fornecidos no contexto: nao invente sintomas, testes,",
+  "medicoes, hipoteses, tensoes ou referencias que nao estejam sustentadas pelo contexto.",
+  "Nao responda de forma generica. O campo 'recommendedTestSequence' deve trazer passos",
+  "objetivos de bancada em ordem, e o primeiro passo deve ser compativel com o teste em",
+  "'recommendedTestName'. O campo 'nextTest' deve detalhar esse primeiro passo.",
+  "Se houver 'symptomGroupInsight', use-o apenas como padrao historico, nunca como certeza.",
+  "Considere 'activeScenario' como o protocolo principal da bancada. Se houver",
+  "'technicalContextSummary', use esse contexto para citar nets, componentes, paginas e",
+  "pontos de medicao de forma pratica. Em 'limitations', liste somente lacunas reais",
+  "de contexto ou confianca. Retorne apenas o JSON estruturado pedido.",
 ].join(" ");
 
 export function isLlmConfigured() {
@@ -106,7 +191,7 @@ export async function generateAssistantNarrative(
   }
 
   const systemPrompt = specialistInstructions
-    ? `${SYSTEM_PROMPT} Além disso, siga as seguintes diretrizes de especialista: ${specialistInstructions}`
+    ? `${SYSTEM_PROMPT} Alem disso, siga as seguintes diretrizes de especialista: ${specialistInstructions}`
     : SYSTEM_PROMPT;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -146,13 +231,12 @@ export async function generateAssistantNarrative(
     };
   };
 
-  // Log token consumption asynchronously
   if (payload.usage) {
     logTokenUsage(
       CHAT_MODEL,
       "narrativa_diagnostico",
       payload.usage.prompt_tokens,
-      payload.usage.completion_tokens
+      payload.usage.completion_tokens,
     );
   }
 
@@ -165,12 +249,18 @@ export async function generateAssistantNarrative(
   const parsed = JSON.parse(content) as AssistantNarrativeResult;
 
   if (
+    typeof parsed.probableDiagnosis !== "string" ||
+    typeof parsed.probableArea !== "string" ||
     typeof parsed.technicalSummary !== "string" ||
     typeof parsed.mainHypothesis !== "string" ||
     !Array.isArray(parsed.evidence) ||
+    !Array.isArray(parsed.relatedLines) ||
+    !Array.isArray(parsed.componentsToMeasure) ||
+    !Array.isArray(parsed.recommendedTestSequence) ||
     typeof parsed.nextTest !== "string" ||
     typeof parsed.validationGoal !== "string" ||
-    typeof parsed.safetyNote !== "string"
+    typeof parsed.safetyNote !== "string" ||
+    !Array.isArray(parsed.limitations)
   ) {
     throw new Error("OpenAI returned a malformed narrative payload.");
   }

@@ -13,6 +13,7 @@ import {
 import {
   type AssistantTechnicalContextSupabaseClient,
   buildTechnicalContextEvidence,
+  buildTechnicalContextSources,
   searchAssistantTechnicalContext,
   summarizeTechnicalContextForAssistant,
 } from "@/lib/services/assistant-technical-context";
@@ -985,6 +986,109 @@ async function getAvailableTests(
   }));
 }
 
+type BenchTechnicalContext = NonNullable<AssistantStructuredResponse["technicalContext"]>;
+
+function buildBenchRelatedLines(
+  context: DiagnosticAssistantContext,
+  technicalContext: BenchTechnicalContext | null,
+) {
+  const lines: Array<{ name: string; expectedVoltage: string; note: string }> = [];
+  const seen = new Set<string>();
+
+  for (const measurement of context.measurements) {
+    const candidateName = measurement.pointLabel?.trim();
+    if (!candidateName) {
+      continue;
+    }
+
+    const key = candidateName.toUpperCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    lines.push({
+      name: candidateName,
+      expectedVoltage: measurement.expectedValueText ?? "Nao informado",
+      note:
+        measurement.measuredValueText ??
+        (measurement.measuredValueNumeric !== null
+          ? `Medido ${measurement.measuredValueNumeric}${measurement.unit ? ` ${measurement.unit}` : ""}`
+          : "Linha mencionada no historico de medicao."),
+    });
+  }
+
+  for (const result of technicalContext?.boardview?.results ?? []) {
+    const netName = result.relatedNet ?? (result.kind === "net" ? result.title : null);
+    if (!netName) {
+      continue;
+    }
+
+    const key = netName.toUpperCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    lines.push({
+      name: netName,
+      expectedVoltage: "Confirmar no esquema e nas medicoes da bancada",
+      note: result.details[0] ?? result.subtitle,
+    });
+  }
+
+  return lines.slice(0, 5);
+}
+
+function buildBenchComponentsToMeasure(
+  context: DiagnosticAssistantContext,
+  technicalContext: BenchTechnicalContext | null,
+) {
+  const items: Array<{
+    reference: string;
+    measurementPoint: string;
+    expectedValue: string;
+    note: string;
+  }> = [];
+  const seen = new Set<string>();
+
+  for (const result of technicalContext?.boardview?.results ?? []) {
+    const key = `${result.kind}:${result.title}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    items.push({
+      reference: result.title,
+      measurementPoint: result.coordinateHint ?? result.locationSummary ?? result.subtitle,
+      expectedValue:
+        result.relatedNet
+          ? `Comparar com a net ${result.relatedNet} no esquema e nas medicoes`
+          : "Comparar com o comportamento esperado do setor",
+      note: result.details.join(" "),
+    });
+  }
+
+  for (const measurement of context.measurements) {
+    const point = measurement.pointLabel?.trim();
+    if (!point) {
+      continue;
+    }
+
+    const key = `measurement:${point.toUpperCase()}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    items.push({
+      reference: point,
+      measurementPoint: measurement.measurementType,
+      expectedValue: measurement.expectedValueText ?? "Nao informado",
+      note: measurement.measuredValueText ?? "Ponto ja medido neste diagnostico.",
+    });
+  }
+
+  return items.slice(0, 6);
+}
+
 async function buildStructuredResponse(
   context: DiagnosticAssistantContext,
   similarCases: SemanticMatchResult[],
@@ -1135,7 +1239,55 @@ async function buildStructuredResponse(
       (primarySymptomInsight ? 0.05 : 0),
   );
 
-  let narrative = { technicalSummary, mainHypothesis, evidence, nextTest, validationGoal, safetyNote };
+  const heuristicRelatedLines = buildBenchRelatedLines(context, null);
+  const heuristicComponentsToMeasure = buildBenchComponentsToMeasure(context, null);
+  const heuristicLimitations = [
+    !context.measurements.length ? "Ainda faltam medicoes objetivas registradas na bancada." : null,
+    !context.tests.length ? "Ainda faltam testes executados para reduzir as hipoteses." : null,
+    !context.technicalAssets.length
+      ? "Nao ha boardview ou esquema associado diretamente a este caso."
+      : null,
+  ].filter((item): item is string => Boolean(item));
+
+  let narrative = {
+    probableDiagnosis: mainHypothesis,
+    probableArea: activeScenario.title,
+    technicalSummary,
+    mainHypothesis,
+    evidence,
+    relatedLines:
+      heuristicRelatedLines.length > 0
+        ? heuristicRelatedLines
+        : [
+            {
+              name: "Sem linha identificada",
+              expectedVoltage: "Solicitar medicao objetiva",
+              note: "O historico atual ainda nao aponta uma net especifica.",
+            },
+          ],
+    componentsToMeasure:
+      heuristicComponentsToMeasure.length > 0
+        ? heuristicComponentsToMeasure
+        : [
+            {
+              reference: "Ponto ainda nao definido",
+              measurementPoint: "Escolher no esquema ou boardview",
+              expectedValue: "Conforme a linha principal do defeito",
+              note: "Falta referencia concreta de componente ou pad no historico.",
+            },
+          ],
+    recommendedTestSequence: [
+      nextTest,
+      ...activeScenario.nextChecks.slice(0, 2).map((item) => `Depois disso: ${item}`),
+    ],
+    nextTest,
+    validationGoal,
+    safetyNote,
+    limitations:
+      heuristicLimitations.length > 0
+        ? heuristicLimitations
+        : ["Resposta baseada no historico atual da bancada."],
+  };
   let modelName = "heuristic-v1";
 
   if (isLlmConfigured()) {
@@ -1148,6 +1300,7 @@ async function buildStructuredResponse(
           manufacturer: context.manufacturer,
           summary: context.summary,
           benchPrompt: context.benchPrompt,
+          technicalContextSummary: context.technicalContextSummary,
           activeScenario,
           categoryStrategyFocus: strategy.summaryFocus,
           categoryFirstMove: strategy.firstMove,
@@ -1209,6 +1362,8 @@ async function buildStructuredResponse(
     confidence,
     modelName,
     rawResponseText: [
+      `Diagnostico provavel: ${narrative.probableDiagnosis}`,
+      `Setor provavel: ${narrative.probableArea}`,
       `Resumo técnico: ${narrative.technicalSummary}`,
       `Hipótese principal: ${narrative.mainHypothesis}`,
       `Evidências: ${narrative.evidence.join(" ")}`,
@@ -1217,12 +1372,18 @@ async function buildStructuredResponse(
       `Observação de segurança: ${narrative.safetyNote}`,
     ].join("\n\n"),
     structured: {
+      probableDiagnosis: narrative.probableDiagnosis,
+      probableArea: narrative.probableArea,
       technicalSummary: narrative.technicalSummary,
       mainHypothesis: narrative.mainHypothesis,
       evidence: narrative.evidence,
+      relatedLines: narrative.relatedLines,
+      componentsToMeasure: narrative.componentsToMeasure,
+      recommendedTestSequence: narrative.recommendedTestSequence,
       nextTest: narrative.nextTest,
       validationGoal: narrative.validationGoal,
       safetyNote: narrative.safetyNote,
+      limitations: narrative.limitations,
       categoryStrategy: strategy.firstMove,
       recommendedTestId: recommendedTest?.id ?? null,
       recommendedTestName: recommendedTest?.name ?? null,
@@ -1348,6 +1509,22 @@ export async function generateDiagnosticAssistantBenchResponse(
     groupSuccessRate,
     symptomGroupInsights,
   );
+  const benchRelatedLines = buildBenchRelatedLines(contextWithTechnicalData, technicalContext);
+  const benchComponentsToMeasure = buildBenchComponentsToMeasure(
+    contextWithTechnicalData,
+    technicalContext,
+  );
+  const benchSources = [
+    ...buildTechnicalContextSources(technicalContext),
+    ...similarCases.slice(0, 2).map((item) => `Caso semelhante: ${item.title}`),
+    ...relatedDocuments.slice(0, 2).map((item) => `Documento tecnico: ${item.title}`),
+  ];
+  const benchLimitations = Array.from(
+    new Set([
+      ...(payload.structured.limitations ?? []),
+      ...technicalContext.limitations,
+    ]),
+  ).slice(0, 6);
 
   const structuredResponse: AssistantStructuredResponse = {
     ...payload.structured,
@@ -1355,6 +1532,16 @@ export async function generateDiagnosticAssistantBenchResponse(
       ...payload.structured.evidence,
       ...buildTechnicalContextEvidence(technicalContext),
     ].slice(0, 8),
+    relatedLines:
+      benchRelatedLines.length > 0
+        ? benchRelatedLines
+        : payload.structured.relatedLines,
+    componentsToMeasure:
+      benchComponentsToMeasure.length > 0
+        ? benchComponentsToMeasure
+        : payload.structured.componentsToMeasure,
+    sourcesUsed: Array.from(new Set(benchSources)).slice(0, 10),
+    limitations: benchLimitations.length > 0 ? benchLimitations : payload.structured.limitations,
     technicalContext,
   };
   const rawResponseText = [

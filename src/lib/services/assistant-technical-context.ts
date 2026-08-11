@@ -306,13 +306,14 @@ function buildBoardviewSearchContext(
   const results = searchTerms.flatMap((term) => {
     const hits = searchBoardviewLabModel(model, term, "both", 4);
 
-    return hits
+    return (hits
       .map((hit) => {
         if (hit.selection.kind === "component") {
           const padPins = getComponentPadPins(model, hit.selection.component);
           const nets = [...new Set(padPins.map((padPin) => padPin.netName))]
             .filter(Boolean)
             .slice(0, 6);
+          const firstPad = padPins[0] ?? null;
 
           return {
             kind: "component" as const,
@@ -326,6 +327,11 @@ function buildBoardviewSearchContext(
               `Centro aproximado: ${hit.selection.component.centerXMil} mil × ${hit.selection.component.centerYMil} mil`,
             ],
             openLabHref: buildLabSearchHref(diagnosticId, asset, hit.title),
+            locationSummary: `Lado ${hit.selection.component.mountingSide} com ${hit.selection.component.pinCount} pads`,
+            relatedNet: nets[0] ?? null,
+            coordinateHint: firstPad
+              ? `Pad ${firstPad.id} em ${firstPad.xMil} mil x ${firstPad.yMil} mil`
+              : `Centro ${hit.selection.component.centerXMil} mil x ${hit.selection.component.centerYMil} mil`,
           };
         }
 
@@ -342,6 +348,8 @@ function buildBoardviewSearchContext(
         const testPointIds = netDetails.testPoints
           .map((testPoint) => testPoint.id)
           .slice(0, 5);
+        const firstPad = netDetails.padPins[0] ?? null;
+        const firstTestPoint = netDetails.testPoints[0] ?? null;
 
         return {
           kind: "net" as const,
@@ -357,11 +365,20 @@ function buildBoardviewSearchContext(
               : "Sem test points nessa net.",
           ],
           openLabHref: buildLabSearchHref(diagnosticId, asset, netName),
+          locationSummary: firstTestPoint
+            ? `Primeiro test point no lado ${firstTestPoint.side}`
+            : firstPad
+              ? `Primeiro pad no lado ${firstPad.side}`
+              : null,
+          relatedNet: netName,
+          coordinateHint: firstTestPoint
+            ? `${firstTestPoint.id} em ${firstTestPoint.xMil} mil x ${firstTestPoint.yMil} mil`
+            : firstPad
+              ? `${firstPad.id} em ${firstPad.xMil} mil x ${firstPad.yMil} mil`
+              : null,
         };
       })
-      .filter(
-        (result): result is AssistantBoardviewResult => Boolean(result),
-      )
+      .filter((result) => Boolean(result)) as AssistantBoardviewResult[])
       .slice(0, 4);
   });
 
@@ -414,6 +431,7 @@ async function buildSchematicSearchContext(
         occurrences: match.occurrences,
         excerpt: match.excerpt,
         openLabHref: buildLabSearchHref(diagnosticId, asset, term),
+        referenceHint: `Pagina ${match.pageNumber} para ${term}`,
       })),
   );
 
@@ -600,6 +618,34 @@ export function buildTechnicalContextEvidence(
   }
 
   return evidence.slice(0, 6);
+}
+
+export function buildTechnicalContextSources(
+  context: AssistantTechnicalContext,
+) {
+  const sources: string[] = [];
+
+  if (context.boardview?.assetTitle) {
+    sources.push(`Boardview: ${context.boardview.assetTitle}`);
+  }
+
+  if (context.schematic?.assetTitle) {
+    sources.push(`Esquema PDF: ${context.schematic.assetTitle}`);
+  }
+
+  for (const result of context.boardview?.results ?? []) {
+    sources.push(
+      result.kind === "net"
+        ? `Boardview net ${result.title}${result.coordinateHint ? ` (${result.coordinateHint})` : ""}`
+        : `Boardview componente ${result.title}${result.coordinateHint ? ` (${result.coordinateHint})` : ""}`,
+    );
+  }
+
+  for (const match of context.schematic?.matches ?? []) {
+    sources.push(`Esquema ${match.term} na pagina ${match.pageNumber}`);
+  }
+
+  return Array.from(new Set(sources)).slice(0, 10);
 }
 
 export function extractTechnicalSearchTermsForTest(prompt: string) {

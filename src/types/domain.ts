@@ -171,12 +171,28 @@ export type TestOption = CatalogOption & {
 };
 
 export type AssistantStructuredResponse = {
+  probableDiagnosis?: string;
+  probableArea?: string;
   technicalSummary: string;
   mainHypothesis: string;
   evidence: string[];
   nextTest: string;
   validationGoal: string;
   safetyNote: string;
+  relatedLines?: Array<{
+    name: string;
+    expectedVoltage: string;
+    note: string;
+  }>;
+  componentsToMeasure?: Array<{
+    reference: string;
+    measurementPoint: string;
+    expectedValue: string;
+    note: string;
+  }>;
+  recommendedTestSequence?: string[];
+  sourcesUsed?: string[];
+  limitations?: string[];
   categoryStrategy: string;
   recommendedTestId: string | null;
   recommendedTestName: string | null;
@@ -194,6 +210,9 @@ export type AssistantStructuredResponse = {
         subtitle: string;
         details: string[];
         openLabHref: string;
+        locationSummary?: string;
+        relatedNet?: string | null;
+        coordinateHint?: string | null;
       }>;
     } | null;
     schematic: {
@@ -206,6 +225,7 @@ export type AssistantStructuredResponse = {
         occurrences: number;
         excerpt: string;
         openLabHref: string;
+        referenceHint?: string | null;
       }>;
     } | null;
     limitations: string[];
