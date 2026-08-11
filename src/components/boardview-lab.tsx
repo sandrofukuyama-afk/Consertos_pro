@@ -945,7 +945,7 @@ export function BoardviewLab() {
       </div>
 
       {detailsOpen ? (
-        <div className="fixed inset-0 z-50 bg-[rgba(7,7,10,0.28)] backdrop-blur-[2px]">
+        <div className="fixed inset-0 z-50 bg-[rgba(7,7,10,0.14)]">
           <div className="absolute inset-y-2 right-2 w-[min(94vw,26rem)] sm:w-[min(92vw,24rem)] lg:w-[min(26rem,calc(100vw-1.5rem))]">
             <div className="ml-auto flex h-full w-full flex-col overflow-hidden rounded-[24px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[-24px_0_48px_rgba(0,0,0,0.25)]">
             <div className="mb-3 flex items-center justify-between gap-3">
