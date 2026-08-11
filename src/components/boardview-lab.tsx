@@ -124,6 +124,21 @@ export function BoardviewLab() {
     () => getBoardviewSelectionSchematicQuery(selected),
     [selected],
   );
+  const selectedSchematicMarker = useMemo(() => {
+    if (!selected) {
+      return null;
+    }
+
+    if (selected.kind === "component") {
+      return selected.component.ref;
+    }
+
+    if (selected.kind === "padPin") {
+      return selected.component?.ref ?? selected.padPin.partRef;
+    }
+
+    return null;
+  }, [selected]);
   const searchHits = model
     ? searchBoardviewLabModel(model, deferredQuery, sideFilter)
     : [];
@@ -913,6 +928,7 @@ export function BoardviewLab() {
                       fileBytes={pdfBytes}
                       fileName={pdfFileName}
                       linkedSearchTerm={linkedSchematicQuery}
+                      selectedMarkerTerm={selectedSchematicMarker}
                       searchQuery={query}
                       isReadingFile={isReadingPdfFile}
                       errorMessage={pdfErrorMessage}
@@ -930,6 +946,7 @@ export function BoardviewLab() {
                   fileBytes={pdfBytes}
                   fileName={pdfFileName}
                   linkedSearchTerm={linkedSchematicQuery}
+                  selectedMarkerTerm={selectedSchematicMarker}
                   searchQuery={query}
                   isReadingFile={isReadingPdfFile}
                   errorMessage={pdfErrorMessage}

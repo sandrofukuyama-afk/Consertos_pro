@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
@@ -40,6 +41,7 @@ type SchematicPdfViewerProps = {
   fileBytes: Uint8Array | null;
   fileName: string | null;
   linkedSearchTerm: string | null;
+  selectedMarkerTerm: string | null;
   searchQuery: string;
   isReadingFile: boolean;
   errorMessage: string | null;
@@ -84,6 +86,7 @@ export function SchematicPdfViewer({
   fileBytes,
   fileName,
   linkedSearchTerm,
+  selectedMarkerTerm,
   searchQuery,
   isReadingFile,
   errorMessage,
@@ -130,6 +133,9 @@ export function SchematicPdfViewer({
   const normalizedSearchQuery = normalizeSchematicSearchQuery(effectiveSearchQuery);
   const normalizedManualSearchQuery = normalizeSchematicSearchQuery(searchQuery);
   const normalizedLinkedQuery = normalizeSchematicSearchQuery(linkedSearchTerm ?? "");
+  const normalizedSelectedMarkerTerm = normalizeSchematicSearchQuery(
+    selectedMarkerTerm ?? "",
+  );
   const searchMatches = useMemo(
     () => findSchematicPdfMatches(pageTexts, effectiveSearchQuery),
     [effectiveSearchQuery, pageTexts],
@@ -648,47 +654,113 @@ export function SchematicPdfViewer({
                     height: renderedPageSize.height || 1,
                   }}
                 >
-                  {renderedTextItems.map((item) => {
-                    const normalizedItemText = normalizeSchematicSearchQuery(item.text);
-                    const isSelectedHighlight =
-                      normalizedLinkedQuery.length > 0 &&
-                      (normalizedItemText.includes(normalizedLinkedQuery) ||
-                        normalizedLinkedQuery.includes(normalizedItemText));
-                    const isRelatedHighlight =
-                      normalizedManualSearchQuery.length > 0 &&
-                      (normalizedItemText.includes(normalizedManualSearchQuery) ||
-                        normalizedManualSearchQuery.includes(normalizedItemText));
-                    const isFallbackHighlight =
-                      !normalizedManualSearchQuery.length &&
-                      !normalizedLinkedQuery.length &&
-                      normalizedSearchQuery.length > 0 &&
-                      (normalizedItemText.includes(normalizedSearchQuery) ||
-                        normalizedSearchQuery.includes(normalizedItemText));
-                    const highlightClass = isSelectedHighlight
-                      ? "rounded border-2 border-[rgba(66,226,255,0.98)] bg-[rgba(66,226,255,0.28)] text-[#f4fdff] shadow-[0_0_0_1px_rgba(66,226,255,0.55),0_0_18px_rgba(66,226,255,0.34)]"
-                      : isRelatedHighlight || isFallbackHighlight
-                        ? "rounded border border-[rgba(255,73,185,0.92)] bg-[rgba(255,73,185,0.18)] text-[#fff7fc] shadow-[0_0_0_1px_rgba(255,73,185,0.28)]"
-                        : "text-transparent";
+                  {renderedTextItems
+                    .map((item) => {
+                      const normalizedItemText = normalizeSchematicSearchQuery(item.text);
+                      const isSelectedHighlight =
+                        normalizedSelectedMarkerTerm.length > 0 &&
+                        normalizedItemText === normalizedSelectedMarkerTerm;
+                      const isRelatedHighlight =
+                        !isSelectedHighlight &&
+                        normalizedManualSearchQuery.length > 0 &&
+                        (normalizedItemText.includes(normalizedManualSearchQuery) ||
+                          normalizedManualSearchQuery.includes(normalizedItemText));
+                      const isFallbackHighlight =
+                        !isSelectedHighlight &&
+                        !normalizedManualSearchQuery.length &&
+                        normalizedLinkedQuery.length > 0 &&
+                        (normalizedItemText.includes(normalizedLinkedQuery) ||
+                          normalizedLinkedQuery.includes(normalizedItemText));
 
-                    return (
-                      <span
-                        key={item.id}
-                        className={`absolute whitespace-pre ${highlightClass}`}
-                        style={{
-                          left: item.left,
-                          top: item.top,
-                          minWidth: item.width,
-                          fontSize: item.fontSize,
-                          transform: `rotate(${item.rotationDeg}deg)`,
-                          transformOrigin: "left top",
-                          lineHeight: 1,
-                          zIndex: isSelectedHighlight ? 2 : 1,
-                        }}
-                      >
-                        {item.text}
-                      </span>
-                    );
-                  })}
+                      return {
+                        item,
+                        isSelectedHighlight,
+                        isHighlighted:
+                          isSelectedHighlight ||
+                          isRelatedHighlight ||
+                          isFallbackHighlight ||
+                          (!normalizedManualSearchQuery.length &&
+                            !normalizedLinkedQuery.length &&
+                            normalizedSearchQuery.length > 0 &&
+                            (normalizedItemText.includes(normalizedSearchQuery) ||
+                              normalizedSearchQuery.includes(normalizedItemText))),
+                      };
+                    })
+                    .sort((left, right) =>
+                      Number(left.isSelectedHighlight) - Number(right.isSelectedHighlight),
+                    )
+                    .map(({ item, isSelectedHighlight, isHighlighted }) => {
+                      if (!isHighlighted) {
+                        return (
+                          <span
+                            key={item.id}
+                            className="absolute whitespace-pre text-transparent"
+                            style={{
+                              left: item.left,
+                              top: item.top,
+                              minWidth: item.width,
+                              fontSize: item.fontSize,
+                              transform: `rotate(${item.rotationDeg}deg)`,
+                              transformOrigin: "left top",
+                              lineHeight: 1,
+                            }}
+                          >
+                            {item.text}
+                          </span>
+                        );
+                      }
+
+                      if (isSelectedHighlight) {
+                        return (
+                          <Fragment key={item.id}>
+                            <span
+                              className="absolute whitespace-pre rounded border-2 border-[rgba(66,226,255,0.98)] bg-[rgba(66,226,255,0.34)] px-1.5 py-0.5 text-[#f4fdff] shadow-[0_0_0_1px_rgba(66,226,255,0.62),0_0_18px_rgba(66,226,255,0.38)]"
+                              style={{
+                                left: item.left - 6,
+                                top: item.top - 4,
+                                minWidth: item.width + 12,
+                                fontSize: item.fontSize,
+                                transform: `rotate(${item.rotationDeg}deg)`,
+                                transformOrigin: "left top",
+                                lineHeight: 1,
+                                zIndex: 3,
+                              }}
+                            >
+                              {item.text}
+                            </span>
+                            <span
+                              className="absolute rounded-full border border-[rgba(66,226,255,0.98)] bg-[rgba(10,31,40,0.92)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[rgba(210,248,255,0.98)] shadow-[0_0_12px_rgba(66,226,255,0.35)]"
+                              style={{
+                                left: item.left + Math.max(item.width - 6, 0),
+                                top: Math.max(item.top - 16, 0),
+                                zIndex: 4,
+                              }}
+                            >
+                              Selecionado
+                            </span>
+                          </Fragment>
+                        );
+                      }
+
+                      return (
+                        <span
+                          key={item.id}
+                          className="absolute whitespace-pre rounded border border-[rgba(255,73,185,0.84)] bg-[rgba(255,73,185,0.16)] text-[#fff7fc] shadow-[0_0_0_1px_rgba(255,73,185,0.22)]"
+                          style={{
+                            left: item.left,
+                            top: item.top,
+                            minWidth: item.width,
+                            fontSize: item.fontSize,
+                            transform: `rotate(${item.rotationDeg}deg)`,
+                            transformOrigin: "left top",
+                            lineHeight: 1,
+                            zIndex: 1,
+                          }}
+                        >
+                          {item.text}
+                        </span>
+                      );
+                    })}
                 </div>
               </div>
             </div>
