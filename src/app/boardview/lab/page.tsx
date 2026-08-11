@@ -12,6 +12,7 @@ export default async function BoardviewLabPage() {
       actionLabel="Voltar aos casos"
       actionHref="/"
       user={user}
+      shellMode="workspace"
     >
       <BoardviewLab />
     </AppShell>

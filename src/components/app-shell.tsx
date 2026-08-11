@@ -16,6 +16,7 @@ type AppShellProps = {
   actionHref?: string;
   user: AppUser;
   children: ReactNode;
+  shellMode?: "default" | "workspace";
 };
 
 export function AppShell({
@@ -25,10 +26,12 @@ export function AppShell({
   actionHref = "/diagnosticos/novo",
   user,
   children,
+  shellMode = "default",
 }: AppShellProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const isWorkspaceMode = shellMode === "workspace";
 
   const handleAppUpdate = async () => {
     setIsUpdating(true);
@@ -234,7 +237,11 @@ export function AppShell({
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col overflow-x-hidden px-3 py-3 md:px-5 md:py-4">
+    <div
+      className={`flex min-h-screen w-full flex-col overflow-x-hidden ${
+        isWorkspaceMode ? "px-2 py-2 md:px-3 md:py-3" : "px-3 py-3 md:px-5 md:py-4"
+      }`}
+    >
       <div
         className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-300 lg:hidden ${
           isMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
@@ -250,13 +257,27 @@ export function AppShell({
         {renderBottomSheetContent(() => setIsMenuOpen(false))}
       </div>
 
-      <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 lg:grid lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="relative hidden overflow-hidden rounded-[30px] border border-white/10 bg-[var(--panel)] text-white shadow-[0_28px_80px_rgba(12,11,18,0.28)] lg:block">
+      <div
+        className={`mx-auto flex w-full flex-1 flex-col gap-4 ${
+          isWorkspaceMode
+            ? "max-w-none lg:min-h-[calc(100vh-1.5rem)]"
+            : "max-w-[1600px] lg:grid lg:min-h-[calc(100vh-2rem)] lg:grid-cols-[280px_minmax(0,1fr)]"
+        }`}
+      >
+        <aside
+          className={`relative hidden overflow-hidden rounded-[30px] border border-white/10 bg-[var(--panel)] text-white shadow-[0_28px_80px_rgba(12,11,18,0.28)] lg:block ${
+            isWorkspaceMode ? "lg:hidden" : ""
+          }`}
+        >
           <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-br from-[rgba(109,94,242,0.24)] to-transparent" />
           {renderSidebarContent()}
         </aside>
 
-        <header className="flex items-center justify-between rounded-[24px] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-3.5 shadow-md lg:hidden">
+        <header
+          className={`flex items-center justify-between rounded-[24px] border border-[var(--panel-border)] bg-[var(--panel)] shadow-md lg:hidden ${
+            isWorkspaceMode ? "px-4 py-2.5" : "px-5 py-3.5"
+          }`}
+        >
           <Link href="/" className="flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-[0.2em] text-white">
             <Logo size={26} />
             ConsertosPro
@@ -281,31 +302,31 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-hidden rounded-2xl sm:rounded-[30px] border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur">
-          <header className="flex flex-col gap-4 border-b border-[var(--panel-border)] px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 md:py-5">
+        <main className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur sm:rounded-[30px]">
+          <header className={`flex border-b border-[var(--panel-border)] ${isWorkspaceMode ? "flex-col gap-3 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between" : "flex-col gap-4 px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 md:py-5"}`}>
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 Central de diagnósticos
               </p>
-              <h2 className="mt-2 break-words font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)] md:text-3xl">
+              <h2 className={`mt-2 break-words font-[family-name:var(--font-heading)] font-semibold tracking-tight text-[var(--foreground)] ${isWorkspaceMode ? "text-xl sm:text-2xl" : "text-2xl md:text-3xl"}`}>
                 {title}
               </h2>
-              <p className="mt-1 max-w-3xl break-words text-sm leading-6 text-[var(--muted)]">
+              <p className={`mt-1 max-w-3xl break-words text-[var(--muted)] ${isWorkspaceMode ? "text-sm leading-5" : "text-sm leading-6"}`}>
                 {description}
               </p>
             </div>
 
-            <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <div className={`flex w-full min-w-0 ${isWorkspaceMode ? "flex-wrap items-center gap-2 lg:w-auto lg:justify-end" : "flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end"}`}>
               <Link
                 href="/busca"
-                className="flex w-full min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2.5 text-sm text-[var(--muted)] transition hover:border-[rgba(109,94,242,0.3)] sm:w-auto sm:min-w-[240px]"
+                className={`flex min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] text-sm text-[var(--muted)] transition hover:border-[rgba(109,94,242,0.3)] ${isWorkspaceMode ? "w-full px-3 py-2 lg:w-auto lg:min-w-[220px]" : "w-full px-4 py-2.5 sm:w-auto sm:min-w-[240px]"}`}
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
-              <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:gap-3">
+              <div className={`grid gap-2 ${isWorkspaceMode ? "grid-cols-2 w-full sm:flex sm:w-auto sm:flex-wrap" : "grid-cols-2 w-full sm:flex sm:w-auto sm:gap-3"}`}>
                 <Link
                   href={actionHref}
-                  className="rounded-full bg-[var(--accent-copper)] px-4 py-2.5 text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]"
+                  className={`rounded-full bg-[var(--accent-copper)] text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9] ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
                 >
                   {actionLabel}
                 </Link>
@@ -313,7 +334,7 @@ export function AppShell({
                   onClick={handleAppUpdate}
                   disabled={isUpdating}
                   title="Limpar cache e atualizar"
-                  className="flex items-center justify-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] hover:bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50"
+                  className={`flex items-center justify-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-50 ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
                 >
                   <svg className={`h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
@@ -321,7 +342,7 @@ export function AppShell({
                   <span className="truncate">{isUpdating ? "Atualizando..." : "Atualizar App"}</span>
                 </button>
               </div>
-              <div className="hidden max-w-full break-words rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] px-4 py-2.5 text-center text-sm font-medium text-[var(--foreground)] sm:block">
+              <div className={`hidden max-w-full break-words rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] text-center text-sm font-medium text-[var(--foreground)] sm:block ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}>
                 {user.fullName}
               </div>
               <div className="hidden sm:block">
@@ -334,7 +355,7 @@ export function AppShell({
             </div>
           </header>
 
-          <div className="px-3 py-3 pb-24 sm:px-4 sm:py-4 md:px-8 md:py-7 lg:pb-7">{children}</div>
+          <div className={`${isWorkspaceMode ? "px-2 py-2 pb-24 sm:px-3 sm:py-3 lg:px-4 lg:py-4 lg:pb-4" : "px-3 py-3 pb-24 sm:px-4 sm:py-4 md:px-8 md:py-7 lg:pb-7"}`}>{children}</div>
         </main>
 
         <nav className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-around border-t border-white/10 bg-[var(--panel)]/90 px-2 py-2 pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md lg:hidden">

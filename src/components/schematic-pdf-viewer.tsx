@@ -15,6 +15,14 @@ import {
   normalizeSchematicSearchQuery,
   type SchematicPdfPageText,
 } from "@/lib/boardview/schematic-pdf";
+import {
+  calculatePdfFitScale,
+  cancelPdfRenderTask,
+  getPdfJsWorkerSrc,
+  isPdfRenderingCancelledError,
+  type PdfRenderTaskLike,
+  type PdfViewportFitMode,
+} from "@/lib/boardview/viewer-utils";
 
 type PdfJsModule = typeof import("pdfjs-dist");
 
@@ -32,9 +40,12 @@ type SchematicPdfViewerProps = {
   fileBytes: Uint8Array | null;
   fileName: string | null;
   linkedSearchTerm: string | null;
+  searchQuery: string;
   isReadingFile: boolean;
   errorMessage: string | null;
 };
+
+type PdfZoomMode = PdfViewportFitMode | "manual";
 
 let workerConfigured = false;
 
@@ -73,12 +84,15 @@ export function SchematicPdfViewer({
   fileBytes,
   fileName,
   linkedSearchTerm,
+  searchQuery,
   isReadingFile,
   errorMessage,
 }: SchematicPdfViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const autoFocusedQueryRef = useRef<string | null>(null);
+  const renderTaskRef = useRef<PdfRenderTaskLike | null>(null);
+  const renderGenerationRef = useRef(0);
   const dragStateRef = useRef<{
     active: boolean;
     pointerId: number;
@@ -99,22 +113,36 @@ export function SchematicPdfViewer({
   const [documentProxy, setDocumentProxy] = useState<PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [zoom, setZoom] = useState(1.1);
-  const [manualSearchQuery, setManualSearchQuery] = useState("");
+  const [zoomMode, setZoomMode] = useState<PdfZoomMode>("page");
+  const [manualZoom, setManualZoom] = useState(1);
   const [pageTexts, setPageTexts] = useState<SchematicPdfPageText[]>([]);
+  const [basePageSize, setBasePageSize] = useState({ width: 0, height: 0 });
+  const [viewportFrameSize, setViewportFrameSize] = useState({ width: 0, height: 0 });
   const [renderedPageSize, setRenderedPageSize] = useState({ width: 0, height: 0 });
   const [renderedTextItems, setRenderedTextItems] = useState<RenderedTextItem[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const [isIndexingText, setIsIndexingText] = useState(false);
   const [isRenderingPage, setIsRenderingPage] = useState(false);
+  const [occurrencesOpen, setOccurrencesOpen] = useState(false);
 
-  const effectiveSearchQuery = manualSearchQuery.trim() || linkedSearchTerm || "";
+  const effectiveSearchQuery = searchQuery.trim() || linkedSearchTerm || "";
   const normalizedSearchQuery = normalizeSchematicSearchQuery(effectiveSearchQuery);
   const searchMatches = useMemo(
     () => findSchematicPdfMatches(pageTexts, effectiveSearchQuery),
     [effectiveSearchQuery, pageTexts],
   );
+  const occurrencesDrawerVisible = occurrencesOpen && searchMatches.length > 0;
+  const zoom =
+    zoomMode === "manual"
+      ? manualZoom
+      : calculatePdfFitScale({
+          mode: zoomMode,
+          pageWidth: basePageSize.width,
+          pageHeight: basePageSize.height,
+          containerWidth: viewportFrameSize.width,
+          containerHeight: viewportFrameSize.height,
+        });
 
   useEffect(() => {
     let cancelled = false;
@@ -122,10 +150,7 @@ export function SchematicPdfViewer({
     async function loadPdfJs() {
       const nextPdfJs = await import("pdfjs-dist");
       if (!workerConfigured) {
-        nextPdfJs.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url,
-        ).toString();
+        nextPdfJs.GlobalWorkerOptions.workerSrc = getPdfJsWorkerSrc();
         workerConfigured = true;
       }
 
@@ -149,6 +174,7 @@ export function SchematicPdfViewer({
         setDocumentProxy(null);
         setPageTexts([]);
         setPageCount(0);
+        setBasePageSize({ width: 0, height: 0 });
         setRenderedTextItems([]);
         setRenderedPageSize({ width: 0, height: 0 });
         return;
@@ -171,12 +197,14 @@ export function SchematicPdfViewer({
         setDocumentProxy(nextDocument);
         setPageCount(nextDocument.numPages);
         setCurrentPage(1);
-        setZoom(1.1);
+        setZoomMode("page");
+        setManualZoom(1);
       } catch (error) {
         if (!cancelled) {
           setDocumentProxy(null);
           setPageTexts([]);
           setPageCount(0);
+          setBasePageSize({ width: 0, height: 0 });
           setLocalError(
             error instanceof Error
               ? error.message
@@ -246,9 +274,71 @@ export function SchematicPdfViewer({
   }, [documentProxy]);
 
   useEffect(() => {
+    const activeDocument = documentProxy;
+    if (!activeDocument) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function measurePageAtBaseScale() {
+      if (!activeDocument) {
+        return;
+      }
+
+      const page = await activeDocument.getPage(currentPage);
+      const viewport = page.getViewport({ scale: 1 });
+
+      if (!cancelled) {
+        setBasePageSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
+      }
+    }
+
+    void measurePageAtBaseScale();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPage, documentProxy]);
+
+  useEffect(() => {
+    if (!scrollContainerRef.current) {
+      return;
+    }
+
+    const element = scrollContainerRef.current;
+    function syncViewportFrameSize() {
+      const rect = element.getBoundingClientRect();
+      const styles = window.getComputedStyle(element);
+      const horizontalPadding =
+        (Number.parseFloat(styles.paddingLeft) || 0) +
+        (Number.parseFloat(styles.paddingRight) || 0);
+      const verticalPadding =
+        (Number.parseFloat(styles.paddingTop) || 0) +
+        (Number.parseFloat(styles.paddingBottom) || 0);
+
+      setViewportFrameSize({
+        width: Math.max(0, Math.floor(rect.width - horizontalPadding)),
+        height: Math.max(0, Math.floor(rect.height - verticalPadding)),
+      });
+    }
+
+    const observer = new ResizeObserver(() => {
+      syncViewportFrameSize();
+    });
+
+    observer.observe(element);
+    syncViewportFrameSize();
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const normalizedLinkedQuery = normalizeSchematicSearchQuery(linkedSearchTerm ?? "");
     if (
-      manualSearchQuery.trim() ||
+      searchQuery.trim() ||
       !normalizedLinkedQuery ||
       normalizedSearchQuery !== normalizedLinkedQuery ||
       !searchMatches.length
@@ -262,7 +352,7 @@ export function SchematicPdfViewer({
 
     autoFocusedQueryRef.current = normalizedLinkedQuery;
     setCurrentPage(searchMatches[0]!.pageNumber);
-  }, [linkedSearchTerm, manualSearchQuery, normalizedSearchQuery, searchMatches]);
+  }, [linkedSearchTerm, normalizedSearchQuery, searchMatches, searchQuery]);
 
   useEffect(() => {
     if (!normalizedSearchQuery) {
@@ -272,6 +362,8 @@ export function SchematicPdfViewer({
 
   useEffect(() => {
     let cancelled = false;
+    const generation = renderGenerationRef.current + 1;
+    renderGenerationRef.current = generation;
 
     async function renderPage() {
       if (!documentProxy || !pdfjs || !canvasRef.current) {
@@ -282,10 +374,20 @@ export function SchematicPdfViewer({
       setIsRenderingPage(true);
 
       try {
+        await cancelPdfRenderTask(renderTaskRef.current);
+
+        if (
+          cancelled ||
+          renderGenerationRef.current !== generation ||
+          !canvasRef.current
+        ) {
+          return;
+        }
+
         const page = await documentProxy.getPage(currentPage);
-        const viewport = page.getViewport({ scale: zoom });
+        const cssViewport = page.getViewport({ scale: zoom });
         const canvas = canvasRef.current;
-        if (!canvas) {
+        if (!canvas || renderGenerationRef.current !== generation) {
           return;
         }
 
@@ -295,31 +397,49 @@ export function SchematicPdfViewer({
         }
 
         const devicePixelRatio = window.devicePixelRatio || 1;
-        canvas.width = Math.ceil(viewport.width * devicePixelRatio);
-        canvas.height = Math.ceil(viewport.height * devicePixelRatio);
-        canvas.style.width = `${viewport.width}px`;
-        canvas.style.height = `${viewport.height}px`;
-        context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-        context.clearRect(0, 0, viewport.width, viewport.height);
+        const renderViewport = page.getViewport({
+          scale: zoom * devicePixelRatio,
+        });
+        canvas.width = Math.ceil(renderViewport.width);
+        canvas.height = Math.ceil(renderViewport.height);
+        canvas.style.width = `${cssViewport.width}px`;
+        canvas.style.height = `${cssViewport.height}px`;
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.clearRect(0, 0, canvas.width, canvas.height);
 
-        await page.render({
+        const renderTask = page.render({
           canvas,
           canvasContext: context,
-          viewport,
-        }).promise;
+          viewport: renderViewport,
+        });
+        renderTaskRef.current = renderTask;
+
+        await renderTask.promise;
+
+        if (
+          cancelled ||
+          renderGenerationRef.current !== generation ||
+          renderTaskRef.current !== renderTask
+        ) {
+          return;
+        }
 
         const textContent = await page.getTextContent();
-        const textItems = getTextItems(textContent as never, viewport, pdfjs);
+        const textItems = getTextItems(textContent as never, cssViewport, pdfjs);
 
         if (!cancelled) {
           setRenderedPageSize({
-            width: viewport.width,
-            height: viewport.height,
+            width: cssViewport.width,
+            height: cssViewport.height,
           });
           setRenderedTextItems(textItems);
         }
       } catch (error) {
-        if (!cancelled) {
+        if (isPdfRenderingCancelledError(error)) {
+          return;
+        }
+
+        if (!cancelled && renderGenerationRef.current === generation) {
           setLocalError(
             error instanceof Error
               ? error.message
@@ -327,7 +447,11 @@ export function SchematicPdfViewer({
           );
         }
       } finally {
-        if (!cancelled) {
+        if (renderGenerationRef.current === generation) {
+          renderTaskRef.current = null;
+        }
+
+        if (!cancelled && renderGenerationRef.current === generation) {
           setIsRenderingPage(false);
         }
       }
@@ -337,6 +461,8 @@ export function SchematicPdfViewer({
 
     return () => {
       cancelled = true;
+      renderGenerationRef.current += 1;
+      void cancelPdfRenderTask(renderTaskRef.current);
     };
   }, [currentPage, documentProxy, pdfjs, zoom]);
 
@@ -377,41 +503,93 @@ export function SchematicPdfViewer({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
+  function handleManualZoom(nextZoom: number) {
+    setZoomMode("manual");
+    setManualZoom(nextZoom);
+  }
+
   const combinedErrorMessage = errorMessage ?? localError;
 
   return (
-    <section className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
-      <div className="flex flex-col gap-3 border-b border-[var(--panel-border)] pb-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-              Esquema PDF
-            </p>
-            <h4 className="mt-2 text-xl font-semibold tracking-tight text-[var(--foreground)]">
-              Visualizador local de esquema
-            </h4>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-              O PDF e aberto somente no navegador, com texto pesquisavel, destaque e navegacao por pagina.
+    <section className="flex h-full min-h-0 min-w-0 flex-col rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)]">
+      <div className="border-b border-[var(--panel-border)] px-4 py-3">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+              {fileName ?? "Esquema PDF"}
             </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+              {documentProxy ? `${currentPage} / ${pageCount}` : "Sem PDF"}
+            </div>
+            <div className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+              {(zoom * 100).toFixed(0)}%
+            </div>
+            {searchMatches.length ? (
+              <button
+                type="button"
+                onClick={() => setOccurrencesOpen(true)}
+                className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+              >
+                Ocorrencias ({searchMatches.length})
+              </button>
+            ) : null}
+            <div className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+              {isReadingFile || isLoadingDocument
+                ? "Abrindo PDF..."
+                : isIndexingText
+                  ? "Indexando texto..."
+                  : isRenderingPage
+                    ? "Renderizando..."
+                    : searchMatches.length
+                      ? `${searchMatches.length} paginas encontradas`
+                      : normalizedSearchQuery
+                        ? "Nenhuma pagina encontrada"
+                        : "Aguardando busca"}
+            </div>
+          </div>
+        </div>
 
-          <div className="grid gap-2 sm:grid-cols-[auto_auto_auto]">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
-              disabled={!documentProxy || currentPage <= 1}
-              className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Pagina anterior
-            </button>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((value) => Math.min(pageCount, value + 1))}
-              disabled={!documentProxy || currentPage >= pageCount}
-              className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Proxima pagina
-            </button>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] p-1">
+              {[
+                { value: "page", label: "Ajustar pagina" },
+                { value: "width", label: "Ajustar largura" },
+              ].map((entry) => (
+                <button
+                  key={entry.value}
+                  type="button"
+                  onClick={() => setZoomMode(entry.value as PdfViewportFitMode)}
+                  className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                    zoomMode === entry.value
+                      ? "bg-[var(--accent-copper)] text-white"
+                      : "text-[var(--muted)] hover:text-white"
+                  }`}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] p-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}
+                disabled={!documentProxy || currentPage <= 1}
+                className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((value) => Math.min(pageCount, value + 1))}
+                disabled={!documentProxy || currentPage >= pageCount}
+                className="rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Proxima
+              </button>
+            </div>
             <div className="flex rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] p-1">
               {[
                 { label: "-", value: Math.max(0.6, zoom - 0.15) },
@@ -420,7 +598,7 @@ export function SchematicPdfViewer({
                 <button
                   key={entry.label}
                   type="button"
-                  onClick={() => setZoom(entry.value)}
+                  onClick={() => handleManualZoom(entry.value)}
                   className="rounded-full px-3 py-1.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5"
                 >
                   {entry.label}
@@ -428,65 +606,22 @@ export function SchematicPdfViewer({
               ))}
             </div>
           </div>
+          <p className="text-xs leading-5 text-[var(--muted)]">
+            Arraste o painel para navegar pela pagina renderizada.
+          </p>
         </div>
-
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
-          <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)]">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">
-              PDF atual
-            </p>
-            <p className="mt-1 truncate">{fileName ?? "Nenhum PDF aberto"}</p>
-          </div>
-          <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)]">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">
-              Pagina
-            </p>
-            <p className="mt-1">
-              {documentProxy ? `${currentPage} / ${pageCount}` : "-"}
-            </p>
-          </div>
-          <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)]">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">
-              Zoom
-            </p>
-            <p className="mt-1">{(zoom * 100).toFixed(0)}%</p>
-          </div>
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-          <input
-            type="text"
-            value={manualSearchQuery || linkedSearchTerm || ""}
-            onChange={(event) => setManualSearchQuery(event.target.value)}
-            placeholder="Buscar referencia ou net no PDF"
-            className="w-full rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[rgba(109,94,242,0.55)]"
-          />
-          <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)]">
-            {isReadingFile || isLoadingDocument
-              ? "Abrindo PDF..."
-              : isIndexingText
-                ? "Indexando texto..."
-                : isRenderingPage
-                  ? "Renderizando..."
-                  : searchMatches.length
-                    ? `${searchMatches.length} paginas encontradas`
-                    : normalizedSearchQuery
-                      ? "Nenhuma pagina encontrada"
-                      : "Aguardando busca"}
-          </div>
-        </div>
-
-        {combinedErrorMessage ? (
-          <div className="rounded-[20px] border border-[rgba(202,106,85,0.28)] bg-[rgba(202,106,85,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
-            {combinedErrorMessage}
-          </div>
-        ) : null}
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      {combinedErrorMessage ? (
+        <div className="border-b border-[var(--panel-border)] px-4 py-3 text-sm text-[var(--danger)]">
+          {combinedErrorMessage}
+        </div>
+      ) : null}
+
+      <div className="relative min-h-0 flex-1 min-w-0">
         <div
           ref={scrollContainerRef}
-          className="min-h-[420px] overflow-auto rounded-[20px] border border-[var(--panel-border)] bg-[#0d0c14] p-3 md:min-h-[560px]"
+          className="h-full min-h-0 min-w-0 overflow-auto bg-[#0d0c14]"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
@@ -494,70 +629,86 @@ export function SchematicPdfViewer({
         >
           {documentProxy ? (
             <div
-              className="relative mx-auto"
-              style={{
-                width: renderedPageSize.width || 1,
-                height: renderedPageSize.height || 1,
-              }}
+              className="flex min-h-full min-w-full items-center justify-center p-3"
             >
-              <canvas ref={canvasRef} className="block rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.35)]" />
               <div
-                className="absolute left-0 top-0 select-text"
+                className="relative shrink-0"
                 style={{
                   width: renderedPageSize.width || 1,
                   height: renderedPageSize.height || 1,
                 }}
               >
-                {renderedTextItems.map((item) => {
-                  const normalizedItemText = normalizeSchematicSearchQuery(item.text);
-                  const isHighlighted =
-                    normalizedSearchQuery.length > 0 &&
-                    (normalizedItemText.includes(normalizedSearchQuery) ||
-                      normalizedSearchQuery.includes(normalizedItemText));
+                <canvas ref={canvasRef} className="block rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.35)]" />
+                <div
+                  className="absolute left-0 top-0 select-text"
+                  style={{
+                    width: renderedPageSize.width || 1,
+                    height: renderedPageSize.height || 1,
+                  }}
+                >
+                  {renderedTextItems.map((item) => {
+                    const normalizedItemText = normalizeSchematicSearchQuery(item.text);
+                    const isHighlighted =
+                      normalizedSearchQuery.length > 0 &&
+                      (normalizedItemText.includes(normalizedSearchQuery) ||
+                        normalizedSearchQuery.includes(normalizedItemText));
 
-                  return (
-                    <span
-                      key={item.id}
-                      className={`absolute whitespace-pre ${
-                        isHighlighted
-                          ? "rounded bg-[rgba(216,166,84,0.65)] text-[#1a1628]"
-                          : "text-transparent"
-                      }`}
-                      style={{
-                        left: item.left,
-                        top: item.top,
-                        minWidth: item.width,
-                        fontSize: item.fontSize,
-                        transform: `rotate(${item.rotationDeg}deg)`,
-                        transformOrigin: "left top",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {item.text}
-                    </span>
-                  );
-                })}
+                    return (
+                      <span
+                        key={item.id}
+                        className={`absolute whitespace-pre ${
+                          isHighlighted
+                            ? "rounded bg-[rgba(216,166,84,0.65)] text-[#1a1628]"
+                            : "text-transparent"
+                        }`}
+                        style={{
+                          left: item.left,
+                          top: item.top,
+                          minWidth: item.width,
+                          fontSize: item.fontSize,
+                          transform: `rotate(${item.rotationDeg}deg)`,
+                          transformOrigin: "left top",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {item.text}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex min-h-[380px] items-center justify-center rounded-[18px] border border-dashed border-[var(--panel-border)] text-center text-sm text-[var(--muted)]">
-              Abra um PDF de esquema local para habilitar a busca cruzada com o boardview.
+            <div className="flex h-full min-h-[320px] items-center justify-center rounded-[18px] border border-dashed border-[var(--panel-border)] text-center text-sm text-[var(--muted)]">
+              Abra um PDF local.
             </div>
           )}
         </div>
 
-        <aside className="grid gap-4">
-          <div className="rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-              Ocorrencias
-            </p>
-            <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
-              {searchMatches.length ? (
-                searchMatches.map((match) => (
+        {occurrencesDrawerVisible ? (
+          <div className="absolute inset-y-0 right-0 z-20 w-full max-w-[22rem] bg-[rgba(7,7,10,0.42)] backdrop-blur-sm">
+            <aside className="ml-auto flex h-full w-full flex-col border-l border-[var(--panel-border)] bg-[var(--card-surface)] shadow-[-24px_0_48px_rgba(0,0,0,0.25)]">
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border)] px-4 py-3">
+                <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                  Ocorrencias
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setOccurrencesOpen(false)}
+                  className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+                >
+                  Fechar
+                </button>
+              </div>
+              <div className="min-h-0 space-y-2 overflow-y-auto p-4">
+                {searchMatches.map((match) => (
                   <button
                     key={`${match.pageNumber}:${match.occurrences}`}
                     type="button"
-                    onClick={() => setCurrentPage(match.pageNumber)}
+                    onClick={() => {
+                      setCurrentPage(match.pageNumber);
+                      setOccurrencesOpen(false);
+                    }}
                     className={`w-full rounded-[18px] border px-3 py-3 text-left transition ${
                       currentPage === match.pageNumber
                         ? "border-[rgba(109,94,242,0.55)] bg-[rgba(109,94,242,0.12)]"
@@ -574,19 +725,11 @@ export function SchematicPdfViewer({
                       {match.excerpt}
                     </p>
                   </button>
-                ))
-              ) : normalizedSearchQuery ? (
-                <div className="rounded-[18px] border border-dashed border-[var(--panel-border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
-                  Nenhuma ocorrencia para esta busca.
-                </div>
-              ) : (
-                <div className="rounded-[18px] border border-dashed border-[var(--panel-border)] px-4 py-6 text-center text-sm text-[var(--muted)]">
-                  Selecione um componente ou digite uma busca manual para localizar paginas.
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            </aside>
           </div>
-        </aside>
+        ) : null}
       </div>
     </section>
   );
