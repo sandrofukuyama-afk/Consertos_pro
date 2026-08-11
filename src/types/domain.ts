@@ -55,6 +55,7 @@ export type TechnicalDocumentListItem = {
   id: string;
   title: string;
   documentType: string;
+  fileFormat: string | null;
   manufacturer: string;
   relation: string;
   uploadedAt: string;
@@ -70,6 +71,7 @@ export type TechnicalLibraryItem = {
   title: string;
   originalFileName: string | null;
   documentType: string;
+  fileFormat: string | null;
   manufacturer: string;
   manufacturerId: string | null;
   relation: string;

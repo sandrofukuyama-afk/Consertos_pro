@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/app-shell";
-import { TechnicalLibraryAssetCard } from "@/components/technical-library-asset-card";
+import { TechnicalLibraryList } from "@/components/technical-library-list";
 import { TechnicalDocumentUploadForm } from "@/components/technical-document-upload-form";
 import { requireCurrentUser } from "@/lib/auth";
 import { getLibraryCatalog } from "@/lib/services/catalog";
@@ -57,74 +57,12 @@ export default async function BibliotecaPage({
               Arquivos salvos
             </h3>
 
-            <div className="mt-5 grid gap-3">
-              {libraryItems.length ? (
-                libraryItems.map((item) => (
-                  item.source === "technical_asset" ? (
-                    <TechnicalLibraryAssetCard
-                      key={`${item.source}:${item.id}`}
-                      item={item}
-                      boards={catalog.boards}
-                      models={catalog.models}
-                      manufacturers={catalog.manufacturers}
-                    />
-                  ) : (
-                    <article
-                      key={`${item.source}:${item.id}`}
-                      className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
-                            {item.documentType}
-                          </p>
-                          <h4 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)] break-words">
-                            {item.title}
-                          </h4>
-                        </div>
-                        <span className="shrink-0 text-xs text-[var(--muted)]">{item.uploadedAt}</span>
-                      </div>
-                      <p className="mt-3 text-sm text-[var(--foreground)]">
-                        Fabricante: {item.manufacturer}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--muted)]">Relação: {item.relation}</p>
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                        {item.chunksCount !== null ? (
-                          <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
-                            {item.chunksCount} chunks
-                          </span>
-                        ) : null}
-                        {item.isIndexed !== null ? (
-                          <span
-                            className={`rounded-full px-3 py-1 ${
-                              item.isIndexed
-                                ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
-                                : "bg-[rgba(202,106,85,0.12)] text-[var(--danger)]"
-                            }`}
-                          >
-                            {item.isIndexed ? "Indexado" : "Indexação pendente"}
-                          </span>
-                        ) : null}
-                      </div>
-                      {item.signedUrl ? (
-                        <a
-                          href={item.signedUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-4 inline-flex text-sm font-semibold text-[var(--accent-copper)]"
-                        >
-                          Abrir documento
-                        </a>
-                      ) : null}
-                    </article>
-                  )
-                ))
-              ) : (
-                <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center text-sm text-[var(--muted)]">
-                  Nenhum documento técnico foi enviado ainda.
-                </div>
-              )}
-            </div>
+            <TechnicalLibraryList
+              items={libraryItems}
+              boards={catalog.boards}
+              models={catalog.models}
+              manufacturers={catalog.manufacturers}
+            />
           </section>
 
           <aside className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--panel)] p-6 text-white">

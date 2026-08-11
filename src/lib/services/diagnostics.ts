@@ -808,6 +808,7 @@ export async function getTechnicalDocuments() {
         id: row.id,
         title: row.title,
         documentType: prettifyStatus(row.document_type),
+        fileFormat: row.document_type,
         manufacturer: manufacturer?.name ?? "Nao informado",
         relation:
           model?.model_name ?? board?.board_code ?? component?.component_ref ?? "Referencia geral",
@@ -884,6 +885,7 @@ export async function getTechnicalLibraryItems() {
       title: displayName,
       originalFileName: row.original_filename,
       documentType: getTechnicalAssetTypeLabel(row.file_format, row.asset_type),
+      fileFormat: row.file_format,
       manufacturer: manufacturerName,
       manufacturerId,
       relation: association.modelName ?? association.boardName ?? "Nao associado",
@@ -909,6 +911,7 @@ export async function getTechnicalLibraryItems() {
     title: item.title,
     originalFileName: null,
     documentType: item.documentType,
+    fileFormat: item.fileFormat,
     manufacturer: item.manufacturer,
     manufacturerId: null,
     relation: item.relation,
