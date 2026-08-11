@@ -77,6 +77,8 @@ type BoardviewLabProps = {
     models: EquipmentModelCatalogOption[];
     manufacturers: CatalogOption[];
   };
+  initialQuery?: string;
+  initialViewerMode?: LabViewerMode;
   initialAssets?: Array<{
     slot: SaveableTechnicalFileSlot;
     assetId: string;
@@ -259,6 +261,8 @@ function getSelectionComponent(selection: BoardviewLabSelection | null) {
 export function BoardviewLab({
   initialAssociation,
   catalogOptions,
+  initialQuery = "",
+  initialViewerMode = "split",
   initialAssets = [],
 }: BoardviewLabProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -283,7 +287,7 @@ export function BoardviewLab({
   const [fileName, setFileName] = useState<string | null>(null);
   const [model, setModel] = useState<BoardviewLabModel | null>(null);
   const [sideFilter, setSideFilter] = useState<BoardviewLabSideFilter>("both");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [selected, setSelected] = useState<BoardviewLabSelection | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isReadingFile, setIsReadingFile] = useState(false);
@@ -295,7 +299,7 @@ export function BoardviewLab({
   const [isReadingPdfFile, setIsReadingPdfFile] = useState(false);
   const [pdfTechnicalFile, setPdfTechnicalFile] =
     useState<SaveableTechnicalFileState | null>(null);
-  const [viewerMode, setViewerMode] = useState<LabViewerMode>("split");
+  const [viewerMode, setViewerMode] = useState<LabViewerMode>(initialViewerMode);
   const [mobileTab, setMobileTab] = useState<MobileWorkspaceTab>("boardview");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [splitRatio, setSplitRatio] = useState(0.52);
@@ -446,6 +450,16 @@ export function BoardviewLab({
   }, []);
 
   useEffect(() => {
+    setQuery((current) => (current === initialQuery ? current : initialQuery));
+  }, [initialQuery]);
+
+  useEffect(() => {
+    setViewerMode((current) =>
+      current === initialViewerMode ? current : initialViewerMode,
+    );
+  }, [initialViewerMode]);
+
+  useEffect(() => {
     if (!pendingSelectionFocusRef.current || !visibleSelected) {
       return;
     }
@@ -571,7 +585,7 @@ export function BoardviewLab({
               setFileName(asset.fileName);
               setModel(nextModel);
               setSelected(null);
-              setQuery("");
+              setQuery(initialQuery);
               setSideFilter("both");
               setBoardScale(1);
               setBoardviewTechnicalFile(savedTechnicalFile);
@@ -580,7 +594,13 @@ export function BoardviewLab({
             startTransition(() => {
               setPdfFileName(asset.fileName);
               setPdfBytes(new Uint8Array(arrayBuffer));
-              setViewerMode((current) => (current === "boardview" ? "split" : current));
+              setViewerMode((current) =>
+                current === "boardview" && initialViewerMode === "split"
+                  ? "split"
+                  : current === initialViewerMode
+                    ? current
+                    : initialViewerMode,
+              );
               setPdfTechnicalFile(savedTechnicalFile);
             });
           }
@@ -613,7 +633,7 @@ export function BoardviewLab({
     return () => {
       cancelled = true;
     };
-  }, [initialAssets]);
+  }, [initialAssets, initialQuery, initialViewerMode]);
 
   useEffect(() => {
     if (!boardviewFileForHashing) {

@@ -10,6 +10,12 @@ import {
   getAssistantModelName,
   isLlmConfigured,
 } from "@/lib/ai/assistant-llm";
+import {
+  type AssistantTechnicalContextSupabaseClient,
+  buildTechnicalContextEvidence,
+  searchAssistantTechnicalContext,
+  summarizeTechnicalContextForAssistant,
+} from "@/lib/services/assistant-technical-context";
 import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
@@ -71,6 +77,7 @@ type DiagnosticAssistantContext = {
     modelName: string | null;
   }>;
   benchPrompt: string | null;
+  technicalContextSummary: string | null;
 };
 
 type CategoryStrategy = {
@@ -700,6 +707,7 @@ async function getDiagnosticAssistantContext(
       ).values(),
     ),
     benchPrompt,
+    technicalContextSummary: null,
   };
 }
 
@@ -710,6 +718,7 @@ async function getSimilarCasesAndDocuments(
   const query = [
     context.summary,
     context.benchPrompt,
+    context.technicalContextSummary,
     ...context.symptoms.slice(0, 3).map((item) => item.name),
     ...context.hypotheses.slice(0, 2).map((item) => item.title),
   ]
@@ -1271,6 +1280,114 @@ export async function generateDiagnosticAssistantResponse(
   };
 }
 
+export async function generateDiagnosticAssistantBenchResponse(
+  diagnosticId: string,
+  benchPrompt: string | null = null,
+) {
+  const supabase = await createClient();
+  const context = await getDiagnosticAssistantContext(
+    diagnosticId,
+    supabase,
+    benchPrompt,
+  );
+
+  if (!context) {
+    throw new Error("Diagnóstico não encontrado para gerar recomendação.");
+  }
+
+  const technicalContextClient =
+    supabase as unknown as AssistantTechnicalContextSupabaseClient;
+  const technicalContext = await searchAssistantTechnicalContext({
+    diagnosticId,
+    benchPrompt,
+    supabase: technicalContextClient,
+  });
+  const technicalContextSummary =
+    summarizeTechnicalContextForAssistant(technicalContext);
+  const contextWithTechnicalData: DiagnosticAssistantContext = {
+    ...context,
+    technicalContextSummary: technicalContextSummary || null,
+  };
+
+  if (benchPrompt) {
+    const { error: promptError } = await supabase.from("ai_responses").insert({
+      diagnostic_id: diagnosticId,
+      prompt_context_version: "assistant-bench-user-v1",
+      response_role: "user",
+      reasoning_summary: benchPrompt,
+      raw_response_text: benchPrompt,
+      structured_response_json: {
+        userPrompt: benchPrompt,
+        technicalContext,
+      },
+      model_name: "technician-input",
+    });
+
+    if (promptError) {
+      throw promptError;
+    }
+  }
+
+  const [
+    { similarCases, relatedDocuments },
+    availableTests,
+    groupSuccessRate,
+    symptomGroupInsights,
+  ] = await Promise.all([
+    getSimilarCasesAndDocuments(contextWithTechnicalData, supabase),
+    getAvailableTests(supabase),
+    getHistoricalTestGroupSuccess(supabase),
+    getHistoricalSymptomGroupInsights(supabase),
+  ]);
+
+  const payload = await buildStructuredResponse(
+    contextWithTechnicalData,
+    similarCases,
+    relatedDocuments,
+    availableTests,
+    groupSuccessRate,
+    symptomGroupInsights,
+  );
+
+  const structuredResponse: AssistantStructuredResponse = {
+    ...payload.structured,
+    evidence: [
+      ...payload.structured.evidence,
+      ...buildTechnicalContextEvidence(technicalContext),
+    ].slice(0, 8),
+    technicalContext,
+  };
+  const rawResponseText = [
+    payload.rawResponseText,
+    technicalContextSummary
+      ? `Contexto técnico consultado: ${technicalContextSummary}`
+      : null,
+  ]
+    .filter((item): item is string => Boolean(item))
+    .join("\n\n");
+
+  const { error } = await supabase.from("ai_responses").insert({
+    diagnostic_id: diagnosticId,
+    prompt_context_version: "assistant-v2-technical-context",
+    response_role: "assistant",
+    reasoning_summary: structuredResponse.technicalSummary,
+    recommended_next_step: structuredResponse.nextTest,
+    confidence_score: payload.confidence,
+    raw_response_text: rawResponseText,
+    structured_response_json: structuredResponse,
+    model_name: payload.modelName,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    confidence: payload.confidence,
+    provider: getEmbeddingProviderName(),
+  };
+}
+
 export async function getDiagnosticAssistantSnapshot(
   diagnosticId: string,
   client?: SupabaseServerClient,
@@ -1318,6 +1435,7 @@ export async function getDiagnosticAssistantSnapshot(
         `,
       )
       .eq("diagnostic_id", diagnosticId)
+      .eq("response_role", "assistant")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

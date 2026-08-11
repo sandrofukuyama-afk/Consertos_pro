@@ -11,6 +11,8 @@ type BoardviewLabPageProps = {
     diagnostic_id?: string;
     boardview_asset_id?: string;
     schematic_asset_id?: string;
+    q?: string;
+    view?: "split" | "boardview" | "schematic";
   }>;
 };
 
@@ -48,6 +50,11 @@ export default async function BoardviewLabPage({
   const diagnosticId = query.diagnostic_id?.trim() || null;
   const boardviewAssetId = query.boardview_asset_id?.trim() || null;
   const schematicAssetId = query.schematic_asset_id?.trim() || null;
+  const initialQuery = query.q?.trim() || "";
+  const initialViewerMode =
+    query.view === "split" || query.view === "boardview" || query.view === "schematic"
+      ? query.view
+      : "split";
   const [user, supabase, catalog] = await Promise.all([
     userPromise,
     supabasePromise,
@@ -174,6 +181,8 @@ export default async function BoardviewLabPage({
           manufacturers: catalog.manufacturers,
         }}
         initialAssets={initialAssets}
+        initialQuery={initialQuery}
+        initialViewerMode={initialViewerMode}
       />
     </AppShell>
   );

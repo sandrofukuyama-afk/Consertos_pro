@@ -11,7 +11,7 @@ import {
   extractComponentReferenceFromImage,
   type ComponentOcrResult,
 } from "@/lib/ai/image-analysis";
-import { generateDiagnosticAssistantResponse } from "@/lib/services/assistant";
+import { generateDiagnosticAssistantBenchResponse } from "@/lib/services/assistant";
 import {
   syncDiagnosticEmbeddingSource,
   syncResolvedCaseEmbeddingSource,
@@ -731,7 +731,10 @@ export async function generateDiagnosticAssistantAction(formData: FormData) {
   }
 
   try {
-    const result = await generateDiagnosticAssistantResponse(diagnosticId, assistantPrompt);
+    const result = await generateDiagnosticAssistantBenchResponse(
+      diagnosticId,
+      assistantPrompt,
+    );
     revalidatePath(`/diagnosticos/${diagnosticId}`);
     redirect(
       `/diagnosticos/${diagnosticId}?message=${encodeURIComponent(

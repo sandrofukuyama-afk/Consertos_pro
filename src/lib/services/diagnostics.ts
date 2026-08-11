@@ -334,8 +334,11 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         ),
         ai_responses(
           id,
+          response_role,
           reasoning_summary,
           recommended_next_step,
+          raw_response_text,
+          structured_response_json,
           created_at
         ),
         measurements(
@@ -679,12 +682,18 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     }),
     ...(data.ai_responses ?? []).map((item) => ({
       id: `ai-response-${item.id}`,
-      kind: "IA",
-      title: "Recomendacao tecnica registrada",
+      kind: item.response_role === "user" ? "Pergunta" : "IA",
+      title:
+        item.response_role === "user"
+          ? "Pergunta da bancada registrada"
+          : "Recomendacao tecnica registrada",
       description:
-        item.recommended_next_step ??
-        item.reasoning_summary ??
-        "Leitura tecnica salva para orientar o proximo passo.",
+        item.response_role === "user"
+          ? item.raw_response_text ?? item.reasoning_summary ?? "Pergunta sem texto."
+          : item.recommended_next_step ??
+            item.reasoning_summary ??
+            item.raw_response_text ??
+            "Leitura tecnica salva para orientar o proximo passo.",
       happenedAt: item.created_at ?? new Date().toISOString(),
     })),
     ...(data.measurements ?? []).map((item) => ({

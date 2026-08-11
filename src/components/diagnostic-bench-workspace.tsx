@@ -166,6 +166,7 @@ export function DiagnosticBenchWorkspace({
   const latestTest = detail.tests[0] ?? null;
   const latestMeasurement = detail.measurements[0] ?? null;
   const latestResponse = detail.assistantSnapshot.latestResponse;
+  const technicalContext = latestResponse?.structured?.technicalContext;
   const intakePower = getEquipmentDetailValue(detail, "Alimentação");
   const intakeBoots = getEquipmentDetailValue(detail, "Liga");
   const intakeScreen = getEquipmentDetailValue(detail, "Condição da tela");
@@ -349,6 +350,154 @@ export function DiagnosticBenchWorkspace({
                       </p>
                     )}
                   </div>
+                </div>
+
+                <div className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    Contexto técnico pesquisado
+                  </p>
+                  {technicalContext ? (
+                    <div className="mt-3 space-y-4">
+                      {technicalContext.searchTerms.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {technicalContext.searchTerms.map((term) => (
+                            <span
+                              key={term}
+                              className="rounded-full border border-[rgba(109,94,242,0.28)] bg-[rgba(109,94,242,0.12)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--foreground)]"
+                            >
+                              {term}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[var(--muted)]">
+                          Nenhum termo técnico pesquisável foi identificado na última pergunta.
+                        </p>
+                      )}
+
+                      {technicalContext.boardview ? (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-[var(--foreground)]">
+                              Boardview: {technicalContext.boardview.assetTitle}
+                            </p>
+                            <ActionLink
+                              href={technicalContext.boardview.openLabHref}
+                              label="Abrir no laboratório"
+                            />
+                          </div>
+                          {technicalContext.boardview.results.length ? (
+                            technicalContext.boardview.results.map((result) => (
+                              <div
+                                key={`${result.kind}-${result.title}`}
+                                className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3"
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                                      {result.title}
+                                    </p>
+                                    <p className="mt-1 text-sm text-[var(--muted)]">
+                                      {result.subtitle}
+                                    </p>
+                                  </div>
+                                  <ActionLink
+                                    href={result.openLabHref}
+                                    label={
+                                      result.kind === "net"
+                                        ? "Abrir net"
+                                        : "Abrir componente"
+                                    }
+                                  />
+                                </div>
+                                <div className="mt-2 space-y-1">
+                                  {result.details.map((detailLine) => (
+                                    <p
+                                      key={detailLine}
+                                      className="text-sm leading-6 text-[var(--muted)]"
+                                    >
+                                      {detailLine}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-[var(--muted)]">
+                              O boardview associado não trouxe resultados para os termos da
+                              pergunta.
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {technicalContext.schematic ? (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-[var(--foreground)]">
+                              Esquema: {technicalContext.schematic.assetTitle}
+                            </p>
+                            <ActionLink
+                              href={technicalContext.schematic.openLabHref}
+                              label="Abrir no laboratório"
+                            />
+                          </div>
+                          {technicalContext.schematic.matches.length ? (
+                            technicalContext.schematic.matches.map((match) => (
+                              <div
+                                key={`${match.term}-${match.pageNumber}`}
+                                className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3"
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-[var(--foreground)]">
+                                      {match.term} na página {match.pageNumber}
+                                    </p>
+                                    <p className="mt-1 text-sm text-[var(--muted)]">
+                                      {match.occurrences} ocorrência(s) localizada(s).
+                                    </p>
+                                  </div>
+                                  <ActionLink
+                                    href={match.openLabHref}
+                                    label="Abrir página do esquema"
+                                  />
+                                </div>
+                                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                                  {match.excerpt}
+                                </p>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-[var(--muted)]">
+                              O esquema associado não trouxe trechos relevantes para os termos da
+                              pergunta.
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {technicalContext.limitations.length ? (
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">
+                            Limitações desta consulta
+                          </p>
+                          {technicalContext.limitations.map((limitation) => (
+                            <p
+                              key={limitation}
+                              className="rounded-[18px] border border-dashed border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm text-[var(--muted)]"
+                            >
+                              {limitation}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-[var(--muted)]">
+                      A última resposta ainda não registrou contexto estruturado de boardview ou
+                      esquema.
+                    </p>
+                  )}
                 </div>
 
                 <div className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4">

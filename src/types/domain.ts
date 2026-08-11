@@ -180,6 +180,36 @@ export type AssistantStructuredResponse = {
   categoryStrategy: string;
   recommendedTestId: string | null;
   recommendedTestName: string | null;
+  technicalContext?: {
+    userPrompt: string | null;
+    searchTerms: string[];
+    boardview: {
+      assetId: string;
+      assetTitle: string;
+      openLabHref: string;
+      results: Array<{
+        kind: "component" | "net";
+        term: string;
+        title: string;
+        subtitle: string;
+        details: string[];
+        openLabHref: string;
+      }>;
+    } | null;
+    schematic: {
+      assetId: string;
+      assetTitle: string;
+      openLabHref: string;
+      matches: Array<{
+        term: string;
+        pageNumber: number;
+        occurrences: number;
+        excerpt: string;
+        openLabHref: string;
+      }>;
+    } | null;
+    limitations: string[];
+  };
 };
 
 export type AiFeedbackRating = "helpful" | "partially_helpful" | "not_helpful";
