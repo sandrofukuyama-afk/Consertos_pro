@@ -77,6 +77,15 @@ type BoardviewLabProps = {
     models: EquipmentModelCatalogOption[];
     manufacturers: CatalogOption[];
   };
+  initialAssets?: Array<{
+    slot: SaveableTechnicalFileSlot;
+    assetId: string;
+    fileName: string;
+    format: "brd" | "bdv" | "pdf";
+    mimeType: string;
+    fileSizeBytes: number;
+    association: TechnicalFileAssociation;
+  }>;
 };
 
 type TechnicalFileAssociation = {
@@ -247,10 +256,15 @@ function getSelectionComponent(selection: BoardviewLabSelection | null) {
   return null;
 }
 
-export function BoardviewLab({ initialAssociation, catalogOptions }: BoardviewLabProps) {
+export function BoardviewLab({
+  initialAssociation,
+  catalogOptions,
+  initialAssets = [],
+}: BoardviewLabProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const boardviewCanvasRef = useRef<BoardviewCanvasHandle | null>(null);
+  const loadedInitialAssetsRef = useRef<string>("");
   const pendingSelectionFocusRef = useRef(false);
   const splitResizeStateRef = useRef<{
     active: boolean;
@@ -495,6 +509,111 @@ export function BoardviewLab({ initialAssociation, catalogOptions }: BoardviewLa
       error: null,
     }));
   }, []);
+
+  useEffect(() => {
+    const assetKey = initialAssets
+      .map((item) => `${item.slot}:${item.assetId}`)
+      .sort()
+      .join("|");
+
+    if (!assetKey || loadedInitialAssetsRef.current === assetKey) {
+      return;
+    }
+
+    loadedInitialAssetsRef.current = assetKey;
+    let cancelled = false;
+
+    async function loadInitialAssets() {
+      for (const asset of initialAssets) {
+        if (cancelled) {
+          return;
+        }
+
+        if (asset.slot === "boardview") {
+          setIsReadingFile(true);
+          setErrorMessage(null);
+        } else {
+          setIsReadingPdfFile(true);
+          setPdfErrorMessage(null);
+        }
+
+        try {
+          const response = await fetch(
+            `/api/technical-assets/${asset.assetId}/content`,
+            {
+              cache: "no-store",
+            },
+          );
+
+          if (!response.ok) {
+            const payload = await readApiResponsePayload(response);
+            throw new Error(payload?.error ?? "Falha ao carregar o arquivo tecnico salvo.");
+          }
+
+          const arrayBuffer = await response.arrayBuffer();
+          const file = new File([arrayBuffer], asset.fileName, {
+            type: asset.mimeType,
+          });
+          const savedTechnicalFile = {
+            ...buildSaveableTechnicalFileState(asset.slot, file),
+            existingAssetId: asset.assetId,
+            associationLinked: true,
+            association: buildAssociationSnapshot(asset.association),
+            status: "saved" as const,
+            message: "Arquivo ja salvo.",
+          };
+
+          if (asset.slot === "boardview") {
+            const parsed = parseLandrexTestlinkBoardview(new Uint8Array(arrayBuffer));
+            const nextModel = buildBoardviewLabModel(parsed);
+
+            startTransition(() => {
+              setFileName(asset.fileName);
+              setModel(nextModel);
+              setSelected(null);
+              setQuery("");
+              setSideFilter("both");
+              setBoardScale(1);
+              setBoardviewTechnicalFile(savedTechnicalFile);
+            });
+          } else {
+            startTransition(() => {
+              setPdfFileName(asset.fileName);
+              setPdfBytes(new Uint8Array(arrayBuffer));
+              setViewerMode((current) => (current === "boardview" ? "split" : current));
+              setPdfTechnicalFile(savedTechnicalFile);
+            });
+          }
+        } catch (error) {
+          if (asset.slot === "boardview") {
+            setErrorMessage(
+              error instanceof Error
+                ? error.message
+                : "Falha ao carregar o boardview salvo.",
+            );
+          } else {
+            setPdfErrorMessage(
+              error instanceof Error
+                ? error.message
+                : "Falha ao carregar o PDF salvo.",
+            );
+          }
+        } finally {
+          if (asset.slot === "boardview") {
+            setIsReadingFile(false);
+          } else {
+            setIsReadingPdfFile(false);
+          }
+        }
+      }
+    }
+
+    void loadInitialAssets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialAssets]);
 
   useEffect(() => {
     if (!boardviewFileForHashing) {

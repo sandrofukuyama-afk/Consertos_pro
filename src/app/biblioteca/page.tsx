@@ -2,7 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { TechnicalDocumentUploadForm } from "@/components/technical-document-upload-form";
 import { requireCurrentUser } from "@/lib/auth";
 import { getLibraryCatalog } from "@/lib/services/catalog";
-import { getTechnicalDocuments } from "@/lib/services/diagnostics";
+import { getTechnicalLibraryItems } from "@/lib/services/diagnostics";
 
 type BibliotecaPageProps = {
   searchParams: Promise<{
@@ -19,11 +19,11 @@ export default async function BibliotecaPage({
 }: BibliotecaPageProps) {
   const userPromise = requireCurrentUser();
   const catalogPromise = getLibraryCatalog();
-  const documentsPromise = getTechnicalDocuments();
-  const [user, catalog, documents] = await Promise.all([
+  const libraryItemsPromise = getTechnicalLibraryItems();
+  const [user, catalog, libraryItems] = await Promise.all([
     userPromise,
     catalogPromise,
-    documentsPromise,
+    libraryItemsPromise,
   ]);
 
   const params = await searchParams;
@@ -57,10 +57,10 @@ export default async function BibliotecaPage({
             </h3>
 
             <div className="mt-5 grid gap-3">
-              {documents.length ? (
-                documents.map((item) => (
+              {libraryItems.length ? (
+                libraryItems.map((item) => (
                   <article
-                    key={item.id}
+                    key={`${item.source}:${item.id}`}
                     className="rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-5"
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -81,29 +81,68 @@ export default async function BibliotecaPage({
                       Relação: {item.relation}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
-                        {item.chunksCount} chunks
-                      </span>
+                      {item.fileSizeLabel ? (
+                        <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
+                          {item.fileSizeLabel}
+                        </span>
+                      ) : null}
+                      {item.chunksCount !== null ? (
+                        <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
+                          {item.chunksCount} chunks
+                        </span>
+                      ) : null}
+                      {item.isIndexed !== null ? (
+                        <span
+                          className={`rounded-full px-3 py-1 ${
+                            item.isIndexed
+                              ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
+                              : "bg-[rgba(202,106,85,0.12)] text-[var(--danger)]"
+                          }`}
+                        >
+                          {item.isIndexed ? "Indexado" : "Indexação pendente"}
+                        </span>
+                      ) : null}
                       <span
                         className={`rounded-full px-3 py-1 ${
-                          item.isIndexed
+                          item.associationStatus === "associated"
                             ? "bg-[rgba(45,139,130,0.14)] text-[var(--accent-teal)]"
-                            : "bg-[rgba(202,106,85,0.12)] text-[var(--danger)]"
+                            : item.associationStatus === "unassociated"
+                              ? "bg-[rgba(202,106,85,0.12)] text-[var(--danger)]"
+                              : "bg-[var(--card-surface)] text-[var(--foreground)]"
                         }`}
                       >
-                        {item.isIndexed ? "Indexado" : "Indexação pendente"}
+                        {item.associationStatus === "associated"
+                          ? "Associado"
+                          : item.associationStatus === "unassociated"
+                            ? "Não associado"
+                            : "Legado"}
                       </span>
+                      {item.associationLabel ? (
+                        <span className="rounded-full bg-[var(--card-surface)] px-3 py-1 text-[var(--foreground)]">
+                          {item.associationLabel}
+                        </span>
+                      ) : null}
                     </div>
-                    {item.signedUrl ? (
-                      <a
-                        href={item.signedUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-4 inline-flex text-sm font-semibold text-[var(--accent-copper)]"
-                      >
-                        Abrir documento
-                      </a>
-                    ) : null}
+                    <div className="mt-4 flex flex-wrap gap-4">
+                      {item.boardviewLabHref ? (
+                        <a
+                          href={item.boardviewLabHref}
+                          className="inline-flex text-sm font-semibold text-[var(--accent-copper)]"
+                        >
+                          Abrir no laboratório
+                        </a>
+                      ) : null}
+                      {item.signedUrl ? (
+                        <a
+                          href={item.signedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex text-sm font-semibold text-[var(--accent-copper)]"
+                        >
+                          Abrir documento
+                        </a>
+                      ) : null}
+                    </div>
                   </article>
                 ))
               ) : (

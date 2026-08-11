@@ -58,9 +58,28 @@ export type TechnicalDocumentListItem = {
   manufacturer: string;
   relation: string;
   uploadedAt: string;
+  uploadedAtIso: string;
   chunksCount: number;
   isIndexed: boolean;
   signedUrl: string | null;
+};
+
+export type TechnicalLibraryItem = {
+  id: string;
+  source: "technical_document" | "technical_asset";
+  title: string;
+  documentType: string;
+  manufacturer: string;
+  relation: string;
+  uploadedAt: string;
+  uploadedAtIso: string;
+  signedUrl: string | null;
+  chunksCount: number | null;
+  isIndexed: boolean | null;
+  fileSizeLabel: string | null;
+  associationStatus: "associated" | "unassociated" | "legacy";
+  associationLabel: string | null;
+  boardviewLabHref: string | null;
 };
 
 export type KnowledgeItem = {

@@ -9,6 +9,7 @@ import type {
   ComponentAnnotation,
   DiagnosticDetail,
   SymptomOption,
+  TechnicalLibraryItem,
   TechnicalDocumentListItem,
   TestOption,
 } from "@/types/domain";
@@ -85,6 +86,29 @@ type TechnicalDocumentRow = {
   document_chunks: Array<{ id: string }> | null;
 };
 
+type TechnicalAssetRow = {
+  id: string;
+  original_filename: string;
+  asset_type: string;
+  file_format: string;
+  file_size_bytes: number;
+  created_at: string;
+  technical_asset_links:
+    | Array<{
+        board_id: string | null;
+        equipment_model_id: string | null;
+        boards:
+          | { board_code: string | null }
+          | Array<{ board_code: string | null }>
+          | null;
+        equipment_models:
+          | { model_name: string | null }
+          | Array<{ model_name: string | null }>
+          | null;
+      }>
+    | null;
+};
+
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -95,6 +119,49 @@ function pickRelation<T>(value: T | T[] | null | undefined) {
 
 function prettifyStatus(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function formatBytesLabel(bytes: number | null | undefined) {
+  if (!bytes || !Number.isFinite(bytes) || bytes <= 0) {
+    return null;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 100 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+function getTechnicalAssetTypeLabel(format: string, assetType: string) {
+  switch (format) {
+    case "brd":
+      return "Boardview BRD";
+    case "bdv":
+      return "Boardview BDV";
+    case "pdf":
+      return assetType === "schematic_pdf" ? "Esquema PDF" : "PDF";
+    case "bin":
+      return "Firmware BIN";
+    case "zip":
+      return "Pacote ZIP";
+    case "jpg":
+      return "Foto JPG";
+    case "png":
+      return "Foto PNG";
+    default:
+      return prettifyStatus(assetType || format);
+  }
+}
+
+function buildTechnicalAssetAssociation(
+  row: TechnicalAssetRow,
+) {
+  const firstLink = row.technical_asset_links?.[0] ?? null;
+  return {
+    boardName: pickRelation(firstLink?.boards)?.board_code ?? null,
+    modelName: pickRelation(firstLink?.equipment_models)?.model_name ?? null,
+  };
 }
 
 function buildBoardLabel(
@@ -744,6 +811,7 @@ export async function getTechnicalDocuments() {
         relation:
           model?.model_name ?? board?.board_code ?? component?.component_ref ?? "Referencia geral",
         uploadedAt: formatRelativeTime(row.created_at),
+        uploadedAtIso: row.created_at,
         chunksCount: chunks.length,
         isIndexed: row.is_indexed || chunks.length > 0,
         signedUrl: signed?.signedUrl ?? null,
@@ -752,4 +820,82 @@ export async function getTechnicalDocuments() {
   );
 
   return items;
+}
+
+export async function getTechnicalLibraryItems() {
+  const supabase = await createClient();
+
+  const [documents, technicalAssetsResult] = await Promise.all([
+    getTechnicalDocuments(),
+    supabase
+      .from("technical_assets")
+      .select(`
+        id,
+        original_filename,
+        asset_type,
+        file_format,
+        file_size_bytes,
+        created_at,
+        technical_asset_links(
+          board_id,
+          equipment_model_id,
+          boards(board_code),
+          equipment_models(model_name)
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  const assetItems = ((technicalAssetsResult.data ?? []) as TechnicalAssetRow[]).map((row) => {
+    const association = buildTechnicalAssetAssociation(row);
+    const associationLabel = association.modelName ?? association.boardName ?? "Nao associado";
+    const boardviewLabHref =
+      row.file_format === "brd" || row.file_format === "bdv"
+        ? `/boardview/lab?boardview_asset_id=${row.id}`
+        : row.file_format === "pdf"
+          ? `/boardview/lab?schematic_asset_id=${row.id}`
+          : null;
+
+    return {
+      id: row.id,
+      source: "technical_asset",
+      title: row.original_filename,
+      documentType: getTechnicalAssetTypeLabel(row.file_format, row.asset_type),
+      manufacturer: "Biblioteca tecnica",
+      relation: association.modelName ?? association.boardName ?? "Nao associado",
+      uploadedAt: formatRelativeTime(row.created_at),
+      uploadedAtIso: row.created_at,
+      signedUrl: null,
+      chunksCount: null,
+      isIndexed: null,
+      fileSizeLabel: formatBytesLabel(row.file_size_bytes),
+      associationStatus:
+        association.boardName || association.modelName ? "associated" : "unassociated",
+      associationLabel,
+      boardviewLabHref,
+    } satisfies TechnicalLibraryItem;
+  });
+
+  const legacyItems = documents.map((item) => ({
+    id: item.id,
+    source: "technical_document",
+    title: item.title,
+    documentType: item.documentType,
+    manufacturer: item.manufacturer,
+      relation: item.relation,
+      uploadedAt: item.uploadedAt,
+      uploadedAtIso: item.uploadedAtIso,
+      signedUrl: item.signedUrl,
+    chunksCount: item.chunksCount,
+    isIndexed: item.isIndexed,
+    fileSizeLabel: null,
+    associationStatus: "legacy" as const,
+    associationLabel: null,
+    boardviewLabHref: null,
+  })) satisfies TechnicalLibraryItem[];
+
+  return [...assetItems, ...legacyItems].sort((left, right) =>
+    right.uploadedAtIso.localeCompare(left.uploadedAtIso),
+  );
 }
