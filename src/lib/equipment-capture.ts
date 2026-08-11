@@ -9,6 +9,9 @@ export type ParsedEquipmentCapture = {
   accessoriesIncluded: string | null;
   initialProblemReport: string | null;
   physicalConditionNotes: string | null;
+  powerPresent: "yes" | "no" | null;
+  powersOn: "yes" | "no" | null;
+  screenCondition: "good" | "broken" | "no_image" | null;
 };
 
 const FIELD_LABELS = {
@@ -72,6 +75,28 @@ export function parseEquipmentCapture(sourceText: string): ParsedEquipmentCaptur
     .flat()
     .map(escapeRegex)
     .join("|");
+  const normalizedText = normalizeCaptureText(sourceText);
+
+  const powerPresent =
+    /\b(sem alimentacao|sem energia|nao tem alimentacao)\b/.test(normalizedText)
+      ? "no"
+      : /\b(tem alimentacao|com alimentacao)\b/.test(normalizedText)
+        ? "yes"
+        : null;
+  const powersOn =
+    /\b(nao liga)\b/.test(normalizedText)
+      ? "no"
+      : /\b(liga)\b/.test(normalizedText)
+        ? "yes"
+        : null;
+  const screenCondition =
+    /\b(sem imagem)\b/.test(normalizedText)
+      ? "no_image"
+      : /\b(tela quebrada|display quebrado)\b/.test(normalizedText)
+        ? "broken"
+        : /\b(tela boa|display bom|tela ok)\b/.test(normalizedText)
+          ? "good"
+          : null;
 
   return {
     category: extractValue(sourceText, FIELD_LABELS.category, allLabelsPattern),
@@ -82,6 +107,9 @@ export function parseEquipmentCapture(sourceText: string): ParsedEquipmentCaptur
     accessoriesIncluded: extractValue(sourceText, FIELD_LABELS.accessoriesIncluded, allLabelsPattern),
     initialProblemReport: extractValue(sourceText, FIELD_LABELS.initialProblemReport, allLabelsPattern),
     physicalConditionNotes: extractValue(sourceText, FIELD_LABELS.physicalConditionNotes, allLabelsPattern),
+    powerPresent,
+    powersOn,
+    screenCondition,
   };
 }
 

@@ -150,6 +150,52 @@ function TextareaField({
   );
 }
 
+function ChoiceGroup({
+  label,
+  name,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <fieldset className="grid gap-2 text-sm text-[var(--foreground)]">
+      <legend className="font-medium">{label}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const checked = value === option.value;
+
+          return (
+            <label
+              key={option.value}
+              className={`inline-flex cursor-pointer items-center rounded-full border px-4 py-2 transition ${
+                checked
+                  ? "border-[var(--accent-copper)] bg-[rgba(109,94,242,0.14)] text-white"
+                  : "border-[var(--panel-border)] bg-[var(--background)] text-[var(--foreground)]"
+              }`}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={checked}
+                onChange={() => onChange(option.value)}
+                className="sr-only"
+              />
+              <span>{option.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 function buildCaptureSummary(parsed: ParsedEquipmentCapture) {
   const entries = [
     parsed.category ? `Categoria: ${parsed.category}` : null,
@@ -160,6 +206,17 @@ function buildCaptureSummary(parsed: ParsedEquipmentCapture) {
     parsed.accessoriesIncluded ? `Acessórios: ${parsed.accessoriesIncluded}` : null,
     parsed.initialProblemReport ? `Relato: ${parsed.initialProblemReport}` : null,
     parsed.physicalConditionNotes ? `Condição física: ${parsed.physicalConditionNotes}` : null,
+    parsed.powerPresent ? `Alimentação: ${parsed.powerPresent === "yes" ? "Sim" : "Não"}` : null,
+    parsed.powersOn ? `Liga: ${parsed.powersOn === "yes" ? "Sim" : "Não"}` : null,
+    parsed.screenCondition
+      ? `Condição da tela: ${
+          parsed.screenCondition === "good"
+            ? "Boa"
+            : parsed.screenCondition === "broken"
+              ? "Quebrada"
+              : "Sem imagem"
+        }`
+      : null,
   ].filter(Boolean);
 
   return entries;
@@ -185,6 +242,9 @@ export function EquipmentIntakeForm({
   const [accessoriesIncluded, setAccessoriesIncluded] = useState("");
   const [initialProblemReport, setInitialProblemReport] = useState("");
   const [physicalConditionNotes, setPhysicalConditionNotes] = useState("");
+  const [powerPresent, setPowerPresent] = useState("");
+  const [powersOn, setPowersOn] = useState("");
+  const [screenCondition, setScreenCondition] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const selectedCategory = categories.find((item) => item.id === categoryId) ?? null;
@@ -296,6 +356,18 @@ export function EquipmentIntakeForm({
 
     if (parsed.physicalConditionNotes) {
       setPhysicalConditionNotes(parsed.physicalConditionNotes);
+    }
+
+    if (parsed.powerPresent) {
+      setPowerPresent(parsed.powerPresent);
+    }
+
+    if (parsed.powersOn) {
+      setPowersOn(parsed.powersOn);
+    }
+
+    if (parsed.screenCondition) {
+      setScreenCondition(parsed.screenCondition);
     }
 
     const needsCategoryHelp =
@@ -517,6 +589,43 @@ export function EquipmentIntakeForm({
           onChange={setAccessoriesIncluded}
         />
       </div>
+
+      <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5 md:grid-cols-3">
+        <div className="md:col-span-3">
+          <p className="font-medium text-[var(--foreground)]">Confirmação de entrada</p>
+        </div>
+        <ChoiceGroup
+          label="Alimentação"
+          name="power_present"
+          value={powerPresent}
+          onChange={setPowerPresent}
+          options={[
+            { label: "Sim", value: "yes" },
+            { label: "Não", value: "no" },
+          ]}
+        />
+        <ChoiceGroup
+          label="Liga"
+          name="powers_on"
+          value={powersOn}
+          onChange={setPowersOn}
+          options={[
+            { label: "Sim", value: "yes" },
+            { label: "Não", value: "no" },
+          ]}
+        />
+        <ChoiceGroup
+          label="Condição da tela"
+          name="screen_condition"
+          value={screenCondition}
+          onChange={setScreenCondition}
+          options={[
+            { label: "Boa", value: "good" },
+            { label: "Quebrada", value: "broken" },
+            { label: "Sem imagem", value: "no_image" },
+          ]}
+        />
+      </section>
 
       {categorySlug.includes("television") ? (
         <section className="grid gap-4 rounded-[24px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:p-5 md:grid-cols-2">

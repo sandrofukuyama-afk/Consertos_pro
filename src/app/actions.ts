@@ -82,6 +82,20 @@ function readOptionalBoolean(formData: FormData, field: string) {
   return null;
 }
 
+function readOptionalChoice<T extends string>(
+  formData: FormData,
+  field: string,
+  allowedValues: readonly T[],
+) {
+  const raw = String(formData.get(field) ?? "").trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  return allowedValues.includes(raw as T) ? (raw as T) : null;
+}
+
 function toSlug(value: string) {
   return normalizeText(value).replace(/\s+/g, "-");
 }
@@ -245,6 +259,13 @@ export async function createDiagnosticAction(formData: FormData) {
   const serialNumber = readOptionalText(formData, "equipment_serial_number");
   const accessoriesIncluded = readOptionalText(formData, "accessories_included");
   const manufacturingYear = readOptionalNumber(formData, "manufacturing_year");
+  const powerPresent = readOptionalBoolean(formData, "power_present");
+  const powersOn = readOptionalBoolean(formData, "powers_on");
+  const screenCondition = readOptionalChoice(formData, "screen_condition", [
+    "good",
+    "broken",
+    "no_image",
+  ] as const);
   const photoFiles = formData
     .getAll("equipment_photos")
     .filter((item): item is File => item instanceof File && item.size > 0);
@@ -385,6 +406,9 @@ export async function createDiagnosticAction(formData: FormData) {
   const equipmentDetails = compactDetails({
     manufacturingYear,
     accessoriesIncluded,
+    powerPresent,
+    powersOn,
+    screenCondition,
     tvScreenSizeInches: readOptionalNumber(formData, "tv_screen_size_inches"),
     tvScreenType: readOptionalText(formData, "tv_screen_type"),
     tvKind: readOptionalText(formData, "tv_kind"),
