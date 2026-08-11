@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "check:encoding": "node scripts/check-encoding.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "npm run check:encoding && eslint"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
