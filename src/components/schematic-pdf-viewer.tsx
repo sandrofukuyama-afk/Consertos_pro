@@ -3,6 +3,7 @@
 import {
   Fragment,
   type PointerEvent as ReactPointerEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -48,6 +49,12 @@ type SchematicPdfViewerProps = {
 };
 
 type PdfZoomMode = PdfViewportFitMode | "manual";
+type PendingZoomAnchor = {
+  relativeX: number;
+  relativeY: number;
+  offsetX: number;
+  offsetY: number;
+};
 
 let workerConfigured = false;
 
@@ -96,6 +103,7 @@ export function SchematicPdfViewer({
   const autoFocusedQueryRef = useRef<string | null>(null);
   const renderTaskRef = useRef<PdfRenderTaskLike | null>(null);
   const renderGenerationRef = useRef(0);
+  const pendingZoomAnchorRef = useRef<PendingZoomAnchor | null>(null);
   const dragStateRef = useRef<{
     active: boolean;
     pointerId: number;
@@ -151,6 +159,7 @@ export function SchematicPdfViewer({
           containerWidth: viewportFrameSize.width,
           containerHeight: viewportFrameSize.height,
         });
+  const clampedManualZoom = Math.min(2.6, Math.max(0.6, manualZoom));
 
   useEffect(() => {
     let cancelled = false;
@@ -511,10 +520,84 @@ export function SchematicPdfViewer({
     event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  function handleManualZoom(nextZoom: number) {
-    setZoomMode("manual");
-    setManualZoom(nextZoom);
-  }
+  const handleManualZoom = useCallback(
+    (
+      nextZoom: number,
+      anchorPoint?: { clientX: number; clientY: number },
+    ) => {
+      const clampedZoom = Math.min(2.6, Math.max(0.6, nextZoom));
+      const scrollContainer = scrollContainerRef.current;
+
+      if (
+        scrollContainer &&
+        renderedPageSize.width > 0 &&
+        renderedPageSize.height > 0
+      ) {
+        const rect = scrollContainer.getBoundingClientRect();
+        const offsetX = anchorPoint ? anchorPoint.clientX - rect.left : rect.width / 2;
+        const offsetY = anchorPoint ? anchorPoint.clientY - rect.top : rect.height / 2;
+        const contentX = scrollContainer.scrollLeft + offsetX;
+        const contentY = scrollContainer.scrollTop + offsetY;
+
+        pendingZoomAnchorRef.current = {
+          relativeX: contentX / renderedPageSize.width,
+          relativeY: contentY / renderedPageSize.height,
+          offsetX,
+          offsetY,
+        };
+      }
+
+      setZoomMode("manual");
+      setManualZoom(clampedZoom);
+    },
+    [renderedPageSize.height, renderedPageSize.width],
+  );
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    function handleWheel(event: globalThis.WheelEvent) {
+      if (!documentProxy) {
+        return;
+      }
+
+      event.preventDefault();
+      const multiplier = event.deltaY < 0 ? 1.12 : 0.89;
+      const baseZoom = zoomMode === "manual" ? clampedManualZoom : zoom;
+      handleManualZoom(baseZoom * multiplier, {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+    }
+
+    scrollContainer.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      scrollContainer.removeEventListener("wheel", handleWheel);
+    };
+  }, [clampedManualZoom, documentProxy, handleManualZoom, zoom, zoomMode]);
+
+  useEffect(() => {
+    const pendingAnchor = pendingZoomAnchorRef.current;
+    const scrollContainer = scrollContainerRef.current;
+
+    if (
+      !pendingAnchor ||
+      !scrollContainer ||
+      renderedPageSize.width <= 0 ||
+      renderedPageSize.height <= 0
+    ) {
+      return;
+    }
+
+    pendingZoomAnchorRef.current = null;
+    const nextContentX = pendingAnchor.relativeX * renderedPageSize.width;
+    const nextContentY = pendingAnchor.relativeY * renderedPageSize.height;
+    scrollContainer.scrollLeft = Math.max(0, nextContentX - pendingAnchor.offsetX);
+    scrollContainer.scrollTop = Math.max(0, nextContentY - pendingAnchor.offsetY);
+  }, [renderedPageSize.height, renderedPageSize.width]);
 
   const combinedErrorMessage = errorMessage ?? localError;
 
