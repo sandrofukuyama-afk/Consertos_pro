@@ -116,6 +116,14 @@ function normalizeSearchToken(value: string) {
     .replace(/^[^A-Z0-9]+|[^A-Z0-9_.+\-\/]+$/g, "");
 }
 
+function normalizeLooseSearchText(value: string) {
+  return value
+    .toUpperCase()
+    .replace(/[^A-Z0-9_.+\-\/\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function buildLabSearchHref(
   diagnosticId: string,
   asset: AssociatedTechnicalAsset,
@@ -145,22 +153,66 @@ function buildLabSearchHref(
   return `/boardview/lab?${params.toString()}`;
 }
 
-function extractTechnicalSearchTerms(prompt: string) {
-  const normalizedPrompt = prompt.toUpperCase();
-  const quotedTerms = [...prompt.matchAll(/"([^"]+)"/g)]
+type TechnicalSearchSourceInput =
+  | string
+  | {
+      prompt?: string | null;
+      summary?: string | null;
+      initialReport?: string | null;
+      symptoms?: Array<string | null | undefined>;
+      measurements?: Array<string | null | undefined>;
+      hypotheses?: Array<string | null | undefined>;
+      tests?: Array<string | null | undefined>;
+      assetNames?: Array<string | null | undefined>;
+    };
+
+function extractTechnicalSearchTerms(input: TechnicalSearchSourceInput) {
+  const source =
+    typeof input === "string"
+      ? {
+          prompt: input,
+        }
+      : input;
+  const orderedChunks = [
+    source.prompt ?? "",
+    source.summary ?? "",
+    source.initialReport ?? "",
+    ...(source.symptoms ?? []),
+    ...(source.measurements ?? []),
+    ...(source.hypotheses ?? []),
+    ...(source.tests ?? []),
+    ...(source.assetNames ?? []),
+  ]
+    .map((item) => item?.trim() ?? "")
+    .filter(Boolean);
+  const mergedText = orderedChunks.join(" ");
+  const normalizedPrompt = normalizeLooseSearchText(mergedText);
+  const quotedTerms = [...mergedText.matchAll(/"([^"]+)"/g)]
     .map((match) => normalizeSearchToken(match[1] ?? ""))
     .filter(Boolean);
   const componentLikeTerms = normalizedPrompt.match(
     /\b[A-Z]{1,4}\d{2,6}(?:\.\d+)?\b/g,
   ) ?? [];
   const netLikeTerms = normalizedPrompt.match(
-    /\b(?:PP[A-Z0-9_+\-/.]+|GND|VBAT[A-Z0-9_+\-/.]*|VCC[A-Z0-9_+\-/.]*|SYS[A-Z0-9_+\-/.]*|SCL[A-Z0-9_+\-/.]*|SDA[A-Z0-9_+\-/.]*)\b/g,
+    /\b(?:PP[A-Z0-9_+\-/.]+|SMC[A-Z0-9_+\-/.]*|PM[A-Z0-9_+\-/.]*|G3H[A-Z0-9_+\-/.]*|S5[A-Z0-9_+\-/.]*|S4[A-Z0-9_+\-/.]*|SUS[A-Z0-9_+\-/.]*|AUX[A-Z0-9_+\-/.]*|GND|VBAT[A-Z0-9_+\-/.]*|VCC[A-Z0-9_+\-/.]*|SYS[A-Z0-9_+\-/.]*|SCL[A-Z0-9_+\-/.]*|SDA[A-Z0-9_+\-/.]*)\b/g,
+  ) ?? [];
+  const voltageLikeTerms = normalizedPrompt.match(/\b\d{1,2}(?:\.\d+)?V\b/g) ?? [];
+  const symptomLikeTerms = normalizedPrompt.match(
+    /\b(?:NAO LIGA|SEM IMAGEM|SEM VIDEO|CURTO|AQUECIMENTO|CONSUMO ALTO|CONSUMO ELEVADO|SEM CONSUMO|NAO CARREGA|SEM BACKLIGHT)\b/g,
   ) ?? [];
 
-  return [...new Set([...quotedTerms, ...componentLikeTerms, ...netLikeTerms])]
+  return [
+    ...new Set([
+      ...quotedTerms,
+      ...componentLikeTerms,
+      ...netLikeTerms,
+      ...voltageLikeTerms,
+      ...symptomLikeTerms.map((item) => item.replace(/\s+/g, "_")),
+    ]),
+  ]
     .map((item) => normalizeSearchToken(item))
     .filter(Boolean)
-    .slice(0, 5);
+    .slice(0, 12);
 }
 
 async function loadDiagnosticAssetContext(
@@ -454,14 +506,23 @@ async function buildSchematicSearchContext(
 export async function searchAssistantTechnicalContext({
   diagnosticId,
   benchPrompt,
+  contextSources,
   supabase,
 }: {
   diagnosticId: string;
   benchPrompt: string | null;
+  contextSources?: Omit<TechnicalSearchSourceInput, "prompt">;
   supabase: AssistantTechnicalContextSupabaseClient;
 }): Promise<AssistantTechnicalContext> {
   const prompt = normalizeWhitespace(benchPrompt ?? "");
-  const searchTerms = prompt ? extractTechnicalSearchTerms(prompt) : [];
+  const searchTerms = prompt
+    ? extractTechnicalSearchTerms({
+        prompt,
+        ...contextSources,
+      })
+    : extractTechnicalSearchTerms({
+        ...contextSources,
+      });
   const limitations: string[] = [];
   const diagnosticAssetContext = await loadDiagnosticAssetContext(diagnosticId, supabase);
 
@@ -648,6 +709,6 @@ export function buildTechnicalContextSources(
   return Array.from(new Set(sources)).slice(0, 10);
 }
 
-export function extractTechnicalSearchTermsForTest(prompt: string) {
-  return extractTechnicalSearchTerms(prompt);
+export function extractTechnicalSearchTermsForTest(input: TechnicalSearchSourceInput) {
+  return extractTechnicalSearchTerms(input);
 }

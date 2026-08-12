@@ -6,9 +6,15 @@ export type AssistantNarrativeFacts = {
   equipmentLabel: string;
   category: string;
   manufacturer: string;
+  model?: string;
   summary: string;
+  initialReport?: string;
   benchPrompt?: string | null;
   technicalContextSummary?: string | null;
+  equipmentDetails?: Array<{
+    label: string;
+    value: string;
+  }>;
   activeScenario: {
     id: string;
     title: string;
@@ -30,6 +36,8 @@ export type AssistantNarrativeFacts = {
     testGroup: string | null;
     resultStatus: string;
     actualResult: string | null;
+    expectedResult?: string | null;
+    conclusion?: string | null;
   }>;
   measurements: Array<{
     measurementType: string;
@@ -38,6 +46,9 @@ export type AssistantNarrativeFacts = {
     measuredValueNumeric: number | null;
     expectedValueText: string | null;
     unit: string | null;
+    context?: string | null;
+    observation?: string | null;
+    inferredTerms?: string[];
   }>;
   hypotheses: Array<{ title: string; confidenceScore: number | null; status: string }>;
   recommendedTestName: string;
@@ -45,12 +56,58 @@ export type AssistantNarrativeFacts = {
   heuristicNextTest: string;
   heuristicValidationGoal: string;
   similarCases: Array<{ title: string; excerpt: string; similarityLabel: string }>;
-  relatedDocuments: Array<{ title: string; excerpt: string }>;
+  relatedDocuments: Array<{
+    title: string;
+    excerpt: string;
+    href?: string | null;
+    similarityLabel?: string | null;
+  }>;
   technicalAssets?: Array<{
     title: string;
     fileFormat: string;
     boardName: string | null;
     modelName: string | null;
+  }>;
+  boardviewFindings?: Array<{
+    title: string;
+    subtitle: string;
+    details: string[];
+    relatedNet?: string | null;
+    locationSummary?: string | null;
+    coordinateHint?: string | null;
+    openLabHref?: string | null;
+  }>;
+  schematicFindings?: Array<{
+    term: string;
+    pageNumber: number;
+    occurrences: number;
+    excerpt: string;
+    openLabHref?: string | null;
+  }>;
+  documentFindings?: Array<{
+    title: string;
+    excerpt: string;
+    similarityLabel?: string | null;
+    href?: string | null;
+  }>;
+  measurementContext?: Array<{
+    label: string;
+    measuredValue: string;
+    expectedValue?: string | null;
+    note?: string | null;
+  }>;
+  diagnosticHistory?: Array<{
+    kind: string;
+    title: string;
+    summary: string;
+  }>;
+  recentAssistantHistory?: Array<{
+    role: "user" | "assistant";
+    summary: string;
+  }>;
+  attachmentContext?: Array<{
+    title: string;
+    summary: string;
   }>;
   symptomGroupInsight: { group: string; topCause: string; count: number } | null;
 };
@@ -58,12 +115,20 @@ export type AssistantNarrativeFacts = {
 export type AssistantNarrativeResult = {
   probableDiagnosis: string;
   probableArea: string;
+  probableSection: string;
   technicalSummary: string;
   mainHypothesis: string;
   evidence: string[];
+  evidenceFound: string[];
   relatedLines: Array<{
     name: string;
     expectedVoltage: string;
+    note: string;
+  }>;
+  expectedVoltages: Array<{
+    line: string;
+    expectedValue: string;
+    condition?: string | null;
     note: string;
   }>;
   componentsToMeasure: Array<{
@@ -72,11 +137,30 @@ export type AssistantNarrativeResult = {
     expectedValue: string;
     note: string;
   }>;
+  testPoints: Array<{
+    label: string;
+    net?: string | null;
+    location?: string | null;
+    expectedValue?: string | null;
+    note: string;
+  }>;
   recommendedTestSequence: string[];
+  whereToOpen: Array<{
+    title: string;
+    targetType: "boardview_net" | "boardview_component" | "schematic_page" | "document" | "diagnostic";
+    href: string | null;
+    page?: number | null;
+    component?: string | null;
+    net?: string | null;
+    note?: string | null;
+  }>;
+  sourcesUsed: string[];
+  confidence: string;
   nextTest: string;
   validationGoal: string;
   safetyNote: string;
   limitations: string[];
+  nextQuestionForTechnician: string | null;
 };
 
 const NARRATIVE_SCHEMA = {
@@ -84,9 +168,16 @@ const NARRATIVE_SCHEMA = {
   properties: {
     probableDiagnosis: { type: "string" },
     probableArea: { type: "string" },
+    probableSection: { type: "string" },
     technicalSummary: { type: "string" },
     mainHypothesis: { type: "string" },
     evidence: {
+      type: "array",
+      items: { type: "string" },
+      minItems: 1,
+      maxItems: 8,
+    },
+    evidenceFound: {
       type: "array",
       items: { type: "string" },
       minItems: 1,
@@ -107,6 +198,22 @@ const NARRATIVE_SCHEMA = {
       minItems: 1,
       maxItems: 5,
     },
+    expectedVoltages: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          line: { type: "string" },
+          expectedValue: { type: "string" },
+          condition: { type: ["string", "null"] },
+          note: { type: "string" },
+        },
+        required: ["line", "expectedValue", "condition", "note"],
+        additionalProperties: false,
+      },
+      minItems: 1,
+      maxItems: 6,
+    },
     componentsToMeasure: {
       type: "array",
       items: {
@@ -123,12 +230,58 @@ const NARRATIVE_SCHEMA = {
       minItems: 1,
       maxItems: 6,
     },
+    testPoints: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          label: { type: "string" },
+          net: { type: ["string", "null"] },
+          location: { type: ["string", "null"] },
+          expectedValue: { type: ["string", "null"] },
+          note: { type: "string" },
+        },
+        required: ["label", "net", "location", "expectedValue", "note"],
+        additionalProperties: false,
+      },
+      minItems: 1,
+      maxItems: 6,
+    },
     recommendedTestSequence: {
       type: "array",
       items: { type: "string" },
       minItems: 2,
       maxItems: 6,
     },
+    whereToOpen: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          targetType: {
+            type: "string",
+            enum: ["boardview_net", "boardview_component", "schematic_page", "document", "diagnostic"],
+          },
+          href: { type: ["string", "null"] },
+          page: { type: ["number", "null"] },
+          component: { type: ["string", "null"] },
+          net: { type: ["string", "null"] },
+          note: { type: ["string", "null"] },
+        },
+        required: ["title", "targetType", "href", "page", "component", "net", "note"],
+        additionalProperties: false,
+      },
+      minItems: 1,
+      maxItems: 8,
+    },
+    sourcesUsed: {
+      type: "array",
+      items: { type: "string" },
+      minItems: 1,
+      maxItems: 10,
+    },
+    confidence: { type: "string" },
     nextTest: { type: "string" },
     validationGoal: { type: "string" },
     safetyNote: { type: "string" },
@@ -138,20 +291,29 @@ const NARRATIVE_SCHEMA = {
       minItems: 1,
       maxItems: 5,
     },
+    nextQuestionForTechnician: { type: ["string", "null"] },
   },
   required: [
     "probableDiagnosis",
     "probableArea",
+    "probableSection",
     "technicalSummary",
     "mainHypothesis",
     "evidence",
+    "evidenceFound",
     "relatedLines",
+    "expectedVoltages",
     "componentsToMeasure",
+    "testPoints",
     "recommendedTestSequence",
+    "whereToOpen",
+    "sourcesUsed",
+    "confidence",
     "nextTest",
     "validationGoal",
     "safetyNote",
     "limitations",
+    "nextQuestionForTechnician",
   ],
   additionalProperties: false,
 };
@@ -165,11 +327,16 @@ const SYSTEM_PROMPT = [
   "Nao responda de forma generica. O campo 'recommendedTestSequence' deve trazer passos",
   "objetivos de bancada em ordem, e o primeiro passo deve ser compativel com o teste em",
   "'recommendedTestName'. O campo 'nextTest' deve detalhar esse primeiro passo.",
+  "Separe claramente fatos observados de sugestoes de verificacao.",
+  "Sempre que houver contexto tecnico suficiente, cite primeiro o que medir, onde medir,",
+  "o valor esperado e qual conclusao tirar se a leitura estiver fora do esperado.",
   "Se houver 'symptomGroupInsight', use-o apenas como padrao historico, nunca como certeza.",
   "Considere 'activeScenario' como o protocolo principal da bancada. Se houver",
-  "'technicalContextSummary', use esse contexto para citar nets, componentes, paginas e",
-  "pontos de medicao de forma pratica. Em 'limitations', liste somente lacunas reais",
-  "de contexto ou confianca. Retorne apenas o JSON estruturado pedido.",
+  "'boardviewFindings', 'schematicFindings', 'measurementContext' e 'diagnosticHistory',",
+  "use esse contexto para citar nets, componentes, paginas, pads e pontos de medicao",
+  "de forma pratica. Se faltar um dado critico, preencha 'nextQuestionForTechnician'",
+  "com a proxima medicao objetiva a ser coletada. Em 'limitations', liste somente",
+  "lacunas reais de contexto ou confianca. Retorne apenas o JSON estruturado pedido.",
 ].join(" ");
 
 export function isLlmConfigured() {
@@ -251,12 +418,19 @@ export async function generateAssistantNarrative(
   if (
     typeof parsed.probableDiagnosis !== "string" ||
     typeof parsed.probableArea !== "string" ||
+    typeof parsed.probableSection !== "string" ||
     typeof parsed.technicalSummary !== "string" ||
     typeof parsed.mainHypothesis !== "string" ||
     !Array.isArray(parsed.evidence) ||
+    !Array.isArray(parsed.evidenceFound) ||
     !Array.isArray(parsed.relatedLines) ||
+    !Array.isArray(parsed.expectedVoltages) ||
     !Array.isArray(parsed.componentsToMeasure) ||
+    !Array.isArray(parsed.testPoints) ||
     !Array.isArray(parsed.recommendedTestSequence) ||
+    !Array.isArray(parsed.whereToOpen) ||
+    !Array.isArray(parsed.sourcesUsed) ||
+    typeof parsed.confidence !== "string" ||
     typeof parsed.nextTest !== "string" ||
     typeof parsed.validationGoal !== "string" ||
     typeof parsed.safetyNote !== "string" ||

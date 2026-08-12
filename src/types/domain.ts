@@ -173,15 +173,24 @@ export type TestOption = CatalogOption & {
 export type AssistantStructuredResponse = {
   probableDiagnosis?: string;
   probableArea?: string;
+  probableSection?: string;
   technicalSummary: string;
   mainHypothesis: string;
   evidence: string[];
+  evidenceFound?: string[];
   nextTest: string;
   validationGoal: string;
   safetyNote: string;
+  confidence?: string;
   relatedLines?: Array<{
     name: string;
     expectedVoltage: string;
+    note: string;
+  }>;
+  expectedVoltages?: Array<{
+    line: string;
+    expectedValue: string;
+    condition?: string | null;
     note: string;
   }>;
   componentsToMeasure?: Array<{
@@ -190,9 +199,32 @@ export type AssistantStructuredResponse = {
     expectedValue: string;
     note: string;
   }>;
+  testPoints?: Array<{
+    label: string;
+    net?: string | null;
+    location?: string | null;
+    expectedValue?: string | null;
+    note: string;
+  }>;
   recommendedTestSequence?: string[];
+  whereToOpen?: Array<{
+    title: string;
+    targetType: "boardview_net" | "boardview_component" | "schematic_page" | "document" | "diagnostic";
+    href: string | null;
+    page?: number | null;
+    component?: string | null;
+    net?: string | null;
+    note?: string | null;
+  }>;
   sourcesUsed?: string[];
   limitations?: string[];
+  nextQuestionForTechnician?: string | null;
+  assistantMeta?: {
+    embeddingProvider: string;
+    narrativeProvider: string;
+    narrativeModel: string;
+    fallbackUsed: boolean;
+  };
   categoryStrategy: string;
   recommendedTestId: string | null;
   recommendedTestName: string | null;
@@ -228,6 +260,29 @@ export type AssistantStructuredResponse = {
         referenceHint?: string | null;
       }>;
     } | null;
+    similarCases?: Array<{
+      title: string;
+      excerpt: string;
+      similarityLabel: string;
+      href: string | null;
+    }>;
+    documentFindings?: Array<{
+      title: string;
+      excerpt: string;
+      similarityLabel?: string | null;
+      href: string | null;
+    }>;
+    measurementContext?: Array<{
+      label: string;
+      measuredValue: string;
+      expectedValue?: string | null;
+      note?: string | null;
+    }>;
+    diagnosticHistory?: Array<{
+      kind: string;
+      title: string;
+      summary: string;
+    }>;
     limitations: string[];
   };
 };
@@ -367,6 +422,9 @@ export type DiagnosticDetail = {
       confidenceScore: string;
       rawResponseText: string;
       modelName: string;
+      embeddingProvider: string;
+      narrativeProvider: string;
+      fallbackUsed: boolean;
       createdAt: string;
       structured: AssistantStructuredResponse | null;
       feedback: {
@@ -381,6 +439,8 @@ export type DiagnosticDetail = {
     similarCases: SemanticMatchResult[];
     relatedDocuments: SemanticMatchResult[];
     provider: string;
+    embeddingProvider: string;
+    narrativeProvider: string;
     externalProviderConfigured: boolean;
     activeAgent: {
       id: string;

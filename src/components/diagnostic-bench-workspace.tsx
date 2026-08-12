@@ -192,7 +192,7 @@ export function DiagnosticBenchWorkspace({
   const intakeScreen = getEquipmentDetailValue(detail, "Condição da tela");
   const probableDiagnosis =
     structured?.probableDiagnosis ?? structured?.mainHypothesis ?? "Sem diagnóstico provável consolidado.";
-  const probableArea = structured?.probableArea ?? "Setor ainda não isolado.";
+  const probableArea = structured?.probableSection ?? structured?.probableArea ?? "Setor ainda não isolado.";
   const relatedLines = structured?.relatedLines ?? [];
   const componentsToMeasure = structured?.componentsToMeasure ?? [];
   const recommendedSequence = structured?.recommendedTestSequence ?? [];
@@ -462,6 +462,20 @@ export function DiagnosticBenchWorkspace({
                   </p>
                   <p className="text-sm text-[var(--muted)]">
                     Segurança: {structured?.safetyNote ?? "Sem observação de segurança registrada."}
+                  </p>
+                  {structured?.nextQuestionForTechnician ? (
+                    <p className="text-sm text-[var(--muted)]">
+                      Próxima medição sugerida: {structured.nextQuestionForTechnician}
+                    </p>
+                  ) : null}
+                  <p className="text-sm text-[var(--muted)]">
+                    Embedding: {latestResponse.embeddingProvider}
+                  </p>
+                  <p className="text-sm text-[var(--muted)]">
+                    Narrativa: {latestResponse.narrativeProvider} ({latestResponse.modelName})
+                  </p>
+                  <p className="text-sm text-[var(--muted)]">
+                    Fallback local: {latestResponse.fallbackUsed ? "sim" : "não"}
                   </p>
                   <div>
                     <p className="text-sm font-semibold text-[var(--foreground)]">Fontes usadas</p>

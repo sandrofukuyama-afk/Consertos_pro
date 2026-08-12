@@ -30,7 +30,7 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 type AssistantSnapshot = DiagnosticDetail["assistantSnapshot"];
 
-type DiagnosticAssistantContext = {
+export type DiagnosticAssistantContext = {
   id: string;
   label: string;
   summary: string;
@@ -39,11 +39,16 @@ type DiagnosticAssistantContext = {
   manufacturer: string;
   model: string;
   physicalNotes: string;
+  equipmentDetails: Array<{
+    label: string;
+    value: string;
+  }>;
   symptoms: Array<{
     name: string;
     severity: string | null;
     isPrimary: boolean;
     group: string | null;
+    notes: string | null;
   }>;
   tests: Array<{
     testId: string | null;
@@ -52,7 +57,9 @@ type DiagnosticAssistantContext = {
     resultStatus: string;
     stepOrder: number;
     procedureNotes: string | null;
+    expectedResult: string | null;
     actualResult: string | null;
+    conclusion: string | null;
   }>;
   measurements: Array<{
     measurementType: string;
@@ -61,6 +68,10 @@ type DiagnosticAssistantContext = {
     measuredValueText: string | null;
     expectedValueText: string | null;
     unit: string | null;
+    context: string | null;
+    toleranceText: string | null;
+    observation: string | null;
+    inferredTerms: string[];
   }>;
   hypotheses: Array<{
     title: string;
@@ -76,6 +87,16 @@ type DiagnosticAssistantContext = {
     fileFormat: string;
     boardName: string | null;
     modelName: string | null;
+  }>;
+  recentAssistantHistory: Array<{
+    role: "user" | "assistant";
+    summary: string;
+    createdAt: string;
+  }>;
+  attachments: Array<{
+    title: string;
+    description: string | null;
+    summary: string;
   }>;
   benchPrompt: string | null;
   technicalContextSummary: string | null;
@@ -158,6 +179,109 @@ function normalizeComparable(value: string | null | undefined) {
 function isMeaningfulValue(value: string | null | undefined) {
   const normalized = normalizeComparable(value);
   return normalized.length > 0 && normalized !== "naoinformado" && normalized !== "naoidentificado";
+}
+
+function getNarrativeProviderName(modelName: string) {
+  return modelName === "heuristic-v1" ? "Modo local (fallback heuristico)" : "IA externa (OpenAI)";
+}
+
+function formatEquipmentDetailValue(
+  key: string,
+  value: string | number | boolean,
+) {
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Nao";
+  }
+
+  if (key === "screenCondition") {
+    if (value === "good") {
+      return "Boa";
+    }
+
+    if (value === "broken") {
+      return "Quebrada";
+    }
+
+    if (value === "no_image") {
+      return "Sem imagem";
+    }
+  }
+
+  return String(value);
+}
+
+function buildEquipmentDetailItemsForAssistant(
+  details: Record<string, unknown> | null | undefined,
+) {
+  if (!details) {
+    return [];
+  }
+
+  const labels: Record<string, string> = {
+    manufacturingYear: "Ano de fabricacao",
+    accessoriesIncluded: "Acessorios",
+    powerPresent: "Alimentacao",
+    powersOn: "Liga",
+    screenCondition: "Condicao da tela",
+    tvScreenSizeInches: "Tela",
+    tvScreenType: "Tipo de tela",
+    tvKind: "Tipo de TV",
+    tvResolution: "Resolucao",
+    tvPanelCode: "Codigo do painel",
+    notebookProcessor: "Processador",
+    notebookRamGb: "RAM",
+    notebookStorageType: "Armazenamento",
+    notebookStorageCapacityGb: "Capacidade",
+    notebookScreenSizeInches: "Tela notebook",
+    notebookChargerIncluded: "Carregador",
+    smartphoneStorageGb: "Armazenamento smartphone",
+    smartphoneColor: "Cor",
+    smartphoneDualSim: "Dual SIM",
+    smartphoneBiometric: "Biometria",
+    smartphoneNetworkType: "Rede",
+    desktopProcessor: "Processador desktop",
+    desktopRamGb: "RAM desktop",
+    desktopStorageType: "Armazenamento desktop",
+    desktopStorageCapacityGb: "Capacidade desktop",
+    desktopDedicatedGpu: "GPU dedicada",
+    desktopPsuWatts: "Fonte",
+  };
+
+  return Object.entries(details)
+    .filter(
+      ([, value]) =>
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean",
+    )
+    .map(([key, value]) => ({
+      label: labels[key] ?? key,
+      value: formatEquipmentDetailValue(key, value as string | number | boolean),
+    }));
+}
+
+function inferMeasurementTerms(
+  measurement: Pick<
+    DiagnosticAssistantContext["measurements"][number],
+    | "pointLabel"
+    | "measuredValueText"
+    | "expectedValueText"
+    | "context"
+    | "observation"
+  >,
+) {
+  const tokens = [
+    measurement.pointLabel,
+    measurement.measuredValueText,
+    measurement.expectedValueText,
+    measurement.context,
+    measurement.observation,
+  ]
+    .join(" ")
+    .toUpperCase()
+    .match(/\b(?:[A-Z]{1,4}\d{2,6}|PP[A-Z0-9_+\-/.]+|SMC[A-Z0-9_+\-/.]*|PM[A-Z0-9_+\-/.]*|G3H[A-Z0-9_+\-/.]*|S5[A-Z0-9_+\-/.]*|S4[A-Z0-9_+\-/.]*|SUS[A-Z0-9_+\-/.]*|AUX[A-Z0-9_+\-/.]*|\d{1,2}(?:\.\d+)?V)\b/g);
+
+  return Array.from(new Set((tokens ?? []).slice(0, 8)));
 }
 
 function inferMeasurementSignals(context: DiagnosticAssistantContext): MeasurementSignal[] {
@@ -554,14 +678,15 @@ async function getDiagnosticAssistantContext(
         current_summary,
         initial_problem_report,
         physical_condition_notes,
+        equipment_details,
         equipment_model_id,
         equipment_categories(name),
         manufacturers(name),
         equipment_models(model_name),
         diagnostic_boards(board_id, boards(board_code)),
-        diagnostic_symptoms(severity, is_primary, symptoms(name, symptom_group)),
-        diagnostic_test_runs(step_order, result_status, procedure_notes, actual_result, tests(id, name, test_group)),
-        measurements(measurement_type, point_label, measured_value_numeric, measured_value_text, expected_value_text, unit),
+        diagnostic_symptoms(severity, notes, is_primary, symptoms(name, symptom_group)),
+        diagnostic_test_runs(step_order, result_status, procedure_notes, expected_result, actual_result, conclusion, tests(id, name, test_group)),
+        measurements(measurement_type, point_label, measured_value_numeric, measured_value_text, expected_value_text, unit, measurement_context, tolerance_text),
         hypotheses(title, description, evidence_summary, confidence_score, status)
       `,
     )
@@ -602,6 +727,21 @@ async function getDiagnosticAssistantContext(
         )
         .or(technicalAssetLinkFilters.join(","))
     : { data: [] as Array<Record<string, unknown>> };
+  const [recentResponsesResult, attachmentsResult] = await Promise.all([
+    supabase
+      .from("ai_responses")
+      .select("response_role, reasoning_summary, recommended_next_step, raw_response_text, created_at")
+      .eq("diagnostic_id", diagnosticId)
+      .in("response_role", ["user", "assistant"])
+      .order("created_at", { ascending: false })
+      .limit(6),
+    supabase
+      .from("attachments")
+      .select("title, description, ai_image_analysis, annotations")
+      .eq("diagnostic_id", diagnosticId)
+      .order("created_at", { ascending: false })
+      .limit(4),
+  ]);
 
   return {
     id: data.id,
@@ -612,11 +752,15 @@ async function getDiagnosticAssistantContext(
     manufacturer: manufacturer?.name ?? "Não identificado",
     model: model?.model_name ?? "Não informado",
     physicalNotes: data.physical_condition_notes ?? "Sem observações físicas.",
+    equipmentDetails: buildEquipmentDetailItemsForAssistant(
+      (data.equipment_details as Record<string, unknown> | null | undefined) ?? null,
+    ),
     symptoms: (data.diagnostic_symptoms ?? []).map((item) => ({
       name: pickRelation(item.symptoms)?.name ?? "Sintoma",
       severity: item.severity,
       isPrimary: item.is_primary,
       group: pickRelation(item.symptoms)?.symptom_group ?? null,
+      notes: item.notes ?? null,
     })),
     tests: (data.diagnostic_test_runs ?? []).map((item) => ({
       testId: pickRelation(item.tests)?.id ?? null,
@@ -625,16 +769,32 @@ async function getDiagnosticAssistantContext(
       resultStatus: item.result_status,
       stepOrder: item.step_order,
       procedureNotes: item.procedure_notes,
+      expectedResult: item.expected_result ?? null,
       actualResult: item.actual_result,
+      conclusion: item.conclusion ?? null,
     })),
-    measurements: (data.measurements ?? []).map((item) => ({
-      measurementType: item.measurement_type,
-      pointLabel: item.point_label,
-      measuredValueNumeric: item.measured_value_numeric,
-      measuredValueText: item.measured_value_text,
-      expectedValueText: item.expected_value_text,
-      unit: item.unit,
-    })),
+    measurements: (data.measurements ?? []).map((item) => {
+      const observation = item.measurement_context ?? item.expected_value_text ?? null;
+
+      return {
+        measurementType: item.measurement_type,
+        pointLabel: item.point_label,
+        measuredValueNumeric: item.measured_value_numeric,
+        measuredValueText: item.measured_value_text,
+        expectedValueText: item.expected_value_text,
+        unit: item.unit,
+        context: item.measurement_context ?? null,
+        toleranceText: item.tolerance_text ?? null,
+        observation,
+        inferredTerms: inferMeasurementTerms({
+          pointLabel: item.point_label,
+          measuredValueText: item.measured_value_text,
+          expectedValueText: item.expected_value_text,
+          context: item.measurement_context ?? null,
+          observation,
+        }),
+      };
+    }),
     hypotheses: (data.hypotheses ?? []).map((item) => ({
       title: item.title,
       description: item.description,
@@ -707,6 +867,53 @@ async function getDiagnosticAssistantContext(
           ),
       ).values(),
     ),
+    recentAssistantHistory: ((recentResponsesResult.data ?? []) as Array<{
+      response_role: "user" | "assistant";
+      reasoning_summary: string | null;
+      recommended_next_step: string | null;
+      raw_response_text: string | null;
+      created_at: string;
+    }>).map((item) => ({
+      role: item.response_role,
+      summary:
+        item.response_role === "assistant"
+          ? item.recommended_next_step ??
+            item.reasoning_summary ??
+            item.raw_response_text ??
+            "Resposta tecnica sem resumo."
+          : item.raw_response_text ?? item.reasoning_summary ?? "Pergunta sem texto.",
+      createdAt: item.created_at,
+    })),
+    attachments: ((attachmentsResult.data ?? []) as Array<{
+      title: string;
+      description: string | null;
+      ai_image_analysis:
+        | {
+            observations?: string[];
+            suspectedIssues?: string[];
+            recommendation?: string;
+          }
+        | null;
+      annotations: Array<{ note?: string | null }> | null;
+    }>).map((item) => {
+      const summary = [
+        ...(item.ai_image_analysis?.observations ?? []).slice(0, 2),
+        ...(item.ai_image_analysis?.suspectedIssues ?? []).slice(0, 2),
+        item.ai_image_analysis?.recommendation ?? null,
+        ...(item.annotations ?? [])
+          .map((annotation) => annotation.note ?? null)
+          .filter((note): note is string => Boolean(note))
+          .slice(0, 2),
+      ]
+        .filter((entry): entry is string => Boolean(entry))
+        .join(" ");
+
+      return {
+        title: item.title,
+        description: item.description ?? null,
+        summary: summary || item.description || item.title,
+      };
+    }),
     benchPrompt,
     technicalContextSummary: null,
   };
@@ -718,10 +925,21 @@ async function getSimilarCasesAndDocuments(
 ) {
   const query = [
     context.summary,
+    context.initialReport,
     context.benchPrompt,
     context.technicalContextSummary,
+    ...context.equipmentDetails.slice(0, 4).map((item) => `${item.label} ${item.value}`),
     ...context.symptoms.slice(0, 3).map((item) => item.name),
+    ...context.measurements.slice(0, 4).flatMap((item) => [
+      item.pointLabel,
+      item.measuredValueText,
+      item.expectedValueText,
+      item.context,
+      ...item.inferredTerms,
+    ]),
     ...context.hypotheses.slice(0, 2).map((item) => item.title),
+    ...context.recentAssistantHistory.slice(0, 3).map((item) => item.summary),
+    ...context.attachments.slice(0, 2).map((item) => item.summary),
   ]
     .filter(Boolean)
     .join(" ");
@@ -988,7 +1206,7 @@ async function getAvailableTests(
 
 type BenchTechnicalContext = NonNullable<AssistantStructuredResponse["technicalContext"]>;
 
-function buildBenchRelatedLines(
+export function buildBenchRelatedLines(
   context: DiagnosticAssistantContext,
   technicalContext: BenchTechnicalContext | null,
 ) {
@@ -1013,7 +1231,7 @@ function buildBenchRelatedLines(
         measurement.measuredValueText ??
         (measurement.measuredValueNumeric !== null
           ? `Medido ${measurement.measuredValueNumeric}${measurement.unit ? ` ${measurement.unit}` : ""}`
-          : "Linha mencionada no historico de medicao."),
+          : measurement.context ?? "Linha mencionada no historico de medicao."),
     });
   }
 
@@ -1038,7 +1256,7 @@ function buildBenchRelatedLines(
   return lines.slice(0, 5);
 }
 
-function buildBenchComponentsToMeasure(
+export function buildBenchComponentsToMeasure(
   context: DiagnosticAssistantContext,
   technicalContext: BenchTechnicalContext | null,
 ) {
@@ -1089,6 +1307,115 @@ function buildBenchComponentsToMeasure(
   return items.slice(0, 6);
 }
 
+function buildBenchExpectedVoltages(
+  relatedLines: Array<{ name: string; expectedVoltage: string; note: string }>,
+) {
+  return relatedLines.map((item) => ({
+    line: item.name,
+    expectedValue: item.expectedVoltage,
+    condition: null,
+    note: item.note,
+  }));
+}
+
+function buildBenchTestPoints(
+  technicalContext: BenchTechnicalContext | null,
+  componentsToMeasure: Array<{
+    reference: string;
+    measurementPoint: string;
+    expectedValue: string;
+    note: string;
+  }>,
+) {
+  const points: Array<{
+    label: string;
+    net: string | null;
+    location: string | null;
+    expectedValue: string | null;
+    note: string;
+  }> = (technicalContext?.boardview?.results ?? []).map((result) => ({
+    label: result.coordinateHint ?? result.title,
+    net: result.relatedNet ?? null,
+    location: result.locationSummary ?? null,
+    expectedValue: null,
+    note: result.subtitle,
+  }));
+
+  for (const component of componentsToMeasure) {
+    points.push({
+      label: component.reference,
+      net: null,
+      location: component.measurementPoint,
+      expectedValue: component.expectedValue,
+      note: component.note,
+    });
+  }
+
+  return Array.from(
+    new Map(points.map((item) => [`${item.label}:${item.location ?? ""}`, item] as const)).values(),
+  ).slice(0, 6);
+}
+
+function buildBenchWhereToOpen(
+  technicalContext: BenchTechnicalContext | null,
+  similarCases: SemanticMatchResult[],
+  relatedDocuments: SemanticMatchResult[],
+) {
+  const items: NonNullable<AssistantStructuredResponse["whereToOpen"]> = [];
+
+  for (const result of technicalContext?.boardview?.results ?? []) {
+    items.push({
+      title: result.title,
+      targetType: result.kind === "net" ? "boardview_net" : "boardview_component",
+      href: result.openLabHref,
+      page: null,
+      component: result.kind === "component" ? result.title : null,
+      net: result.kind === "net" ? result.title : result.relatedNet ?? null,
+      note: result.locationSummary ?? result.coordinateHint ?? result.subtitle,
+    });
+  }
+
+  for (const match of technicalContext?.schematic?.matches ?? []) {
+    items.push({
+      title: `${match.term} pagina ${match.pageNumber}`,
+      targetType: "schematic_page",
+      href: match.openLabHref,
+      page: match.pageNumber,
+      component: null,
+      net: match.term,
+      note: match.excerpt,
+    });
+  }
+
+  for (const item of similarCases.slice(0, 2)) {
+    items.push({
+      title: item.title,
+      targetType: "diagnostic",
+      href: item.href,
+      page: null,
+      component: null,
+      net: null,
+      note: item.similarityLabel,
+    });
+  }
+
+  for (const item of relatedDocuments.slice(0, 2)) {
+    items.push({
+      title: item.title,
+      targetType: "document",
+      href: item.href,
+      page: null,
+      component: null,
+      net: null,
+      note: item.similarityLabel,
+    });
+  }
+
+  return Array.from(
+    new Map(items.map((item) => [`${item.targetType}:${item.title}`, item] as const)).values(),
+  ).slice(0, 8);
+}
+
 async function buildStructuredResponse(
   context: DiagnosticAssistantContext,
   similarCases: SemanticMatchResult[],
@@ -1096,6 +1423,7 @@ async function buildStructuredResponse(
   availableTests: Array<{ id: string; name: string; group: string | null }>,
   groupSuccessRate: Map<string, number>,
   symptomGroupInsights: Map<string, { topCause: string; count: number }>,
+  technicalContext: BenchTechnicalContext | null = null,
 ) {
   const strategy = resolveCategoryStrategy(context.category);
   const activeScenario = inferAssistantScenario(context);
@@ -1124,6 +1452,8 @@ async function buildStructuredResponse(
   );
   const nextTestName = recommendedTest?.name ?? "Executar o próximo teste objetivo da bancada";
   const normalizedBenchPrompt = normalizeComparable(context.benchPrompt);
+  const primaryBoardviewFinding = technicalContext?.boardview?.results[0] ?? null;
+  const primarySchematicFinding = technicalContext?.schematic?.matches[0] ?? null;
 
   let nextTest = "Registrar um próximo passo objetivo na bancada.";
   let validationGoal = "Gerar evidência suficiente para reduzir as hipóteses abertas.";
@@ -1166,6 +1496,11 @@ async function buildStructuredResponse(
   } else if (strongestHypothesis) {
     nextTest = `Validar a hipótese ${strongestHypothesis.title} com um teste binário ou medição no ponto mais próximo da causa suspeita.`;
     validationGoal = "Confirmar ou enfraquecer a hipótese mais forte sem repetir etapas já percorridas.";
+  } else if (primaryBoardviewFinding) {
+    nextTest = `Medir primeiro em ${primaryBoardviewFinding.title}${primaryBoardviewFinding.relatedNet ? ` na net ${primaryBoardviewFinding.relatedNet}` : ""}, usando ${primaryBoardviewFinding.coordinateHint ?? primaryBoardviewFinding.locationSummary ?? primaryBoardviewFinding.subtitle}.`;
+    validationGoal = primarySchematicFinding
+      ? `Cruzar a leitura com o esquema na página ${primarySchematicFinding.pageNumber} antes de trocar componente.`
+      : "Confirmar no boardview se o ponto sugerido representa a causa ou apenas o sintoma.";
   } else {
     nextTest = latestMeasurementSummary
       ? `Com base na medição registrada (${latestMeasurementSummary}), execute o teste ${nextTestName} para validar ${activeScenario.nextChecks[0].toLowerCase()}.`
@@ -1239,8 +1574,18 @@ async function buildStructuredResponse(
       (primarySymptomInsight ? 0.05 : 0),
   );
 
-  const heuristicRelatedLines = buildBenchRelatedLines(context, null);
-  const heuristicComponentsToMeasure = buildBenchComponentsToMeasure(context, null);
+  const heuristicRelatedLines = buildBenchRelatedLines(context, technicalContext);
+  const heuristicComponentsToMeasure = buildBenchComponentsToMeasure(context, technicalContext);
+  const heuristicExpectedVoltages = buildBenchExpectedVoltages(heuristicRelatedLines);
+  const heuristicTestPoints = buildBenchTestPoints(
+    technicalContext,
+    heuristicComponentsToMeasure,
+  );
+  const heuristicWhereToOpen = buildBenchWhereToOpen(
+    technicalContext,
+    similarCases,
+    relatedDocuments,
+  );
   const heuristicLimitations = [
     !context.measurements.length ? "Ainda faltam medicoes objetivas registradas na bancada." : null,
     !context.tests.length ? "Ainda faltam testes executados para reduzir as hipoteses." : null,
@@ -1248,13 +1593,25 @@ async function buildStructuredResponse(
       ? "Nao ha boardview ou esquema associado diretamente a este caso."
       : null,
   ].filter((item): item is string => Boolean(item));
+  const nextQuestionForTechnician =
+    !context.measurements.length
+      ? activeScenario.firstMeasurements[0]
+      : !technicalContext?.boardview?.results.length && !technicalContext?.schematic?.matches.length
+        ? "Qual linha, componente ou tensao voce quer isolar agora? Ex.: PPBUS_G3H, PP3V3_G3H ou U7000."
+        : null;
 
-  let narrative = {
+  let narrative: Awaited<ReturnType<typeof generateAssistantNarrative>> extends infer T
+    ? T extends null
+      ? never
+      : T
+    : never = {
     probableDiagnosis: mainHypothesis,
     probableArea: activeScenario.title,
+    probableSection: activeScenario.title,
     technicalSummary,
     mainHypothesis,
     evidence,
+    evidenceFound: evidence,
     relatedLines:
       heuristicRelatedLines.length > 0
         ? heuristicRelatedLines
@@ -1263,6 +1620,17 @@ async function buildStructuredResponse(
               name: "Sem linha identificada",
               expectedVoltage: "Solicitar medicao objetiva",
               note: "O historico atual ainda nao aponta uma net especifica.",
+            },
+          ],
+    expectedVoltages:
+      heuristicExpectedVoltages.length > 0
+        ? heuristicExpectedVoltages
+        : [
+            {
+              line: "Linha ainda nao definida",
+              expectedValue: "Solicitar medicao objetiva",
+              condition: null,
+              note: "Ainda faltam referencias tecnicas para cravar a tensao esperada.",
             },
           ],
     componentsToMeasure:
@@ -1276,10 +1644,42 @@ async function buildStructuredResponse(
               note: "Falta referencia concreta de componente ou pad no historico.",
             },
           ],
+    testPoints:
+      heuristicTestPoints.length > 0
+        ? heuristicTestPoints
+        : [
+            {
+              label: "Selecionar pad ou test point",
+              net: null,
+              location: null,
+              expectedValue: null,
+              note: "Use boardview ou esquema para localizar o primeiro ponto de medicao.",
+            },
+          ],
     recommendedTestSequence: [
       nextTest,
       ...activeScenario.nextChecks.slice(0, 2).map((item) => `Depois disso: ${item}`),
     ],
+    whereToOpen:
+      heuristicWhereToOpen.length > 0
+        ? heuristicWhereToOpen
+        : [
+            {
+              title: "Abrir assets tecnicos do caso",
+              targetType: availableSchematicAsset ? "schematic_page" : "diagnostic",
+              href: null,
+              page: null,
+              component: null,
+              net: null,
+              note: "Ainda nao houve alvo tecnico concreto para abrir focado.",
+            },
+          ],
+    sourcesUsed: [
+      ...similarCases.slice(0, 2).map((item) => `Caso semelhante: ${item.title}`),
+      ...relatedDocuments.slice(0, 2).map((item) => `Documento tecnico: ${item.title}`),
+      ...context.technicalAssets.slice(0, 2).map((item) => `Asset tecnico: ${item.title}`),
+    ],
+    confidence: formatConfidence(confidence),
     nextTest,
     validationGoal,
     safetyNote,
@@ -1287,6 +1687,7 @@ async function buildStructuredResponse(
       heuristicLimitations.length > 0
         ? heuristicLimitations
         : ["Resposta baseada no historico atual da bancada."],
+    nextQuestionForTechnician,
   };
   let modelName = "heuristic-v1";
 
@@ -1298,9 +1699,12 @@ async function buildStructuredResponse(
           equipmentLabel: context.label,
           category: context.category,
           manufacturer: context.manufacturer,
+          model: context.model,
           summary: context.summary,
+          initialReport: context.initialReport,
           benchPrompt: context.benchPrompt,
           technicalContextSummary: context.technicalContextSummary,
+          equipmentDetails: context.equipmentDetails,
           activeScenario,
           categoryStrategyFocus: strategy.summaryFocus,
           categoryFirstMove: strategy.firstMove,
@@ -1311,6 +1715,8 @@ async function buildStructuredResponse(
             testGroup: item.testGroup,
             resultStatus: item.resultStatus,
             actualResult: item.actualResult,
+            expectedResult: item.expectedResult,
+            conclusion: item.conclusion,
           })),
           measurements: context.measurements,
           hypotheses: context.hypotheses.map((item) => ({
@@ -1330,6 +1736,8 @@ async function buildStructuredResponse(
           relatedDocuments: relatedDocuments.map((item) => ({
             title: item.title,
             excerpt: item.excerpt,
+            href: item.href,
+            similarityLabel: item.similarityLabel,
           })),
           technicalAssets: context.technicalAssets.map((item) => ({
             title: item.title,
@@ -1337,6 +1745,59 @@ async function buildStructuredResponse(
             boardName: item.boardName,
             modelName: item.modelName,
           })),
+          boardviewFindings: (technicalContext?.boardview?.results ?? []).map((item) => ({
+            title: item.title,
+            subtitle: item.subtitle,
+            details: item.details,
+            relatedNet: item.relatedNet ?? null,
+            locationSummary: item.locationSummary ?? null,
+            coordinateHint: item.coordinateHint ?? null,
+            openLabHref: item.openLabHref,
+          })),
+          schematicFindings: (technicalContext?.schematic?.matches ?? []).map((item) => ({
+            term: item.term,
+            pageNumber: item.pageNumber,
+            occurrences: item.occurrences,
+            excerpt: item.excerpt,
+            openLabHref: item.openLabHref,
+          })),
+          documentFindings: relatedDocuments.map((item) => ({
+            title: item.title,
+            excerpt: item.excerpt,
+            similarityLabel: item.similarityLabel,
+            href: item.href,
+          })),
+          measurementContext: context.measurements.map((item) => ({
+            label: item.pointLabel ?? item.measurementType,
+            measuredValue:
+              item.measuredValueText ??
+              (item.measuredValueNumeric !== null
+                ? `${item.measuredValueNumeric}${item.unit ? ` ${item.unit}` : ""}`
+                : "Nao informado"),
+            expectedValue: item.expectedValueText ?? null,
+            note: item.context ?? item.observation ?? null,
+          })),
+          diagnosticHistory: [
+            ...context.tests.slice(0, 4).map((item) => ({
+              kind: "teste",
+              title: item.testName,
+              summary: item.conclusion ?? item.actualResult ?? item.procedureNotes ?? item.resultStatus,
+            })),
+            ...context.measurements.slice(0, 4).map((item) => ({
+              kind: "medicao",
+              title: item.pointLabel ?? item.measurementType,
+              summary:
+                item.measuredValueText ??
+                (item.measuredValueNumeric !== null
+                  ? `${item.measuredValueNumeric}${item.unit ? ` ${item.unit}` : ""}`
+                  : "Sem leitura"),
+            })),
+          ].slice(0, 8),
+          recentAssistantHistory: context.recentAssistantHistory.map((item) => ({
+            role: item.role,
+            summary: item.summary,
+          })),
+          attachmentContext: context.attachments,
           symptomGroupInsight:
             primarySymptomInsight && primarySymptomEntry?.group
               ? {
@@ -1353,17 +1814,23 @@ async function buildStructuredResponse(
         narrative = llmNarrative;
         modelName = getAssistantModelName();
       }
-    } catch {
-      // Keep the heuristic narrative if the LLM call fails for any reason.
+    } catch (error) {
+      console.error("[assistant] OpenAI narrative failed", {
+        diagnosticId: context.id,
+        model: getAssistantModelName(),
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
   return {
     confidence,
     modelName,
+    narrativeProvider: getNarrativeProviderName(modelName),
+    fallbackUsed: modelName === "heuristic-v1",
     rawResponseText: [
       `Diagnostico provavel: ${narrative.probableDiagnosis}`,
-      `Setor provavel: ${narrative.probableArea}`,
+      `Setor provavel: ${narrative.probableSection ?? narrative.probableArea}`,
       `Resumo técnico: ${narrative.technicalSummary}`,
       `Hipótese principal: ${narrative.mainHypothesis}`,
       `Evidências: ${narrative.evidence.join(" ")}`,
@@ -1374,16 +1841,27 @@ async function buildStructuredResponse(
     structured: {
       probableDiagnosis: narrative.probableDiagnosis,
       probableArea: narrative.probableArea,
+      probableSection: narrative.probableSection ?? narrative.probableArea,
       technicalSummary: narrative.technicalSummary,
       mainHypothesis: narrative.mainHypothesis,
       evidence: narrative.evidence,
+      evidenceFound: narrative.evidenceFound ?? narrative.evidence,
       relatedLines: narrative.relatedLines,
+      expectedVoltages:
+        narrative.expectedVoltages ?? buildBenchExpectedVoltages(narrative.relatedLines),
       componentsToMeasure: narrative.componentsToMeasure,
+      testPoints:
+        narrative.testPoints ?? buildBenchTestPoints(technicalContext, narrative.componentsToMeasure),
       recommendedTestSequence: narrative.recommendedTestSequence,
+      whereToOpen:
+        narrative.whereToOpen ?? buildBenchWhereToOpen(technicalContext, similarCases, relatedDocuments),
+      sourcesUsed: narrative.sourcesUsed ?? [],
+      confidence: narrative.confidence ?? formatConfidence(confidence),
       nextTest: narrative.nextTest,
       validationGoal: narrative.validationGoal,
       safetyNote: narrative.safetyNote,
       limitations: narrative.limitations,
+      nextQuestionForTechnician: narrative.nextQuestionForTechnician ?? null,
       categoryStrategy: strategy.firstMove,
       recommendedTestId: recommendedTest?.id ?? null,
       recommendedTestName: recommendedTest?.name ?? null,
@@ -1417,6 +1895,7 @@ export async function generateDiagnosticAssistantResponse(
     availableTests,
     groupSuccessRate,
     symptomGroupInsights,
+    null,
   );
 
   const { error } = await supabase.from("ai_responses").insert({
@@ -1461,6 +1940,25 @@ export async function generateDiagnosticAssistantBenchResponse(
   const technicalContext = await searchAssistantTechnicalContext({
     diagnosticId,
     benchPrompt,
+    contextSources: {
+      summary: context.summary,
+      initialReport: context.initialReport,
+      symptoms: context.symptoms.map((item) => `${item.name} ${item.notes ?? ""}`),
+      measurements: context.measurements.flatMap((item) => [
+        item.pointLabel,
+        item.measuredValueText,
+        item.expectedValueText,
+        item.context,
+        item.observation,
+        ...item.inferredTerms,
+      ]),
+      hypotheses: context.hypotheses.map((item) => `${item.title} ${item.evidenceSummary ?? ""}`),
+      tests: context.tests.map(
+        (item) =>
+          `${item.testName} ${item.resultStatus} ${item.actualResult ?? ""} ${item.conclusion ?? ""}`,
+      ),
+      assetNames: context.technicalAssets.map((item) => item.title),
+    },
     supabase: technicalContextClient,
   });
   const technicalContextSummary =
@@ -1508,6 +2006,7 @@ export async function generateDiagnosticAssistantBenchResponse(
     availableTests,
     groupSuccessRate,
     symptomGroupInsights,
+    technicalContext,
   );
   const benchRelatedLines = buildBenchRelatedLines(contextWithTechnicalData, technicalContext);
   const benchComponentsToMeasure = buildBenchComponentsToMeasure(
@@ -1532,17 +2031,79 @@ export async function generateDiagnosticAssistantBenchResponse(
       ...payload.structured.evidence,
       ...buildTechnicalContextEvidence(technicalContext),
     ].slice(0, 8),
+    evidenceFound: [
+      ...(payload.structured.evidenceFound ?? payload.structured.evidence),
+      ...buildTechnicalContextEvidence(technicalContext),
+    ].slice(0, 8),
     relatedLines:
       benchRelatedLines.length > 0
         ? benchRelatedLines
         : payload.structured.relatedLines,
+    expectedVoltages:
+      payload.structured.expectedVoltages ??
+      buildBenchExpectedVoltages(
+        benchRelatedLines.length > 0 ? benchRelatedLines : payload.structured.relatedLines ?? [],
+      ),
     componentsToMeasure:
       benchComponentsToMeasure.length > 0
         ? benchComponentsToMeasure
         : payload.structured.componentsToMeasure,
+    testPoints:
+      payload.structured.testPoints ??
+      buildBenchTestPoints(
+        technicalContext,
+        benchComponentsToMeasure.length > 0
+          ? benchComponentsToMeasure
+          : payload.structured.componentsToMeasure ?? [],
+      ),
+    whereToOpen:
+      payload.structured.whereToOpen ??
+      buildBenchWhereToOpen(technicalContext, similarCases, relatedDocuments),
     sourcesUsed: Array.from(new Set(benchSources)).slice(0, 10),
+    assistantMeta: {
+      embeddingProvider: getEmbeddingProviderName(),
+      narrativeProvider: payload.narrativeProvider,
+      narrativeModel: payload.modelName,
+      fallbackUsed: payload.fallbackUsed,
+    },
     limitations: benchLimitations.length > 0 ? benchLimitations : payload.structured.limitations,
-    technicalContext,
+    technicalContext: {
+      ...technicalContext,
+      similarCases: similarCases.map((item) => ({
+        title: item.title,
+        excerpt: item.excerpt,
+        similarityLabel: item.similarityLabel,
+        href: item.href,
+      })),
+      documentFindings: relatedDocuments.map((item) => ({
+        title: item.title,
+        excerpt: item.excerpt,
+        similarityLabel: item.similarityLabel,
+        href: item.href,
+      })),
+      measurementContext: contextWithTechnicalData.measurements.map((item) => ({
+        label: item.pointLabel ?? item.measurementType,
+        measuredValue:
+          item.measuredValueText ??
+          (item.measuredValueNumeric !== null
+            ? `${item.measuredValueNumeric}${item.unit ? ` ${item.unit}` : ""}`
+            : "Nao informado"),
+        expectedValue: item.expectedValueText ?? null,
+        note: item.context ?? item.observation ?? null,
+      })),
+      diagnosticHistory: [
+        ...contextWithTechnicalData.recentAssistantHistory.map((item) => ({
+          kind: item.role,
+          title: item.role === "assistant" ? "IA" : "Tecnico",
+          summary: item.summary,
+        })),
+        ...contextWithTechnicalData.tests.slice(0, 3).map((item) => ({
+          kind: "teste",
+          title: item.testName,
+          summary: item.conclusion ?? item.actualResult ?? item.resultStatus,
+        })),
+      ].slice(0, 8),
+    },
   };
   const rawResponseText = [
     payload.rawResponseText,
@@ -1572,7 +2133,30 @@ export async function generateDiagnosticAssistantBenchResponse(
   return {
     confidence: payload.confidence,
     provider: getEmbeddingProviderName(),
+    embeddingProvider: getEmbeddingProviderName(),
+    narrativeProvider: payload.narrativeProvider,
+    fallbackUsed: payload.fallbackUsed,
   };
+}
+
+export async function buildStructuredResponseForTest(args: {
+  context: DiagnosticAssistantContext;
+  similarCases?: SemanticMatchResult[];
+  relatedDocuments?: SemanticMatchResult[];
+  availableTests?: Array<{ id: string; name: string; group: string | null }>;
+  groupSuccessRate?: Map<string, number>;
+  symptomGroupInsights?: Map<string, { topCause: string; count: number }>;
+  technicalContext?: BenchTechnicalContext | null;
+}) {
+  return buildStructuredResponse(
+    args.context,
+    args.similarCases ?? [],
+    args.relatedDocuments ?? [],
+    args.availableTests ?? [],
+    args.groupSuccessRate ?? new Map<string, number>(),
+    args.symptomGroupInsights ?? new Map<string, { topCause: string; count: number }>(),
+    args.technicalContext ?? null,
+  );
 }
 
 export async function getDiagnosticAssistantSnapshot(
@@ -1588,6 +2172,8 @@ export async function getDiagnosticAssistantSnapshot(
       similarCases: [],
       relatedDocuments: [],
       provider: getEmbeddingProviderName(),
+      embeddingProvider: getEmbeddingProviderName(),
+      narrativeProvider: "Modo local (fallback heuristico)",
       externalProviderConfigured: isExternalEmbeddingConfigured(),
       activeAgent: {
         id: "default",
@@ -1641,6 +2227,33 @@ export async function getDiagnosticAssistantSnapshot(
           confidenceScore: formatConfidence(Number(latestResponse.confidence_score ?? 0)),
           rawResponseText: latestResponse.raw_response_text,
           modelName: latestResponse.model_name ?? "assistant-v1",
+          embeddingProvider:
+            latestResponse.structured_response_json &&
+            typeof latestResponse.structured_response_json === "object" &&
+            "assistantMeta" in latestResponse.structured_response_json &&
+            typeof latestResponse.structured_response_json.assistantMeta === "object" &&
+            latestResponse.structured_response_json.assistantMeta &&
+            "embeddingProvider" in latestResponse.structured_response_json.assistantMeta
+              ? String(latestResponse.structured_response_json.assistantMeta.embeddingProvider)
+              : getEmbeddingProviderName(),
+          narrativeProvider:
+            latestResponse.structured_response_json &&
+            typeof latestResponse.structured_response_json === "object" &&
+            "assistantMeta" in latestResponse.structured_response_json &&
+            typeof latestResponse.structured_response_json.assistantMeta === "object" &&
+            latestResponse.structured_response_json.assistantMeta &&
+            "narrativeProvider" in latestResponse.structured_response_json.assistantMeta
+              ? String(latestResponse.structured_response_json.assistantMeta.narrativeProvider)
+              : getNarrativeProviderName(latestResponse.model_name ?? "heuristic-v1"),
+          fallbackUsed:
+            latestResponse.structured_response_json &&
+            typeof latestResponse.structured_response_json === "object" &&
+            "assistantMeta" in latestResponse.structured_response_json &&
+            typeof latestResponse.structured_response_json.assistantMeta === "object" &&
+            latestResponse.structured_response_json.assistantMeta &&
+            "fallbackUsed" in latestResponse.structured_response_json.assistantMeta
+              ? Boolean(latestResponse.structured_response_json.assistantMeta.fallbackUsed)
+              : (latestResponse.model_name ?? "heuristic-v1") === "heuristic-v1",
           createdAt: formatRelativeTime(latestResponse.created_at),
           structured:
             latestResponse.structured_response_json &&
@@ -1671,6 +2284,11 @@ export async function getDiagnosticAssistantSnapshot(
     similarCases,
     relatedDocuments,
     provider: getEmbeddingProviderName(),
+    embeddingProvider: getEmbeddingProviderName(),
+    narrativeProvider:
+      latestResponse?.model_name
+        ? getNarrativeProviderName(latestResponse.model_name)
+        : "Modo local (fallback heuristico)",
     externalProviderConfigured: isExternalEmbeddingConfigured(),
     activeAgent: {
       id: activeAgent.id,
