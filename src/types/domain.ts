@@ -231,6 +231,26 @@ export type AssistantStructuredResponse = {
   technicalContext?: {
     userPrompt: string | null;
     searchTerms: string[];
+    selectedAssets?: {
+      boardview: {
+        assetId: string;
+        assetTitle: string;
+        selectionReason: string;
+        attemptedBuckets: string[];
+        downloadBucketUsed?: string | null;
+        downloadStatus: "pending" | "downloaded" | "failed";
+        warning?: string | null;
+      } | null;
+      schematic: {
+        assetId: string;
+        assetTitle: string;
+        selectionReason: string;
+        attemptedBuckets: string[];
+        downloadBucketUsed?: string | null;
+        downloadStatus: "pending" | "downloaded" | "failed";
+        warning?: string | null;
+      } | null;
+    };
     boardview: {
       assetId: string;
       assetTitle: string;

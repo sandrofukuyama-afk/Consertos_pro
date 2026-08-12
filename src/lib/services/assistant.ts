@@ -1957,6 +1957,12 @@ export async function generateDiagnosticAssistantBenchResponse(
         (item) =>
           `${item.testName} ${item.resultStatus} ${item.actualResult ?? ""} ${item.conclusion ?? ""}`,
       ),
+      recentHistory: context.recentAssistantHistory.map(
+        (item) => `${item.role} ${item.summary}`,
+      ),
+      attachments: context.attachments.map(
+        (item) => `${item.title} ${item.description ?? ""} ${item.summary}`,
+      ),
       assetNames: context.technicalAssets.map((item) => item.title),
     },
     supabase: technicalContextClient,

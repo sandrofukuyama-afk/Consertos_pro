@@ -9,6 +9,7 @@ import {
   findSchematicPdfMatches,
   type SchematicPdfPageText,
 } from "@/lib/boardview/schematic-pdf";
+import { TECHNICAL_ASSET_BUCKET } from "@/lib/technical-assets.mjs";
 import type { AssistantStructuredResponse } from "@/types/domain";
 
 type SupabaseMaybeSingleResult = Promise<{
@@ -59,6 +60,7 @@ type TechnicalAssetSearchRow = {
         file_format: string;
         storage_bucket: string;
         storage_path: string;
+        created_at: string;
       }
     | Array<{
         id: string;
@@ -67,6 +69,7 @@ type TechnicalAssetSearchRow = {
         file_format: string;
         storage_bucket: string;
         storage_path: string;
+        created_at: string;
       }>
     | null;
 };
@@ -84,6 +87,7 @@ type AssociatedTechnicalAsset = {
   fileFormat: string;
   storageBucket: string;
   storagePath: string;
+  createdAt: string;
   boardId: string | null;
   equipmentModelId: string | null;
   boardName: string | null;
@@ -96,6 +100,24 @@ type AssistantTechnicalContext = NonNullable<
 type AssistantBoardviewResult = NonNullable<
   AssistantTechnicalContext["boardview"]
 >["results"][number];
+type SelectedAssetMetadata = NonNullable<
+  AssistantTechnicalContext["selectedAssets"]
+>["boardview"];
+type AssetFocusTarget =
+  | { component: string; net?: string | null }
+  | { net: string; component?: string | null }
+  | { page: number }
+  | { query: string };
+type AssetSelectionResult = {
+  asset: AssociatedTechnicalAsset | null;
+  metadata: SelectedAssetMetadata;
+};
+type AssetDownloadResult = {
+  bytes: Uint8Array;
+  bucketUsed: string;
+  attemptedBuckets: string[];
+  warning: string | null;
+};
 
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
@@ -127,11 +149,10 @@ function normalizeLooseSearchText(value: string) {
 function buildLabSearchHref(
   diagnosticId: string,
   asset: AssociatedTechnicalAsset,
-  term: string,
+  focus: AssetFocusTarget,
 ) {
   const params = new URLSearchParams({
     diagnostic_id: diagnosticId,
-    q: term,
   });
 
   if (asset.fileFormat === "pdf") {
@@ -150,6 +171,22 @@ function buildLabSearchHref(
     params.set("model_id", asset.equipmentModelId);
   }
 
+  if ("component" in focus && focus.component) {
+    params.set("component", focus.component);
+    if (focus.net) {
+      params.set("net", focus.net);
+    }
+  } else if ("net" in focus && focus.net) {
+    params.set("net", focus.net);
+    if (focus.component) {
+      params.set("component", focus.component);
+    }
+  } else if ("page" in focus) {
+    params.set("page", String(focus.page));
+  } else if ("query" in focus && focus.query) {
+    params.set("q", focus.query);
+  }
+
   return `/boardview/lab?${params.toString()}`;
 }
 
@@ -163,6 +200,8 @@ type TechnicalSearchSourceInput =
       measurements?: Array<string | null | undefined>;
       hypotheses?: Array<string | null | undefined>;
       tests?: Array<string | null | undefined>;
+      recentHistory?: Array<string | null | undefined>;
+      attachments?: Array<string | null | undefined>;
       assetNames?: Array<string | null | undefined>;
     };
 
@@ -181,6 +220,8 @@ function extractTechnicalSearchTerms(input: TechnicalSearchSourceInput) {
     ...(source.measurements ?? []),
     ...(source.hypotheses ?? []),
     ...(source.tests ?? []),
+    ...(source.recentHistory ?? []),
+    ...(source.attachments ?? []),
     ...(source.assetNames ?? []),
   ]
     .map((item) => item?.trim() ?? "")
@@ -286,7 +327,8 @@ async function loadAssociatedTechnicalAssets(
           asset_type,
           file_format,
           storage_bucket,
-          storage_path
+          storage_path,
+          created_at
         )
       `,
     )
@@ -315,6 +357,7 @@ async function loadAssociatedTechnicalAssets(
               fileFormat: asset.file_format,
               storageBucket: asset.storage_bucket,
               storagePath: asset.storage_path,
+              createdAt: asset.created_at,
               boardId: row.board_id ?? null,
               equipmentModelId: row.equipment_model_id ?? null,
               boardName: pickRelation(row.boards)?.board_code ?? null,
@@ -331,19 +374,143 @@ async function loadAssociatedTechnicalAssets(
   );
 }
 
+function buildAssetSelectionReason(
+  asset: AssociatedTechnicalAsset,
+  context: DiagnosticAssetContext,
+) {
+  const reasons: string[] = [];
+
+  if (asset.boardId && context.boardIds.includes(asset.boardId)) {
+    reasons.push(`associado diretamente à placa ${asset.boardName ?? asset.boardId}`);
+  }
+
+  if (asset.equipmentModelId && asset.equipmentModelId === context.equipmentModelId) {
+    reasons.push(`associado ao modelo ${asset.modelName ?? asset.equipmentModelId}`);
+  }
+
+  reasons.push(`arquivo mais recente em ${asset.createdAt}`);
+
+  return reasons.join("; ");
+}
+
+function rankAssociatedAsset(
+  asset: AssociatedTechnicalAsset,
+  context: DiagnosticAssetContext,
+) {
+  let score = 0;
+
+  if (asset.boardId && context.boardIds.includes(asset.boardId)) {
+    score += 100;
+  }
+
+  if (asset.equipmentModelId && asset.equipmentModelId === context.equipmentModelId) {
+    score += 20;
+  }
+
+  if (asset.boardId && asset.equipmentModelId) {
+    score += 5;
+  }
+
+  if (asset.fileFormat === "brd") {
+    score += 2;
+  }
+
+  const createdAtScore = Number.isFinite(Date.parse(asset.createdAt))
+    ? Date.parse(asset.createdAt)
+    : 0;
+
+  return {
+    score,
+    createdAtScore,
+  };
+}
+
+function selectPreferredAsset(
+  assets: AssociatedTechnicalAsset[],
+  context: DiagnosticAssetContext,
+  kind: "boardview" | "schematic",
+): AssetSelectionResult {
+  const filteredAssets = assets.filter((asset) =>
+    kind === "schematic"
+      ? asset.fileFormat === "pdf"
+      : asset.fileFormat === "brd" || asset.fileFormat === "bdv",
+  );
+
+  if (!filteredAssets.length) {
+    return {
+      asset: null,
+      metadata: null,
+    };
+  }
+
+  const sortedAssets = [...filteredAssets].sort((left, right) => {
+    const leftRank = rankAssociatedAsset(left, context);
+    const rightRank = rankAssociatedAsset(right, context);
+
+    return (
+      rightRank.score - leftRank.score ||
+      rightRank.createdAtScore - leftRank.createdAtScore ||
+      left.title.localeCompare(right.title)
+    );
+  });
+
+  const selectedAsset = sortedAssets[0];
+
+  return {
+    asset: selectedAsset,
+    metadata: {
+      assetId: selectedAsset.id,
+      assetTitle: selectedAsset.title,
+      selectionReason: buildAssetSelectionReason(selectedAsset, context),
+      attemptedBuckets: [selectedAsset.storageBucket, TECHNICAL_ASSET_BUCKET, "technical-documents"]
+        .filter((value, index, array) => Boolean(value) && array.indexOf(value) === index),
+      downloadBucketUsed: null,
+      downloadStatus: "pending",
+      warning:
+        sortedAssets.length > 1
+          ? `${sortedAssets.length} candidatos encontrados; foi escolhido o asset mais específico e mais recente.`
+          : null,
+    },
+  };
+}
+
 async function downloadAssetBytes(
   asset: AssociatedTechnicalAsset,
   supabase: AssistantTechnicalContextSupabaseClient,
-) {
-  const { data, error } = await supabase.storage
-    .from(asset.storageBucket)
-    .download(asset.storagePath);
+): Promise<AssetDownloadResult> {
+  const candidateBuckets = Array.from(
+    new Set(
+      [asset.storageBucket, TECHNICAL_ASSET_BUCKET, "technical-documents"].filter(
+        (value): value is string => Boolean(value?.trim()),
+      ),
+    ),
+  );
+  const downloadErrors: string[] = [];
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Não foi possível baixar o arquivo técnico.");
+  for (const bucket of candidateBuckets) {
+    const { data, error } = await supabase.storage.from(bucket).download(asset.storagePath);
+
+    if (data) {
+      return {
+        bytes: new Uint8Array(await data.arrayBuffer()),
+        bucketUsed: bucket,
+        attemptedBuckets: candidateBuckets,
+        warning:
+          bucket !== asset.storageBucket
+            ? `bucket alternativo usado: esperado ${asset.storageBucket}, usado ${bucket}`
+            : null,
+      };
+    }
+
+    if (error?.message) {
+      downloadErrors.push(`${bucket}: ${error.message}`);
+    }
   }
 
-  return new Uint8Array(await data.arrayBuffer());
+  throw new Error(
+    downloadErrors[0] ??
+      "Não foi possível baixar o arquivo técnico pelos buckets disponíveis.",
+  );
 }
 
 function buildBoardviewSearchContext(
@@ -376,9 +543,12 @@ function buildBoardviewSearchContext(
               nets.length
                 ? `Nets ligadas: ${nets.join(", ")}`
                 : "Sem nets ligadas detectadas.",
-              `Centro aproximado: ${hit.selection.component.centerXMil} mil × ${hit.selection.component.centerYMil} mil`,
+              `Centro aproximado: ${hit.selection.component.centerXMil} mil x ${hit.selection.component.centerYMil} mil`,
             ],
-            openLabHref: buildLabSearchHref(diagnosticId, asset, hit.title),
+            openLabHref: buildLabSearchHref(diagnosticId, asset, {
+              component: hit.title,
+              net: nets[0] ?? null,
+            }),
             locationSummary: `Lado ${hit.selection.component.mountingSide} com ${hit.selection.component.pinCount} pads`,
             relatedNet: nets[0] ?? null,
             coordinateHint: firstPad
@@ -416,7 +586,9 @@ function buildBoardviewSearchContext(
               ? `Test points: ${testPointIds.join(", ")}`
               : "Sem test points nessa net.",
           ],
-          openLabHref: buildLabSearchHref(diagnosticId, asset, netName),
+          openLabHref: buildLabSearchHref(diagnosticId, asset, {
+            net: netName,
+          }),
           locationSummary: firstTestPoint
             ? `Primeiro test point no lado ${firstTestPoint.side}`
             : firstPad
@@ -437,11 +609,9 @@ function buildBoardviewSearchContext(
   return {
     assetId: asset.id,
     assetTitle: asset.title,
-    openLabHref: buildLabSearchHref(
-      diagnosticId,
-      asset,
-      searchTerms[0] ?? asset.title,
-    ),
+    openLabHref: buildLabSearchHref(diagnosticId, asset, {
+      query: searchTerms[0] ?? asset.title,
+    }),
     results: Array.from(
       new Map(results.map((item) => [`${item.kind}:${item.title}`, item] as const)).values(),
     ).slice(0, 6),
@@ -482,7 +652,9 @@ async function buildSchematicSearchContext(
         pageNumber: match.pageNumber,
         occurrences: match.occurrences,
         excerpt: match.excerpt,
-        openLabHref: buildLabSearchHref(diagnosticId, asset, term),
+        openLabHref: buildLabSearchHref(diagnosticId, asset, {
+          page: match.pageNumber,
+        }),
         referenceHint: `Pagina ${match.pageNumber} para ${term}`,
       })),
   );
@@ -490,16 +662,28 @@ async function buildSchematicSearchContext(
   return {
     assetId: asset.id,
     assetTitle: asset.title,
-    openLabHref: buildLabSearchHref(
-      diagnosticId,
-      asset,
-      searchTerms[0] ?? asset.title,
-    ),
+    openLabHref: buildLabSearchHref(diagnosticId, asset, {
+      query: searchTerms[0] ?? asset.title,
+    }),
     matches: Array.from(
       new Map(
         matches.map((item) => [`${item.term}:${item.pageNumber}`, item] as const),
       ).values(),
     ).slice(0, 8),
+  };
+}
+
+function updateSelectedAssetMetadata(
+  metadata: SelectedAssetMetadata,
+  updates: Partial<NonNullable<SelectedAssetMetadata>>,
+): SelectedAssetMetadata {
+  if (!metadata) {
+    return null;
+  }
+
+  return {
+    ...metadata,
+    ...updates,
   };
 }
 
@@ -515,14 +699,10 @@ export async function searchAssistantTechnicalContext({
   supabase: AssistantTechnicalContextSupabaseClient;
 }): Promise<AssistantTechnicalContext> {
   const prompt = normalizeWhitespace(benchPrompt ?? "");
-  const searchTerms = prompt
-    ? extractTechnicalSearchTerms({
-        prompt,
-        ...contextSources,
-      })
-    : extractTechnicalSearchTerms({
-        ...contextSources,
-      });
+  const searchTerms = extractTechnicalSearchTerms({
+    prompt,
+    ...contextSources,
+  });
   const limitations: string[] = [];
   const diagnosticAssetContext = await loadDiagnosticAssetContext(diagnosticId, supabase);
 
@@ -530,6 +710,10 @@ export async function searchAssistantTechnicalContext({
     return {
       userPrompt: benchPrompt,
       searchTerms,
+      selectedAssets: {
+        boardview: null,
+        schematic: null,
+      },
       boardview: null,
       schematic: null,
       limitations: ["Diagnóstico não encontrado para busca técnica."],
@@ -540,54 +724,65 @@ export async function searchAssistantTechnicalContext({
     diagnosticAssetContext,
     supabase,
   );
-  const boardviewAsset =
-    associatedAssets.find(
-      (asset) => asset.fileFormat === "brd" || asset.fileFormat === "bdv",
-    ) ?? null;
-  const schematicAsset =
-    associatedAssets.find((asset) => asset.fileFormat === "pdf") ?? null;
-
-  if (!prompt) {
-    return {
-      userPrompt: null,
-      searchTerms: [],
-      boardview: null,
-      schematic: null,
-      limitations: [],
-    };
-  }
+  const boardviewSelection = selectPreferredAsset(
+    associatedAssets,
+    diagnosticAssetContext,
+    "boardview",
+  );
+  const schematicSelection = selectPreferredAsset(
+    associatedAssets,
+    diagnosticAssetContext,
+    "schematic",
+  );
 
   if (!searchTerms.length) {
     limitations.push(
-      "A pergunta não trouxe uma referência ou net pesquisável. Cite algo como U1900, C1009 ou PPBUS_G3H.",
+      "Não foi possível extrair uma referência pesquisável do contexto atual. Registre algo como U1900, C1009 ou PPBUS_G3H.",
     );
   }
 
-  if (/boardview|brd|bdv/i.test(prompt) && !boardviewAsset) {
+  if (/boardview|brd|bdv/i.test(prompt) && !boardviewSelection.asset) {
     limitations.push("Não há boardview associado a este diagnóstico.");
   }
 
-  if (/esquema|schematic|pdf/i.test(prompt) && !schematicAsset) {
+  if (/esquema|schematic|pdf/i.test(prompt) && !schematicSelection.asset) {
     limitations.push("Não há esquema PDF associado a este diagnóstico.");
   }
 
+  let selectedBoardviewMetadata = boardviewSelection.metadata;
+  let selectedSchematicMetadata = schematicSelection.metadata;
   let boardview: AssistantTechnicalContext["boardview"] = null;
   let schematic: AssistantTechnicalContext["schematic"] = null;
 
-  if (boardviewAsset && searchTerms.length) {
+  if (boardviewSelection.asset && searchTerms.length) {
     try {
-      const bytes = await downloadAssetBytes(boardviewAsset, supabase);
+      const boardviewDownload = await downloadAssetBytes(boardviewSelection.asset, supabase);
+      selectedBoardviewMetadata = updateSelectedAssetMetadata(selectedBoardviewMetadata, {
+        attemptedBuckets: boardviewDownload.attemptedBuckets,
+        downloadBucketUsed: boardviewDownload.bucketUsed,
+        downloadStatus: "downloaded",
+        warning:
+          boardviewDownload.warning ?? selectedBoardviewMetadata?.warning ?? null,
+      });
       boardview = buildBoardviewSearchContext(
         diagnosticId,
-        boardviewAsset,
-        bytes,
+        boardviewSelection.asset,
+        boardviewDownload.bytes,
         searchTerms,
       );
 
-      if (!boardview || !boardview.results.length) {
+      if (!boardview?.results.length) {
         limitations.push("Nenhum resultado encontrado no boardview para os termos pesquisados.");
       }
+
+      if (boardviewDownload.warning) {
+        limitations.push(`Boardview: ${boardviewDownload.warning}.`);
+      }
     } catch (error) {
+      selectedBoardviewMetadata = updateSelectedAssetMetadata(selectedBoardviewMetadata, {
+        downloadStatus: "failed",
+        warning: error instanceof Error ? error.message : "Falha ao baixar boardview.",
+      });
       limitations.push(
         error instanceof Error
           ? `Falha ao consultar o boardview: ${error.message}`
@@ -596,20 +791,35 @@ export async function searchAssistantTechnicalContext({
     }
   }
 
-  if (schematicAsset && searchTerms.length) {
+  if (schematicSelection.asset && searchTerms.length) {
     try {
-      const bytes = await downloadAssetBytes(schematicAsset, supabase);
+      const schematicDownload = await downloadAssetBytes(schematicSelection.asset, supabase);
+      selectedSchematicMetadata = updateSelectedAssetMetadata(selectedSchematicMetadata, {
+        attemptedBuckets: schematicDownload.attemptedBuckets,
+        downloadBucketUsed: schematicDownload.bucketUsed,
+        downloadStatus: "downloaded",
+        warning:
+          schematicDownload.warning ?? selectedSchematicMetadata?.warning ?? null,
+      });
       schematic = await buildSchematicSearchContext(
         diagnosticId,
-        schematicAsset,
-        bytes,
+        schematicSelection.asset,
+        schematicDownload.bytes,
         searchTerms,
       );
 
-      if (!schematic || !schematic.matches.length) {
+      if (!schematic?.matches.length) {
         limitations.push("Nenhum trecho relevante encontrado no esquema para os termos pesquisados.");
       }
+
+      if (schematicDownload.warning) {
+        limitations.push(`Esquema: ${schematicDownload.warning}.`);
+      }
     } catch (error) {
+      selectedSchematicMetadata = updateSelectedAssetMetadata(selectedSchematicMetadata, {
+        downloadStatus: "failed",
+        warning: error instanceof Error ? error.message : "Falha ao baixar esquema.",
+      });
       limitations.push(
         error instanceof Error
           ? `Falha ao consultar o esquema: ${error.message}`
@@ -621,6 +831,10 @@ export async function searchAssistantTechnicalContext({
   return {
     userPrompt: benchPrompt,
     searchTerms,
+    selectedAssets: {
+      boardview: selectedBoardviewMetadata,
+      schematic: selectedSchematicMetadata,
+    },
     boardview,
     schematic,
     limitations,
@@ -631,6 +845,18 @@ export function summarizeTechnicalContextForAssistant(
   context: AssistantTechnicalContext,
 ) {
   const sections: string[] = [];
+
+  if (context.selectedAssets?.boardview) {
+    sections.push(
+      `Boardview escolhido: ${context.selectedAssets.boardview.assetTitle} (${context.selectedAssets.boardview.selectionReason}).`,
+    );
+  }
+
+  if (context.selectedAssets?.schematic) {
+    sections.push(
+      `Esquema escolhido: ${context.selectedAssets.schematic.assetTitle} (${context.selectedAssets.schematic.selectionReason}).`,
+    );
+  }
 
   if (context.boardview?.results.length) {
     sections.push(
@@ -666,8 +892,16 @@ export function buildTechnicalContextEvidence(
 ) {
   const evidence: string[] = [];
 
+  if (context.selectedAssets?.boardview?.assetTitle) {
+    evidence.push(`Asset boardview: ${context.selectedAssets.boardview.assetTitle}.`);
+  }
+
+  if (context.selectedAssets?.schematic?.assetTitle) {
+    evidence.push(`Asset esquema: ${context.selectedAssets.schematic.assetTitle}.`);
+  }
+
   for (const result of context.boardview?.results ?? []) {
-    evidence.push(`Boardview: ${result.title} — ${result.subtitle}.`);
+    evidence.push(`Boardview: ${result.title} - ${result.subtitle}.`);
   }
 
   for (const match of context.schematic?.matches ?? []) {
@@ -694,6 +928,18 @@ export function buildTechnicalContextSources(
     sources.push(`Esquema PDF: ${context.schematic.assetTitle}`);
   }
 
+  if (context.selectedAssets?.boardview?.downloadBucketUsed) {
+    sources.push(
+      `Boardview bucket: ${context.selectedAssets.boardview.downloadBucketUsed}`,
+    );
+  }
+
+  if (context.selectedAssets?.schematic?.downloadBucketUsed) {
+    sources.push(
+      `Esquema bucket: ${context.selectedAssets.schematic.downloadBucketUsed}`,
+    );
+  }
+
   for (const result of context.boardview?.results ?? []) {
     sources.push(
       result.kind === "net"
@@ -711,4 +957,41 @@ export function buildTechnicalContextSources(
 
 export function extractTechnicalSearchTermsForTest(input: TechnicalSearchSourceInput) {
   return extractTechnicalSearchTerms(input);
+}
+
+export function buildLabSearchHrefForTest(
+  diagnosticId: string,
+  asset: {
+    id: string;
+    fileFormat: string;
+    boardId?: string | null;
+    equipmentModelId?: string | null;
+  },
+  focus: AssetFocusTarget,
+) {
+  return buildLabSearchHref(
+    diagnosticId,
+    {
+      id: asset.id,
+      title: asset.id,
+      assetType: asset.fileFormat === "pdf" ? "schematic_pdf" : "boardview",
+      fileFormat: asset.fileFormat,
+      storageBucket: TECHNICAL_ASSET_BUCKET,
+      storagePath: asset.id,
+      createdAt: new Date(0).toISOString(),
+      boardId: asset.boardId ?? null,
+      equipmentModelId: asset.equipmentModelId ?? null,
+      boardName: null,
+      modelName: null,
+    },
+    focus,
+  );
+}
+
+export function selectPreferredAssetForTest(args: {
+  assets: AssociatedTechnicalAsset[];
+  context: DiagnosticAssetContext;
+  kind: "boardview" | "schematic";
+}) {
+  return selectPreferredAsset(args.assets, args.context, args.kind);
 }
