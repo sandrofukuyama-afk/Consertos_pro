@@ -86,6 +86,7 @@ type BoardviewLabProps = {
     models: EquipmentModelCatalogOption[];
     manufacturers: CatalogOption[];
   };
+  initialLoadIssues?: string[];
   initialQuery?: string;
   initialViewerMode?: LabViewerMode;
   initialBoardviewFocus?: InitialBoardviewFocus;
@@ -272,6 +273,7 @@ function getSelectionComponent(selection: BoardviewLabSelection | null) {
 export function BoardviewLab({
   initialAssociation,
   catalogOptions,
+  initialLoadIssues = [],
   initialQuery = "",
   initialViewerMode = "split",
   initialBoardviewFocus = {
@@ -364,6 +366,9 @@ export function BoardviewLab({
     selected && isSelectionOnVisibleSide(selected, sideFilter) ? selected : null;
   const selectedComponent = getSelectionComponent(visibleSelected);
   const hasAnyFileOpen = Boolean(model || pdfBytes);
+  const loadMessages = [errorMessage, pdfErrorMessage, ...initialLoadIssues].filter(
+    (message): message is string => Boolean(message?.trim()),
+  );
   const resolvedMobileTab =
     mobileTab === "boardview" && !model && pdfBytes
       ? "schematic"
@@ -593,8 +598,6 @@ export function BoardviewLab({
     if (!assetKey || loadedInitialAssetsRef.current === assetKey) {
       return;
     }
-
-    loadedInitialAssetsRef.current = assetKey;
     let cancelled = false;
 
     async function loadInitialAssets() {
@@ -603,7 +606,9 @@ export function BoardviewLab({
           return;
         }
 
-        if (asset.slot === "boardview") {
+        const resolvedSlot = asset.format === "pdf" ? "schematic" : "boardview";
+
+        if (resolvedSlot === "boardview") {
           setIsReadingFile(true);
           setErrorMessage(null);
         } else {
@@ -637,7 +642,7 @@ export function BoardviewLab({
             message: "Arquivo ja salvo.",
           };
 
-          if (asset.slot === "boardview") {
+          if (resolvedSlot === "boardview") {
             const parsed = parseLandrexTestlinkBoardview(new Uint8Array(arrayBuffer));
             const nextModel = buildBoardviewLabModel(parsed);
 
@@ -665,7 +670,7 @@ export function BoardviewLab({
             });
           }
         } catch (error) {
-          if (asset.slot === "boardview") {
+          if (resolvedSlot === "boardview") {
             setErrorMessage(
               error instanceof Error
                 ? error.message
@@ -679,12 +684,16 @@ export function BoardviewLab({
             );
           }
         } finally {
-          if (asset.slot === "boardview") {
+          if (resolvedSlot === "boardview") {
             setIsReadingFile(false);
           } else {
             setIsReadingPdfFile(false);
           }
         }
+      }
+
+      if (!cancelled) {
+        loadedInitialAssetsRef.current = assetKey;
       }
     }
 
@@ -2145,9 +2154,9 @@ export function BoardviewLab({
         ) : null}
       </div>
 
-      {(errorMessage || pdfErrorMessage) && hasAnyFileOpen ? (
+      {loadMessages.length ? (
         <div className="border-b border-[var(--panel-border)] px-4 py-3 text-sm text-[var(--danger)]">
-          {[errorMessage, pdfErrorMessage].filter(Boolean).join(" ")}
+          {loadMessages.join(" ")}
         </div>
       ) : null}
 

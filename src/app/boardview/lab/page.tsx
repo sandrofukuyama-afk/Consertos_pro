@@ -37,12 +37,50 @@ type InitialTechnicalAsset = {
   };
 };
 
+type TechnicalAssetRecord = {
+  id: string;
+  original_filename: string;
+  file_format: "brd" | "bdv" | "pdf";
+  mime_type: string;
+  file_size_bytes: number;
+  technical_asset_links: Array<{
+    board_id: string | null;
+    equipment_model_id: string | null;
+    boards: { board_code: string | null } | null;
+    equipment_models: { model_name: string | null } | null;
+  }> | null;
+};
+
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
   }
 
   return value ?? null;
+}
+
+function inferAssetSlot(format: "brd" | "bdv" | "pdf") {
+  return format === "pdf" ? "schematic" : "boardview";
+}
+
+function buildInitialTechnicalAsset(item: TechnicalAssetRecord): InitialTechnicalAsset {
+  return {
+    slot: inferAssetSlot(item.file_format),
+    assetId: item.id,
+    fileName: item.original_filename,
+    format: item.file_format,
+    mimeType: item.mime_type,
+    fileSizeBytes: item.file_size_bytes,
+    association: {
+      boardId: item.technical_asset_links?.[0]?.board_id ?? null,
+      boardName:
+        pickRelation(item.technical_asset_links?.[0]?.boards)?.board_code ?? null,
+      equipmentModelId: item.technical_asset_links?.[0]?.equipment_model_id ?? null,
+      equipmentModelName:
+        pickRelation(item.technical_asset_links?.[0]?.equipment_models)?.model_name ??
+        null,
+    },
+  };
 }
 
 export default async function BoardviewLabPage({
@@ -55,12 +93,8 @@ export default async function BoardviewLabPage({
   const equipmentModelId = query.model_id?.trim() || null;
   const diagnosticId = query.diagnostic_id?.trim() || null;
   const sharedAssetId = query.asset_id?.trim() || null;
-  const boardviewAssetId =
-    query.boardview_asset_id?.trim() ||
-    (query.view !== "schematic" ? sharedAssetId : null);
-  const schematicAssetId =
-    query.schematic_asset_id?.trim() ||
-    (query.view === "schematic" ? sharedAssetId : null);
+  const requestedBoardviewAssetId = query.boardview_asset_id?.trim() || null;
+  const requestedSchematicAssetId = query.schematic_asset_id?.trim() || null;
   const initialQuery = query.q?.trim() || "";
   const initialBoardviewComponent = query.component?.trim() || null;
   const initialBoardviewNet = query.net?.trim() || null;
@@ -80,9 +114,13 @@ export default async function BoardviewLabPage({
     getLibraryCatalog(),
   ]);
 
-  const assetIds = [boardviewAssetId, schematicAssetId].filter(
-    (value): value is string => Boolean(value),
-  );
+  const requestedAssetIds = [
+    requestedBoardviewAssetId,
+    requestedSchematicAssetId,
+    sharedAssetId,
+  ].filter((value): value is string => Boolean(value));
+  const assetIds = Array.from(new Set(requestedAssetIds));
+  const initialLoadIssues: string[] = [];
 
   const technicalAssetsResult = assetIds.length
     ? await supabase
@@ -101,58 +139,102 @@ export default async function BoardviewLabPage({
           )
         `)
         .in("id", assetIds)
-    : { data: [] as Array<{
-        id: string;
-        original_filename: string;
-        file_format: "brd" | "bdv" | "pdf";
-        mime_type: string;
-        file_size_bytes: number;
-        technical_asset_links: Array<{
-          board_id: string | null;
-          equipment_model_id: string | null;
-          boards: { board_code: string | null } | null;
-          equipment_models: { model_name: string | null } | null;
-        }> | null;
-      }> };
+    : { data: [] as TechnicalAssetRecord[] };
 
   const technicalAssetMap = new Map(
-    (technicalAssetsResult.data ?? []).map((item) => [item.id, item]),
+    ((technicalAssetsResult.data ?? []) as TechnicalAssetRecord[]).map((item) => [
+      item.id,
+      item,
+    ]),
   );
 
-  const initialAssets = [boardviewAssetId, schematicAssetId]
-    .map((assetId, index) => {
-      if (!assetId) {
-        return null;
-      }
+  for (const assetId of assetIds) {
+    if (!technicalAssetMap.has(assetId)) {
+      initialLoadIssues.push(`Arquivo tecnico ${assetId} nao foi encontrado na biblioteca.`);
+    }
+  }
 
-      const item = technicalAssetMap.get(assetId);
-      if (!item) {
-        return null;
-      }
+  const explicitBoardviewAsset =
+    requestedBoardviewAssetId && technicalAssetMap.get(requestedBoardviewAssetId)
+      ? buildInitialTechnicalAsset(
+          technicalAssetMap.get(requestedBoardviewAssetId) as TechnicalAssetRecord,
+        )
+      : null;
+  const explicitSchematicAsset =
+    requestedSchematicAssetId && technicalAssetMap.get(requestedSchematicAssetId)
+      ? buildInitialTechnicalAsset(
+          technicalAssetMap.get(requestedSchematicAssetId) as TechnicalAssetRecord,
+        )
+      : null;
+  const sharedAsset =
+    sharedAssetId && technicalAssetMap.get(sharedAssetId)
+      ? buildInitialTechnicalAsset(technicalAssetMap.get(sharedAssetId) as TechnicalAssetRecord)
+      : null;
 
-      return {
-        slot: index === 0 ? "boardview" : "schematic",
-        assetId: item.id,
-        fileName: item.original_filename,
-        format: item.file_format,
-        mimeType: item.mime_type,
-        fileSizeBytes: item.file_size_bytes,
-        association: {
-          boardId: item.technical_asset_links?.[0]?.board_id ?? null,
-          boardName:
-            pickRelation(item.technical_asset_links?.[0]?.boards)?.board_code ?? null,
-          equipmentModelId: item.technical_asset_links?.[0]?.equipment_model_id ?? null,
-          equipmentModelName:
-            pickRelation(item.technical_asset_links?.[0]?.equipment_models)?.model_name ??
-            null,
-        },
-      } satisfies InitialTechnicalAsset;
-    })
-    .filter((item): item is InitialTechnicalAsset => Boolean(item));
+  const initialAssets = new Map<InitialTechnicalAsset["slot"], InitialTechnicalAsset>();
+
+  if (explicitBoardviewAsset) {
+    initialAssets.set(explicitBoardviewAsset.slot, explicitBoardviewAsset);
+  }
+  if (explicitSchematicAsset) {
+    initialAssets.set(explicitSchematicAsset.slot, explicitSchematicAsset);
+  }
+  if (sharedAsset && !initialAssets.has(sharedAsset.slot)) {
+    initialAssets.set(sharedAsset.slot, sharedAsset);
+  }
+
+  if (
+    requestedBoardviewAssetId &&
+    explicitBoardviewAsset &&
+    explicitBoardviewAsset.slot !== "boardview"
+  ) {
+    initialLoadIssues.push(
+      `O asset ${explicitBoardviewAsset.fileName} foi solicitado como boardview, mas e ${explicitBoardviewAsset.format.toUpperCase()}. O laboratorio abriu o arquivo no painel compativel.`,
+    );
+  }
+
+  if (
+    requestedSchematicAssetId &&
+    explicitSchematicAsset &&
+    explicitSchematicAsset.slot !== "schematic"
+  ) {
+    initialLoadIssues.push(
+      `O asset ${explicitSchematicAsset.fileName} foi solicitado como esquema, mas e ${explicitSchematicAsset.format.toUpperCase()}. O laboratorio abriu o arquivo no painel compativel.`,
+    );
+  }
+
+  if (
+    sharedAsset &&
+    query.view === "schematic" &&
+    sharedAsset.slot !== "schematic" &&
+    !requestedBoardviewAssetId &&
+    !requestedSchematicAssetId
+  ) {
+    initialLoadIssues.push(
+      `O asset ${sharedAsset.fileName} nao e um PDF. O laboratorio abriu o arquivo no modo compativel.`,
+    );
+  }
+
+  if (
+    sharedAsset &&
+    query.view === "boardview" &&
+    sharedAsset.slot !== "boardview" &&
+    !requestedBoardviewAssetId &&
+    !requestedSchematicAssetId
+  ) {
+    initialLoadIssues.push(
+      `O asset ${sharedAsset.fileName} nao e um boardview. O laboratorio abriu o arquivo no modo compativel.`,
+    );
+  }
+
+  const orderedInitialAssets = [
+    initialAssets.get("boardview") ?? null,
+    initialAssets.get("schematic") ?? null,
+  ].filter((item): item is InitialTechnicalAsset => Boolean(item));
 
   const fallbackAssociation =
-    initialAssets[0]?.association ??
-    initialAssets[1]?.association ?? {
+    orderedInitialAssets[0]?.association ??
+    orderedInitialAssets[1]?.association ?? {
       boardId: null,
       boardName: null,
       equipmentModelId: null,
@@ -178,9 +260,9 @@ export default async function BoardviewLabPage({
 
   return (
     <AppShell
-      title="Laboratório boardview"
+      title="Laboratorio boardview"
       description="Abrir, inspecionar e salvar arquivos .brd, .bdv e .pdf localmente."
-      actionLabel="Voltar ao início"
+      actionLabel="Voltar ao inicio"
       actionHref="/"
       user={user}
       shellMode="workspace"
@@ -199,7 +281,8 @@ export default async function BoardviewLabPage({
           models: catalog.models,
           manufacturers: catalog.manufacturers,
         }}
-        initialAssets={initialAssets}
+        initialAssets={orderedInitialAssets}
+        initialLoadIssues={initialLoadIssues}
         initialQuery={initialQuery}
         initialViewerMode={initialViewerMode}
         initialBoardviewFocus={{
@@ -209,9 +292,10 @@ export default async function BoardviewLabPage({
           side: initialBoardviewSide,
         }}
         initialSchematicFocus={{
-          page: Number.isFinite(initialSchematicPage) && initialSchematicPage > 0
-            ? initialSchematicPage
-            : null,
+          page:
+            Number.isFinite(initialSchematicPage) && initialSchematicPage > 0
+              ? initialSchematicPage
+              : null,
         }}
       />
     </AppShell>
