@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { DiagnosticBenchWorkspace } from "@/components/diagnostic-bench-workspace";
 import { requireCurrentUser } from "@/lib/auth";
+import { getLibraryCatalog } from "@/lib/services/catalog";
 import {
   getDiagnosticDetail,
   getDiagnosticFormOptions,
@@ -20,10 +21,11 @@ export default async function DiagnosticDetailPage({
 }: DiagnosticDetailPageProps) {
   const userPromise = requireCurrentUser();
   const { id } = await params;
-  const [user, detail, options, query] = await Promise.all([
+  const [user, detail, options, catalog, query] = await Promise.all([
     userPromise,
     getDiagnosticDetail(id),
     getDiagnosticFormOptions(id),
+    getLibraryCatalog(),
     searchParams,
   ]);
 
@@ -48,7 +50,7 @@ export default async function DiagnosticDetailPage({
           </section>
         ) : null}
 
-        <DiagnosticBenchWorkspace detail={detail} options={options} />
+        <DiagnosticBenchWorkspace detail={detail} options={options} catalog={catalog} />
       </div>
     </AppShell>
   );

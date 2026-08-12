@@ -6,17 +6,29 @@ import {
   generateDiagnosticAssistantAction,
 } from "@/app/actions";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
+import { DiagnosticTechnicalAssetAssociation } from "@/components/diagnostic-technical-asset-association";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
 import { formatProviderLabel } from "@/lib/utils";
-import type { DiagnosticDetail, SymptomOption, TestOption } from "@/types/domain";
+import type {
+  CatalogOption,
+  DiagnosticDetail,
+  EquipmentModelCatalogOption,
+  SymptomOption,
+  TestOption,
+} from "@/types/domain";
 
 type DiagnosticBenchWorkspaceProps = {
   detail: DiagnosticDetail;
   options: {
     symptoms: SymptomOption[];
     tests: TestOption[];
+  };
+  catalog: {
+    boards: CatalogOption[];
+    models: EquipmentModelCatalogOption[];
+    manufacturers: CatalogOption[];
   };
 };
 
@@ -79,6 +91,17 @@ function inferBoardviewSide(locationSummary: string | null | undefined) {
 
 function getEquipmentDetailValue(detail: DiagnosticDetail, label: string) {
   return detail.equipmentDetails.find((item) => item.label === label)?.value ?? "Não informado";
+}
+
+function getAssetAssociationHref(
+  detail: DiagnosticDetail,
+  asset: DiagnosticDetail["technicalAssets"][number],
+) {
+  if (asset.fileFormat === "pdf") {
+    return asset.boardviewLabHref ?? buildAssetHref(detail, asset.id, "schematic");
+  }
+
+  return asset.boardviewLabHref ?? buildAssetHref(detail, asset.id, "boardview");
 }
 
 function ActionLink({
@@ -169,6 +192,7 @@ function ResponseBlock({
 export function DiagnosticBenchWorkspace({
   detail,
   options,
+  catalog,
 }: DiagnosticBenchWorkspaceProps) {
   const primaryBoard = detail.boards.find((board) => board.isPrimary) ?? detail.boards[0] ?? null;
   const latestTest = detail.tests[0] ?? null;
@@ -203,6 +227,7 @@ export function DiagnosticBenchWorkspace({
       technicalContext?.schematic?.assetTitle ? `Esquema PDF: ${technicalContext.schematic.assetTitle}` : null,
     ].filter((item): item is string => Boolean(item));
   const limitations = structured?.limitations ?? technicalContext?.limitations ?? [];
+  const needsTechnicalAssociation = !primaryBoard?.boardId || detail.technicalAssets.length === 0;
 
   return (
     <div className="grid gap-4">
@@ -246,6 +271,15 @@ export function DiagnosticBenchWorkspace({
               Placa: {primaryBoard?.name ?? "Não informada"}
               {primaryBoard?.boardCode ? ` • ${primaryBoard.boardCode}` : ""}
             </p>
+            {needsTechnicalAssociation ? (
+              <div className="pt-2">
+                <ActionLink
+                  href="#associar-ativos-tecnicos"
+                  label="Associar placa/arquivos tecnicos"
+                  tone="primary"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -258,6 +292,60 @@ export function DiagnosticBenchWorkspace({
           <SummaryItem label="Última medição" value={latestMeasurement ? `${latestMeasurement.pointLabel} • ${latestMeasurement.measuredValue}` : "Nenhuma medição registrada"} />
           <SummaryItem label="Estado físico" value={detail.physicalNotes} />
           <SummaryItem label="Arquivos técnicos" value={`${detail.technicalAssets.length} associado(s)`} />
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        id="associar-ativos-tecnicos"
+        eyebrow="Placa e arquivos tecnicos"
+        title="Associar placa e biblioteca tecnica"
+        description="Vincule este diagnostico a uma placa e escolha o boardview e o esquema certos para a IA e para o laboratorio abrirem no contexto correto."
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryItem label="Placa associada" value={primaryBoard?.name ?? "Nao informada"} />
+            <SummaryItem label="Modelo associado" value={detail.model ?? "Nao informado"} />
+            <SummaryItem
+              label="Arquivos tecnicos"
+              value={`${detail.technicalAssets.length} associado(s)`}
+            />
+            <SummaryItem
+              label="Abrir no laboratorio"
+              value={
+                boardviewAsset || schematicAsset
+                  ? "Boardview e esquema prontos"
+                  : "Aguardando associacao"
+              }
+            />
+          </div>
+
+          {(boardviewAsset || schematicAsset) ? (
+            <div className="flex flex-wrap gap-3">
+              {boardviewAsset ? (
+                <ActionLink
+                  href={getAssetAssociationHref(detail, boardviewAsset)}
+                  label="Abrir boardview"
+                />
+              ) : null}
+              {schematicAsset ? (
+                <ActionLink
+                  href={getAssetAssociationHref(detail, schematicAsset)}
+                  label="Abrir esquema"
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          <DiagnosticTechnicalAssetAssociation
+            diagnosticId={detail.id}
+            manufacturerId={detail.manufacturerId}
+            currentBoardId={primaryBoard?.boardId ?? null}
+            currentModelId={detail.modelId}
+            currentAssets={detail.technicalAssets}
+            boards={catalog.boards}
+            models={catalog.models}
+            manufacturers={catalog.manufacturers}
+          />
         </div>
       </SectionCard>
 

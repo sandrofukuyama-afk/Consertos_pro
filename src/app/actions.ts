@@ -720,6 +720,321 @@ export async function addHypothesisAction(formData: FormData) {
   redirect(`/diagnosticos/${diagnosticId}?message=Hipótese registrada.`);
 }
 
+type AssociateTechnicalAssetRow = {
+  id: string;
+  file_format: string;
+  original_filename: string;
+  board_id: string | null;
+  equipment_model_id: string | null;
+  technical_asset_links:
+    | Array<{
+        board_id: string | null;
+        equipment_model_id: string | null;
+      }>
+    | null;
+};
+
+function pickAssociationValue(
+  assets: AssociateTechnicalAssetRow[],
+  field: "board_id" | "equipment_model_id",
+) {
+  const preferredOrder = [...assets].sort((left, right) => {
+    const leftScore =
+      left.file_format === "brd" || left.file_format === "bdv"
+        ? 2
+        : left.file_format === "pdf"
+          ? 1
+          : 0;
+    const rightScore =
+      right.file_format === "brd" || right.file_format === "bdv"
+        ? 2
+        : right.file_format === "pdf"
+          ? 1
+          : 0;
+
+    return rightScore - leftScore || left.original_filename.localeCompare(right.original_filename);
+  });
+
+  for (const asset of preferredOrder) {
+    const directValue = asset[field];
+    if (directValue) {
+      return directValue;
+    }
+
+    for (const link of asset.technical_asset_links ?? []) {
+      const linkedValue = link[field];
+      if (linkedValue) {
+        return linkedValue;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function ensureDiagnosticPrimaryBoardAssociation(
+  diagnosticId: string,
+  boardId: string,
+) {
+  const supabase = await createClient();
+  const { data: existingBoards, error: existingBoardsError } = await supabase
+    .from("diagnostic_boards")
+    .select("id, board_id")
+    .eq("diagnostic_id", diagnosticId);
+
+  if (existingBoardsError) {
+    throw new Error(existingBoardsError.message);
+  }
+
+  const matchingBoard = (existingBoards ?? []).find((item) => item.board_id === boardId) ?? null;
+
+  const { error: clearPrimaryError } = await supabase
+    .from("diagnostic_boards")
+    .update({ is_primary: false })
+    .eq("diagnostic_id", diagnosticId);
+
+  if (clearPrimaryError) {
+    throw new Error(clearPrimaryError.message);
+  }
+
+  if (matchingBoard) {
+    const { error: updateBoardError } = await supabase
+      .from("diagnostic_boards")
+      .update({
+        board_id: boardId,
+        role_label: "Placa principal",
+        is_primary: true,
+      })
+      .eq("id", matchingBoard.id);
+
+    if (updateBoardError) {
+      throw new Error(updateBoardError.message);
+    }
+
+    return;
+  }
+
+  const { error: insertBoardError } = await supabase.from("diagnostic_boards").insert({
+    diagnostic_id: diagnosticId,
+    board_id: boardId,
+    role_label: "Placa principal",
+    is_primary: true,
+  });
+
+  if (insertBoardError) {
+    throw new Error(insertBoardError.message);
+  }
+}
+
+async function ensureDiagnosticTechnicalAssetLink({
+  assetId,
+  boardId,
+  equipmentModelId,
+  userId,
+}: {
+  assetId: string;
+  boardId: string | null;
+  equipmentModelId: string | null;
+  userId: string;
+}) {
+  if (!boardId && !equipmentModelId) {
+    return;
+  }
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("technical_asset_links")
+    .select("id")
+    .eq("technical_asset_id", assetId);
+
+  query = boardId ? query.eq("board_id", boardId) : query.is("board_id", null);
+  query = equipmentModelId
+    ? query.eq("equipment_model_id", equipmentModelId)
+    : query.is("equipment_model_id", null);
+
+  const { data: existingLink, error: existingLinkError } = await query.maybeSingle();
+  if (existingLinkError) {
+    throw new Error(existingLinkError.message);
+  }
+
+  if (existingLink) {
+    return;
+  }
+
+  const { error: insertLinkError } = await supabase.from("technical_asset_links").insert({
+    technical_asset_id: assetId,
+    board_id: boardId,
+    equipment_model_id: equipmentModelId,
+    linked_by_user_id: userId,
+  });
+
+  if (insertLinkError && insertLinkError.code !== "23505") {
+    throw new Error(insertLinkError.message);
+  }
+}
+
+async function ensureDiagnosticModelBoardLink(
+  boardId: string | null,
+  equipmentModelId: string | null,
+) {
+  if (!boardId || !equipmentModelId) {
+    return;
+  }
+
+  const supabase = await createClient();
+  const { data: existingLink, error: existingLinkError } = await supabase
+    .from("model_boards")
+    .select("id")
+    .eq("board_id", boardId)
+    .eq("equipment_model_id", equipmentModelId)
+    .maybeSingle();
+
+  if (existingLinkError) {
+    throw new Error(existingLinkError.message);
+  }
+
+  if (existingLink) {
+    return;
+  }
+
+  const { error: insertLinkError } = await supabase.from("model_boards").insert({
+    board_id: boardId,
+    equipment_model_id: equipmentModelId,
+    role_label: "Associacao tecnica",
+    is_primary: false,
+  });
+
+  if (insertLinkError && insertLinkError.code !== "23505") {
+    throw new Error(insertLinkError.message);
+  }
+}
+
+export async function associateDiagnosticTechnicalAssetsAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+  const selectedBoardId = String(formData.get("board_id") ?? "").trim() || null;
+  const selectedEquipmentModelId =
+    String(formData.get("equipment_model_id") ?? "").trim() || null;
+  const assetIds = Array.from(
+    new Set(
+      formData
+        .getAll("asset_ids")
+        .map((item) => String(item ?? "").trim())
+        .filter(Boolean),
+    ),
+  );
+
+  if (!diagnosticId) {
+    redirect("/?error=Diagnostico invalido para associacao tecnica.");
+  }
+
+  if (!assetIds.length && !selectedBoardId && !selectedEquipmentModelId) {
+    redirect(
+      `/diagnosticos/${diagnosticId}?error=${encodeURIComponent("Escolha pelo menos uma placa, modelo ou arquivo tecnico para associar.")}`,
+    );
+  }
+
+  const { data: diagnostic, error: diagnosticError } = await supabase
+    .from("diagnostics")
+    .select("id, equipment_model_id")
+    .eq("id", diagnosticId)
+    .maybeSingle();
+
+  if (diagnosticError) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(diagnosticError.message)}`);
+  }
+
+  if (!diagnostic) {
+    redirect(`/diagnosticos/${diagnosticId}?error=Diagnostico nao encontrado.`);
+  }
+
+  const assetQueryResult = assetIds.length
+    ? await supabase
+        .from("technical_assets")
+        .select(`
+          id,
+          file_format,
+          original_filename,
+          board_id,
+          equipment_model_id,
+          technical_asset_links(board_id, equipment_model_id)
+        `)
+        .in("id", assetIds)
+    : { data: [] as AssociateTechnicalAssetRow[], error: null };
+
+  if (assetQueryResult.error) {
+    redirect(
+      `/diagnosticos/${diagnosticId}?error=${encodeURIComponent(assetQueryResult.error.message)}`,
+    );
+  }
+
+  const assets = (assetQueryResult.data ?? []) as AssociateTechnicalAssetRow[];
+  const resolvedBoardId =
+    selectedBoardId ?? pickAssociationValue(assets, "board_id");
+  const resolvedEquipmentModelId =
+    selectedEquipmentModelId ??
+    pickAssociationValue(assets, "equipment_model_id") ??
+    diagnostic.equipment_model_id ??
+    null;
+
+  if (resolvedEquipmentModelId) {
+    const { error: updateDiagnosticError } = await supabase
+      .from("diagnostics")
+      .update({
+        equipment_model_id: resolvedEquipmentModelId,
+      })
+      .eq("id", diagnosticId);
+
+    if (updateDiagnosticError) {
+      redirect(
+        `/diagnosticos/${diagnosticId}?error=${encodeURIComponent(updateDiagnosticError.message)}`,
+      );
+    }
+  }
+
+  if (resolvedBoardId) {
+    await ensureDiagnosticPrimaryBoardAssociation(diagnosticId, resolvedBoardId);
+  }
+
+  await ensureDiagnosticModelBoardLink(resolvedBoardId, resolvedEquipmentModelId);
+
+  for (const assetId of assetIds) {
+    await ensureDiagnosticTechnicalAssetLink({
+      assetId,
+      boardId: resolvedBoardId,
+      equipmentModelId: resolvedEquipmentModelId,
+      userId: user.id,
+    });
+
+    const { error: syncPrimaryError } = await supabase
+      .from("technical_assets")
+      .update({
+        board_id: resolvedBoardId,
+        equipment_model_id: resolvedEquipmentModelId,
+      })
+      .eq("id", assetId);
+
+    if (
+      syncPrimaryError &&
+      syncPrimaryError.code !== "PGRST204" &&
+      !syncPrimaryError.message.toLowerCase().includes("board_id") &&
+      !syncPrimaryError.message.toLowerCase().includes("equipment_model_id")
+    ) {
+      redirect(
+        `/diagnosticos/${diagnosticId}?error=${encodeURIComponent(syncPrimaryError.message)}`,
+      );
+    }
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  revalidatePath("/catalogo-tecnico");
+  redirect(
+    `/diagnosticos/${diagnosticId}?message=${encodeURIComponent("Placa e arquivos tecnicos associados ao diagnostico.")}`,
+  );
+}
+
 export async function generateDiagnosticAssistantAction(formData: FormData) {
   await requireCurrentUser();
 

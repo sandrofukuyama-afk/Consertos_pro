@@ -19,6 +19,9 @@ type TechnicalAssetRow = {
   original_filename: string;
   asset_type: string;
   file_format: string;
+  created_at?: string;
+  board_id?: string | null;
+  equipment_model_id?: string | null;
   metadata?: Record<string, unknown> | null;
   technical_asset_links?: Array<{
     id: string;
@@ -749,6 +752,141 @@ async function updateTechnicalAssetMetadata({
   }
 }
 
+function normalizeSearchText(value: string | null | undefined) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+async function searchTechnicalAssets(request: Request) {
+  const supabase = await createClient();
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("q")?.trim() ?? "";
+  const fileFormat = searchParams.get("file_format")?.trim() ?? "";
+  const boardId = searchParams.get("board_id")?.trim() ?? "";
+  const equipmentModelId = searchParams.get("equipment_model_id")?.trim() ?? "";
+  const manufacturerId = searchParams.get("manufacturer_id")?.trim() ?? "";
+  const limit = Math.min(
+    Math.max(Number.parseInt(searchParams.get("limit") ?? "40", 10) || 40, 1),
+    100,
+  );
+
+  const { data, error } = await supabase
+    .from("technical_assets")
+    .select(`
+      id,
+      original_filename,
+      asset_type,
+      file_format,
+      created_at,
+      board_id,
+      equipment_model_id,
+      metadata,
+      technical_asset_links(
+        id,
+        board_id,
+        equipment_model_id,
+        boards(board_code, manufacturer_id),
+        equipment_models(model_name, manufacturer_id)
+      )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(limit * 4);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as TechnicalAssetRow[];
+  const normalizedQuery = normalizeSearchText(query);
+
+  const items = rows
+    .map((row) => {
+      const matchingLink =
+        row.technical_asset_links?.find((link) => {
+          if (boardId && link.board_id === boardId) {
+            return true;
+          }
+
+          if (equipmentModelId && link.equipment_model_id === equipmentModelId) {
+            return true;
+          }
+
+          return false;
+        }) ?? row.technical_asset_links?.[0] ?? null;
+      const boardRelation = pickRelation(matchingLink?.boards) as
+        | { board_code: string | null; manufacturer_id?: string | null }
+        | null;
+      const modelRelation = pickRelation(matchingLink?.equipment_models) as
+        | { model_name: string | null; manufacturer_id?: string | null }
+        | null;
+      const resolvedBoardId = row.board_id ?? matchingLink?.board_id ?? null;
+      const resolvedEquipmentModelId =
+        row.equipment_model_id ?? matchingLink?.equipment_model_id ?? null;
+      const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+      const metadataManufacturerId =
+        String(metadata.manufacturerId ?? metadata.manufacturer_id ?? "").trim() || null;
+      const metadataManufacturerName =
+        String(metadata.manufacturerName ?? metadata.manufacturer_name ?? "").trim() || null;
+
+      return {
+        id: row.id,
+        title:
+          String(metadata.displayName ?? metadata.display_name ?? "").trim() ||
+          row.original_filename,
+        originalFileName: row.original_filename,
+        fileFormat: row.file_format,
+        assetType: row.asset_type,
+        createdAt: row.created_at ?? new Date(0).toISOString(),
+        boardId: resolvedBoardId,
+        boardName: boardRelation?.board_code ?? null,
+        equipmentModelId: resolvedEquipmentModelId,
+        equipmentModelName: modelRelation?.model_name ?? null,
+        manufacturerId:
+          metadataManufacturerId ??
+          modelRelation?.manufacturer_id ??
+          boardRelation?.manufacturer_id ??
+          null,
+        manufacturerName: metadataManufacturerName,
+        description: String(metadata.description ?? "").trim() || null,
+      };
+    })
+    .filter((item) => (fileFormat ? item.fileFormat === fileFormat : true))
+    .filter((item) => (boardId ? item.boardId === boardId : true))
+    .filter((item) =>
+      equipmentModelId ? item.equipmentModelId === equipmentModelId : true,
+    )
+    .filter((item) => (manufacturerId ? item.manufacturerId === manufacturerId : true))
+    .filter((item) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = normalizeSearchText(
+        [
+          item.title,
+          item.originalFileName,
+          item.fileFormat,
+          item.assetType,
+          item.boardName,
+          item.equipmentModelName,
+          item.manufacturerName,
+          item.description,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+
+      return haystack.includes(normalizedQuery);
+    })
+    .slice(0, limit);
+
+  return { items };
+}
+
 export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
@@ -761,7 +899,19 @@ export async function GET(request: Request) {
   const equipmentModelId = searchParams.get("equipment_model_id")?.trim() || null;
 
   if (!rawHash) {
-    return NextResponse.json({ error: "Hash SHA-256 e obrigatorio." }, { status: 400 });
+    try {
+      return NextResponse.json(await searchTechnicalAssets(request));
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel listar os arquivos tecnicos.",
+        },
+        { status: 500 },
+      );
+    }
   }
 
   let hash: string;

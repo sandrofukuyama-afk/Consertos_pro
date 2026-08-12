@@ -261,6 +261,83 @@ test("searchAssistantTechnicalContext uses diagnostic context even when prompt i
   assert.equal(context.selectedAssets?.schematic?.assetId, "asset-pdf");
 });
 
+test("selectPreferredAssetForTest prioritizes direct board association before model-only match", () => {
+  const result = selectPreferredAssetForTest({
+    kind: "boardview",
+    context: {
+      diagnosticId: "diag-1",
+      equipmentModelId: "model-1",
+      boardIds: ["board-1"],
+    },
+    assets: [
+      {
+        id: "asset-model-newer",
+        title: "820-00239-newer.brd",
+        assetType: "boardview",
+        fileFormat: "brd",
+        storageBucket: "technical-assets",
+        storagePath: "a",
+        createdAt: "2026-08-12T12:00:00.000Z",
+        boardId: null,
+        equipmentModelId: "model-1",
+        boardName: null,
+        modelName: "A1706",
+      },
+      {
+        id: "asset-board-direct",
+        title: "820-00239-direct.brd",
+        assetType: "boardview",
+        fileFormat: "brd",
+        storageBucket: "technical-assets",
+        storagePath: "b",
+        createdAt: "2026-08-11T12:00:00.000Z",
+        boardId: "board-1",
+        equipmentModelId: null,
+        boardName: "820-00239",
+        modelName: null,
+      },
+    ],
+  });
+
+  assert.equal(result.asset?.id, "asset-board-direct");
+  assert.match(result.metadata?.selectionReason ?? "", /placa 820-00239/i);
+});
+
+test("buildLabSearchHrefForTest creates focused links for component, net and page", () => {
+  assert.equal(
+    buildLabSearchHrefForTest(
+      "diag-1",
+      {
+        id: "asset-board",
+        fileFormat: "brd",
+        boardId: "board-1",
+        equipmentModelId: "model-1",
+      },
+      {
+        component: "U1900",
+        net: "PPBUS_G3H",
+      },
+    ),
+    "/boardview/lab?diagnostic_id=diag-1&boardview_asset_id=asset-board&view=boardview&board_id=board-1&model_id=model-1&component=U1900&net=PPBUS_G3H",
+  );
+
+  assert.equal(
+    buildLabSearchHrefForTest(
+      "diag-1",
+      {
+        id: "asset-pdf",
+        fileFormat: "pdf",
+        boardId: "board-1",
+        equipmentModelId: "model-1",
+      },
+      {
+        page: 9,
+      },
+    ),
+    "/boardview/lab?diagnostic_id=diag-1&schematic_asset_id=asset-pdf&view=schematic&board_id=board-1&model_id=model-1&page=9",
+  );
+});
+
 test("selectPreferredAssetForTest prioritizes matching board before model and recency", () => {
   const result = selectPreferredAssetForTest({
     kind: "boardview",
