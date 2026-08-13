@@ -855,11 +855,15 @@ async function searchTechnicalAssets(request: Request) {
       };
     })
     .filter((item) => (fileFormat ? item.fileFormat === fileFormat : true))
-    .filter((item) => (boardId ? item.boardId === boardId : true))
+    .filter((item) => (boardId ? item.boardId === boardId || item.boardId === null : true))
     .filter((item) =>
-      equipmentModelId ? item.equipmentModelId === equipmentModelId : true,
+      equipmentModelId
+        ? item.equipmentModelId === equipmentModelId || item.equipmentModelId === null
+        : true,
     )
-    .filter((item) => (manufacturerId ? item.manufacturerId === manufacturerId : true))
+    .filter((item) =>
+      manufacturerId ? item.manufacturerId === manufacturerId || item.manufacturerId === null : true,
+    )
     .filter((item) => {
       if (!normalizedQuery) {
         return true;
