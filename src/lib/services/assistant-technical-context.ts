@@ -78,6 +78,9 @@ type DiagnosticAssetContext = {
   diagnosticId: string;
   equipmentModelId: string | null;
   boardIds: string[];
+  preferredAssetIds: string[];
+  preferredBoardviewAssetId: string | null;
+  preferredSchematicAssetId: string | null;
 };
 
 type AssociatedTechnicalAsset = {
@@ -144,6 +147,30 @@ function normalizeLooseSearchText(value: string) {
     .replace(/[^A-Z0-9_.+\-\/\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function readDiagnosticTechnicalAssetPreferences(details: Record<string, unknown> | null | undefined) {
+  const preferredAssetIds = Array.isArray(details?.associatedTechnicalAssetIds)
+    ? details.associatedTechnicalAssetIds
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean)
+    : [];
+  const preferredBoardviewAssetId =
+    typeof details?.preferredBoardviewAssetId === "string" &&
+    details.preferredBoardviewAssetId.trim()
+      ? details.preferredBoardviewAssetId.trim()
+      : null;
+  const preferredSchematicAssetId =
+    typeof details?.preferredSchematicAssetId === "string" &&
+    details.preferredSchematicAssetId.trim()
+      ? details.preferredSchematicAssetId.trim()
+      : null;
+
+  return {
+    preferredAssetIds: [...new Set(preferredAssetIds)],
+    preferredBoardviewAssetId,
+    preferredSchematicAssetId,
+  };
 }
 
 function buildLabSearchHref(
@@ -266,6 +293,7 @@ async function loadDiagnosticAssetContext(
       `
         id,
         equipment_model_id,
+        equipment_details,
         diagnostic_boards(board_id)
       `,
     )
@@ -283,8 +311,10 @@ async function loadDiagnosticAssetContext(
   const diagnosticRow = data as {
     id: string;
     equipment_model_id: string | null;
+    equipment_details: Record<string, unknown> | null;
     diagnostic_boards: Array<{ board_id: string | null }> | null;
   };
+  const preferences = readDiagnosticTechnicalAssetPreferences(diagnosticRow.equipment_details);
 
   return {
     diagnosticId: diagnosticRow.id,
@@ -292,6 +322,9 @@ async function loadDiagnosticAssetContext(
     boardIds: (diagnosticRow.diagnostic_boards ?? [])
       .map((item) => item.board_id)
       .filter((item): item is string => Boolean(item)),
+    preferredAssetIds: preferences.preferredAssetIds,
+    preferredBoardviewAssetId: preferences.preferredBoardviewAssetId,
+    preferredSchematicAssetId: preferences.preferredSchematicAssetId,
   } satisfies DiagnosticAssetContext;
 }
 
@@ -299,6 +332,63 @@ async function loadAssociatedTechnicalAssets(
   context: DiagnosticAssetContext,
   supabase: AssistantTechnicalContextSupabaseClient,
 ) {
+  const mapRowToAsset = (row: TechnicalAssetSearchRow) => {
+    const asset = pickRelation(row.technical_assets);
+
+    if (!asset) {
+      return null;
+    }
+
+    return [
+      asset.id,
+      {
+        id: asset.id,
+        title: asset.original_filename,
+        assetType: asset.asset_type,
+        fileFormat: asset.file_format,
+        storageBucket: asset.storage_bucket,
+        storagePath: asset.storage_path,
+        createdAt: asset.created_at,
+        boardId: row.board_id ?? null,
+        equipmentModelId: row.equipment_model_id ?? null,
+        boardName: pickRelation(row.boards)?.board_code ?? null,
+        modelName: pickRelation(row.equipment_models)?.model_name ?? null,
+      } satisfies AssociatedTechnicalAsset,
+    ] as const;
+  };
+
+  const selectedAssetRows = context.preferredAssetIds.length
+    ? await (supabase as unknown as { from: (table: string) => { select: (query: string) => { in: (column: string, values: string[]) => Promise<{ data: Array<Record<string, unknown>> | null; error: { message: string } | null }> } } })
+        .from("technical_assets")
+        .select(
+          `
+            id,
+            original_filename,
+            asset_type,
+            file_format,
+            storage_bucket,
+            storage_path,
+            created_at,
+            technical_asset_links(
+              board_id,
+              equipment_model_id,
+              boards(board_code),
+              equipment_models(model_name),
+              technical_assets(
+                id,
+                original_filename,
+                asset_type,
+                file_format,
+                storage_bucket,
+                storage_path,
+                created_at
+              )
+            )
+          `,
+        )
+        .in("id", context.preferredAssetIds)
+    : await Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null });
+
   const filters: string[] = [];
 
   if (context.equipmentModelId) {
@@ -309,62 +399,77 @@ async function loadAssociatedTechnicalAssets(
     filters.push(`board_id.in.(${context.boardIds.join(",")})`);
   }
 
-  if (!filters.length) {
-    return [];
-  }
-
-  const { data, error } = await supabase
-    .from("technical_asset_links")
-    .select(
-      `
-        board_id,
-        equipment_model_id,
-        boards(board_code),
-        equipment_models(model_name),
-        technical_assets(
-          id,
-          original_filename,
-          asset_type,
-          file_format,
-          storage_bucket,
-          storage_path,
-          created_at
+  const contextualAssetRows = filters.length
+    ? await supabase
+        .from("technical_asset_links")
+        .select(
+          `
+            board_id,
+            equipment_model_id,
+            boards(board_code),
+            equipment_models(model_name),
+            technical_assets(
+              id,
+              original_filename,
+              asset_type,
+              file_format,
+              storage_bucket,
+              storage_path,
+              created_at
+            )
+          `,
         )
-      `,
-    )
-    .or(filters.join(","));
+        .or(filters.join(","))
+    : await Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null });
 
-  if (error) {
-    throw new Error(error.message);
+  const errors = [selectedAssetRows.error, contextualAssetRows.error].filter(Boolean);
+  if (errors.length) {
+    throw new Error(errors[0]?.message ?? "Falha ao carregar assets tecnicos associados.");
   }
+
+  const preferredAssets = ((selectedAssetRows.data ?? []) as Array<{
+    id: string;
+    original_filename: string;
+    asset_type: string;
+    file_format: string;
+    storage_bucket: string;
+    storage_path: string;
+    created_at: string;
+    technical_asset_links: TechnicalAssetSearchRow[] | null;
+  }>).map((row) => {
+    const matchingLink =
+      row.technical_asset_links?.find(
+        (link) =>
+          (link.board_id && context.boardIds.includes(link.board_id)) ||
+          (link.equipment_model_id && link.equipment_model_id === context.equipmentModelId),
+      ) ??
+      row.technical_asset_links?.[0] ??
+      null;
+
+    return [
+      row.id,
+      {
+        id: row.id,
+        title: row.original_filename,
+        assetType: row.asset_type,
+        fileFormat: row.file_format,
+        storageBucket: row.storage_bucket,
+        storagePath: row.storage_path,
+        createdAt: row.created_at,
+        boardId: matchingLink?.board_id ?? null,
+        equipmentModelId: matchingLink?.equipment_model_id ?? null,
+        boardName: pickRelation(matchingLink?.boards)?.board_code ?? null,
+        modelName: pickRelation(matchingLink?.equipment_models)?.model_name ?? null,
+      } satisfies AssociatedTechnicalAsset,
+    ] as const;
+  });
 
   return Array.from(
     new Map(
-      ((data ?? []) as TechnicalAssetSearchRow[])
-        .map((row) => {
-          const asset = pickRelation(row.technical_assets);
-
-          if (!asset) {
-            return null;
-          }
-
-          return [
-            asset.id,
-            {
-              id: asset.id,
-              title: asset.original_filename,
-              assetType: asset.asset_type,
-              fileFormat: asset.file_format,
-              storageBucket: asset.storage_bucket,
-              storagePath: asset.storage_path,
-              createdAt: asset.created_at,
-              boardId: row.board_id ?? null,
-              equipmentModelId: row.equipment_model_id ?? null,
-              boardName: pickRelation(row.boards)?.board_code ?? null,
-              modelName: pickRelation(row.equipment_models)?.model_name ?? null,
-            } satisfies AssociatedTechnicalAsset,
-          ] as const;
-        })
+      [
+        ...preferredAssets,
+        ...((contextualAssetRows.data ?? []) as TechnicalAssetSearchRow[]).map(mapRowToAsset),
+      ]
         .filter(
           (
             entry,
@@ -379,6 +484,9 @@ function buildAssetSelectionReason(
   context: DiagnosticAssetContext,
 ) {
   const reasons: string[] = [];
+  if (context.preferredAssetIds.includes(asset.id)) {
+    reasons.push("associado manualmente a este diagnostico");
+  }
 
   if (asset.boardId && context.boardIds.includes(asset.boardId)) {
     reasons.push(`associado diretamente à placa ${asset.boardName ?? asset.boardId}`);
@@ -444,6 +552,17 @@ function selectPreferredAsset(
   }
 
   const sortedAssets = [...filteredAssets].sort((left, right) => {
+    const leftPreferred =
+      (kind === "boardview" && context.preferredBoardviewAssetId === left.id) ||
+      (kind === "schematic" && context.preferredSchematicAssetId === left.id);
+    const rightPreferred =
+      (kind === "boardview" && context.preferredBoardviewAssetId === right.id) ||
+      (kind === "schematic" && context.preferredSchematicAssetId === right.id);
+
+    if (leftPreferred !== rightPreferred) {
+      return leftPreferred ? -1 : 1;
+    }
+
     const leftRank = rankAssociatedAsset(left, context);
     const rightRank = rankAssociatedAsset(right, context);
 

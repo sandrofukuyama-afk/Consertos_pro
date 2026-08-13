@@ -734,6 +734,61 @@ type AssociateTechnicalAssetRow = {
     | null;
 };
 
+type DiagnosticTechnicalAssetPreferences = {
+  associatedTechnicalAssetIds: string[];
+  preferredBoardviewAssetId: string | null;
+  preferredSchematicAssetId: string | null;
+};
+
+function readDiagnosticTechnicalAssetPreferences(
+  details: Record<string, unknown> | null | undefined,
+): DiagnosticTechnicalAssetPreferences {
+  const preferredAssetIds = Array.isArray(details?.associatedTechnicalAssetIds)
+    ? details.associatedTechnicalAssetIds
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean)
+    : [];
+  const preferredBoardviewAssetId =
+    typeof details?.preferredBoardviewAssetId === "string" &&
+    details.preferredBoardviewAssetId.trim()
+      ? details.preferredBoardviewAssetId.trim()
+      : null;
+  const preferredSchematicAssetId =
+    typeof details?.preferredSchematicAssetId === "string" &&
+    details.preferredSchematicAssetId.trim()
+      ? details.preferredSchematicAssetId.trim()
+      : null;
+
+  return {
+    associatedTechnicalAssetIds: [...new Set(preferredAssetIds)],
+    preferredBoardviewAssetId,
+    preferredSchematicAssetId,
+  };
+}
+
+function buildDiagnosticTechnicalAssetPreferences(
+  details: Record<string, unknown> | null | undefined,
+  assets: AssociateTechnicalAssetRow[],
+) {
+  const currentPreferences = readDiagnosticTechnicalAssetPreferences(details);
+  const nextBoardviewAssetId =
+    assets.find((asset) => asset.file_format === "brd" || asset.file_format === "bdv")?.id ??
+    currentPreferences.preferredBoardviewAssetId;
+  const nextSchematicAssetId =
+    assets.find((asset) => asset.file_format === "pdf")?.id ??
+    currentPreferences.preferredSchematicAssetId;
+  const nextAssociatedIds = assets.length
+    ? assets.map((asset) => asset.id)
+    : currentPreferences.associatedTechnicalAssetIds;
+
+  return {
+    ...(details ?? {}),
+    associatedTechnicalAssetIds: nextAssociatedIds,
+    preferredBoardviewAssetId: nextBoardviewAssetId,
+    preferredSchematicAssetId: nextSchematicAssetId,
+  };
+}
+
 function pickAssociationValue(
   assets: AssociateTechnicalAssetRow[],
   field: "board_id" | "equipment_model_id",
@@ -938,7 +993,7 @@ export async function associateDiagnosticTechnicalAssetsAction(formData: FormDat
 
   const { data: diagnostic, error: diagnosticError } = await supabase
     .from("diagnostics")
-    .select("id, equipment_model_id")
+    .select("id, equipment_model_id, equipment_details")
     .eq("id", diagnosticId)
     .maybeSingle();
 
@@ -978,12 +1033,17 @@ export async function associateDiagnosticTechnicalAssetsAction(formData: FormDat
     pickAssociationValue(assets, "equipment_model_id") ??
     diagnostic.equipment_model_id ??
     null;
+  const nextEquipmentDetails = buildDiagnosticTechnicalAssetPreferences(
+    ((diagnostic.equipment_details as Record<string, unknown> | null | undefined) ?? null),
+    assets,
+  );
 
-  if (resolvedEquipmentModelId) {
+  {
     const { error: updateDiagnosticError } = await supabase
       .from("diagnostics")
       .update({
         equipment_model_id: resolvedEquipmentModelId,
+        equipment_details: nextEquipmentDetails,
       })
       .eq("id", diagnosticId);
 

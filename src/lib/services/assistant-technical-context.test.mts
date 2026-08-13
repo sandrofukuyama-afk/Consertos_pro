@@ -268,6 +268,9 @@ test("selectPreferredAssetForTest prioritizes direct board association before mo
       diagnosticId: "diag-1",
       equipmentModelId: "model-1",
       boardIds: ["board-1"],
+      preferredAssetIds: [],
+      preferredBoardviewAssetId: null,
+      preferredSchematicAssetId: null,
     },
     assets: [
       {
@@ -301,6 +304,51 @@ test("selectPreferredAssetForTest prioritizes direct board association before mo
 
   assert.equal(result.asset?.id, "asset-board-direct");
   assert.match(result.metadata?.selectionReason ?? "", /placa 820-00239/i);
+});
+
+test("selectPreferredAssetForTest prioritizes the manual diagnostic selection", () => {
+  const result = selectPreferredAssetForTest({
+    kind: "boardview",
+    context: {
+      diagnosticId: "diag-1",
+      equipmentModelId: "model-1",
+      boardIds: ["board-1"],
+      preferredAssetIds: ["asset-manual"],
+      preferredBoardviewAssetId: "asset-manual",
+      preferredSchematicAssetId: null,
+    },
+    assets: [
+      {
+        id: "asset-newer",
+        title: "820-00239-newer.brd",
+        assetType: "boardview",
+        fileFormat: "brd",
+        storageBucket: "technical-assets",
+        storagePath: "newer",
+        createdAt: "2026-08-12T12:00:00.000Z",
+        boardId: "board-1",
+        equipmentModelId: "model-1",
+        boardName: "820-00239",
+        modelName: "A1706",
+      },
+      {
+        id: "asset-manual",
+        title: "820-00239-selected.brd",
+        assetType: "boardview",
+        fileFormat: "brd",
+        storageBucket: "technical-assets",
+        storagePath: "manual",
+        createdAt: "2026-08-11T12:00:00.000Z",
+        boardId: "board-1",
+        equipmentModelId: "model-1",
+        boardName: "820-00239",
+        modelName: "A1706",
+      },
+    ],
+  });
+
+  assert.equal(result.asset?.id, "asset-manual");
+  assert.match(result.metadata?.selectionReason ?? "", /manualmente/i);
 });
 
 test("buildLabSearchHrefForTest creates focused links for component, net and page", () => {
@@ -345,6 +393,9 @@ test("selectPreferredAssetForTest prioritizes matching board before model and re
       diagnosticId: "diag-1",
       equipmentModelId: "model-1",
       boardIds: ["board-1"],
+      preferredAssetIds: [],
+      preferredBoardviewAssetId: null,
+      preferredSchematicAssetId: null,
     },
     assets: [
       {

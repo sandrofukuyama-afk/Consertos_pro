@@ -142,6 +142,12 @@ type DiagnosticTechnicalAssetLinkRow = {
     | null;
 };
 
+type DiagnosticTechnicalAssetPreferenceState = {
+  associatedTechnicalAssetIds: string[];
+  preferredBoardviewAssetId: string | null;
+  preferredSchematicAssetId: string | null;
+};
+
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -211,6 +217,32 @@ function buildBoardLabel(
   return board.name ?? board.boardCode ?? board.roleLabel;
 }
 
+function readDiagnosticTechnicalAssetPreferences(
+  details: Record<string, unknown> | null | undefined,
+): DiagnosticTechnicalAssetPreferenceState {
+  const associatedTechnicalAssetIds = Array.isArray(details?.associatedTechnicalAssetIds)
+    ? details.associatedTechnicalAssetIds
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean)
+    : [];
+  const preferredBoardviewAssetId =
+    typeof details?.preferredBoardviewAssetId === "string" &&
+    details.preferredBoardviewAssetId.trim()
+      ? details.preferredBoardviewAssetId.trim()
+      : null;
+  const preferredSchematicAssetId =
+    typeof details?.preferredSchematicAssetId === "string" &&
+    details.preferredSchematicAssetId.trim()
+      ? details.preferredSchematicAssetId.trim()
+      : null;
+
+  return {
+    associatedTechnicalAssetIds: [...new Set(associatedTechnicalAssetIds)],
+    preferredBoardviewAssetId,
+    preferredSchematicAssetId,
+  };
+}
+
 function formatEquipmentDetailValue(
   key: string,
   value: string | number | boolean,
@@ -237,10 +269,6 @@ function formatEquipmentDetailValue(
 }
 
 function buildEquipmentDetailItems(details: Record<string, unknown> | null | undefined) {
-  if (!details) {
-    return [];
-  }
-
   const labels: Record<string, string> = {
     manufacturingYear: "Ano de fabricação",
     accessoriesIncluded: "Acessórios",
@@ -271,10 +299,15 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
     desktopPsuWatts: "Fonte (W)",
   };
 
+  if (!details) {
+    return [];
+  }
+
   return Object.entries(details)
     .filter(
-      ([, value]) =>
-        typeof value === "string" || typeof value === "number" || typeof value === "boolean",
+      ([key, value]) =>
+        Object.prototype.hasOwnProperty.call(labels, key) &&
+        (typeof value === "string" || typeof value === "number" || typeof value === "boolean"),
     )
     .map(([key, value]) => ({
       label: labels[key] ?? key,
@@ -399,8 +432,11 @@ export async function getDiagnosticDetail(diagnosticId: string) {
   const model = pickRelation(data.equipment_models);
   const openedBy = pickRelation(data.users);
   const resolvedCase = pickRelation(data.resolved_cases);
+  const rawEquipmentDetails =
+    (data.equipment_details as Record<string, unknown> | null | undefined) ?? null;
+  const technicalAssetPreferences = readDiagnosticTechnicalAssetPreferences(rawEquipmentDetails);
   const equipmentDetails = buildEquipmentDetailItems(
-    (data.equipment_details as Record<string, unknown> | null | undefined) ?? null,
+    rawEquipmentDetails,
   );
   const fallbackLabel =
     [manufacturer?.name, category?.name].filter(Boolean).join(" ") || "Equipamento sem nome";
@@ -558,6 +594,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     preventiveInsight,
     referenceMeasurements,
     technicalAssetLinksResult,
+    preferredTechnicalAssetsResult,
   ] =
     await Promise.all([
       Promise.resolve(
@@ -647,6 +684,28 @@ export async function getDiagnosticDetail(diagnosticId: string) {
             )
             .or(technicalAssetLinkFilters.join(","))
         : Promise.resolve({ data: [] as DiagnosticTechnicalAssetLinkRow[] }),
+      technicalAssetPreferences.associatedTechnicalAssetIds.length > 0
+        ? supabase
+            .from("technical_assets")
+            .select(
+              `
+                id,
+                original_filename,
+                asset_type,
+                file_format,
+                file_size_bytes,
+                created_at,
+                metadata,
+                technical_asset_links(
+                  board_id,
+                  equipment_model_id,
+                  boards(board_code),
+                  equipment_models(model_name)
+                )
+              `,
+            )
+            .in("id", technicalAssetPreferences.associatedTechnicalAssetIds)
+        : Promise.resolve({ data: [] as TechnicalAssetRow[] }),
     ]);
 
   const attachments = attachmentsList;
@@ -728,7 +787,46 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       happenedAt: formatRelativeTime(item.happenedAt),
     }));
 
-  const technicalAssets = Array.from(
+  const buildTechnicalAssetItem = (
+    asset: {
+      id: string;
+      original_filename: string;
+      asset_type: string;
+      file_format: string;
+      file_size_bytes: number;
+      created_at: string;
+    },
+    relation: {
+      boardId: string | null;
+      equipmentModelId: string | null;
+      boardName: string | null;
+      modelName: string | null;
+    },
+  ) => {
+    const boardviewLabHref =
+      asset.file_format === "brd" || asset.file_format === "bdv"
+        ? `/boardview/lab?diagnostic_id=${data.id}&boardview_asset_id=${asset.id}`
+        : asset.file_format === "pdf"
+          ? `/boardview/lab?diagnostic_id=${data.id}&schematic_asset_id=${asset.id}`
+          : null;
+
+    return {
+      id: asset.id,
+      title: asset.original_filename,
+      documentType: getTechnicalAssetTypeLabel(asset.file_format, asset.asset_type),
+      fileFormat: asset.file_format,
+      fileSizeLabel: formatBytesLabel(asset.file_size_bytes),
+      uploadedAt: formatRelativeTime(asset.created_at),
+      boardId: relation.boardId,
+      equipmentModelId: relation.equipmentModelId,
+      boardName: relation.boardName,
+      modelName: relation.modelName,
+      associationLabel: relation.modelName ?? relation.boardName ?? "Associado a este diagnostico",
+      boardviewLabHref,
+    } satisfies DiagnosticDetail["technicalAssets"][number];
+  };
+
+  const contextualTechnicalAssets = Array.from(
     new Map(
       ((technicalAssetLinksResult.data ?? []) as DiagnosticTechnicalAssetLinkRow[])
         .map((linkRow) => {
@@ -737,31 +835,14 @@ export async function getDiagnosticDetail(diagnosticId: string) {
             return null;
           }
 
-          const boardName = pickRelation(linkRow.boards)?.board_code ?? null;
-          const modelName = pickRelation(linkRow.equipment_models)?.model_name ?? null;
-          const boardviewLabHref =
-            asset.file_format === "brd" || asset.file_format === "bdv"
-              ? `/boardview/lab?diagnostic_id=${data.id}&boardview_asset_id=${asset.id}`
-              : asset.file_format === "pdf"
-                ? `/boardview/lab?diagnostic_id=${data.id}&schematic_asset_id=${asset.id}`
-                : null;
-
           return [
             asset.id,
-            {
-              id: asset.id,
-              title: asset.original_filename,
-              documentType: getTechnicalAssetTypeLabel(asset.file_format, asset.asset_type),
-              fileFormat: asset.file_format,
-              fileSizeLabel: formatBytesLabel(asset.file_size_bytes),
-              uploadedAt: formatRelativeTime(asset.created_at),
+            buildTechnicalAssetItem(asset, {
               boardId: linkRow.board_id ?? null,
               equipmentModelId: linkRow.equipment_model_id ?? null,
-              boardName,
-              modelName,
-              associationLabel: modelName ?? boardName ?? "Não associado",
-              boardviewLabHref,
-            },
+              boardName: pickRelation(linkRow.boards)?.board_code ?? null,
+              modelName: pickRelation(linkRow.equipment_models)?.model_name ?? null,
+            }),
           ] as const;
         })
         .filter(
@@ -773,7 +854,76 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           ] => Boolean(entry),
         ),
     ).values(),
-  ).sort((left, right) => left.title.localeCompare(right.title));
+  );
+
+  const preferredTechnicalAssets = Array.from(
+    new Map(
+      ((preferredTechnicalAssetsResult.data ?? []) as TechnicalAssetRow[])
+        .map((assetRow) => {
+          const matchingLink =
+            assetRow.technical_asset_links?.find(
+              (link) =>
+                (link.board_id && boardIds.includes(link.board_id)) ||
+                (link.equipment_model_id && link.equipment_model_id === data.equipment_model_id),
+            ) ??
+            assetRow.technical_asset_links?.[0] ??
+            null;
+
+          return [
+            assetRow.id,
+            buildTechnicalAssetItem(
+              {
+                id: assetRow.id,
+                original_filename: assetRow.original_filename,
+                asset_type: assetRow.asset_type,
+                file_format: assetRow.file_format,
+                file_size_bytes: assetRow.file_size_bytes,
+                created_at: assetRow.created_at,
+              },
+              {
+                boardId: matchingLink?.board_id ?? null,
+                equipmentModelId: matchingLink?.equipment_model_id ?? null,
+                boardName: pickRelation(matchingLink?.boards)?.board_code ?? null,
+                modelName: pickRelation(matchingLink?.equipment_models)?.model_name ?? null,
+              },
+            ),
+          ] as const;
+        })
+        .filter(
+          (
+            entry,
+          ): entry is readonly [
+            string,
+            DiagnosticDetail["technicalAssets"][number],
+          ] => Boolean(entry),
+        ),
+    ).values(),
+  );
+
+  const technicalAssets = (
+    technicalAssetPreferences.associatedTechnicalAssetIds.length
+      ? preferredTechnicalAssets
+      : contextualTechnicalAssets
+  ).sort((left, right) => {
+    const leftPreferredIndex = technicalAssetPreferences.associatedTechnicalAssetIds.indexOf(left.id);
+    const rightPreferredIndex = technicalAssetPreferences.associatedTechnicalAssetIds.indexOf(
+      right.id,
+    );
+
+    if (leftPreferredIndex !== -1 || rightPreferredIndex !== -1) {
+      if (leftPreferredIndex === -1) {
+        return 1;
+      }
+
+      if (rightPreferredIndex === -1) {
+        return -1;
+      }
+
+      return leftPreferredIndex - rightPreferredIndex;
+    }
+
+    return left.title.localeCompare(right.title);
+  });
 
   return {
     id: data.id,

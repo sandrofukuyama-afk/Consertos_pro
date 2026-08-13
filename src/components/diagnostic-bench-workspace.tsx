@@ -275,7 +275,7 @@ export function DiagnosticBenchWorkspace({
               <div className="pt-2">
                 <ActionLink
                   href="#associar-ativos-tecnicos"
-                  label="Associar placa/arquivos tecnicos"
+                  label="Associar placa e arquivos técnicos"
                   tone="primary"
                 />
               </div>
@@ -298,23 +298,23 @@ export function DiagnosticBenchWorkspace({
       <SectionCard
         id="associar-ativos-tecnicos"
         eyebrow="Placa e arquivos tecnicos"
-        title="Associar placa e biblioteca tecnica"
-        description="Vincule este diagnostico a uma placa e escolha o boardview e o esquema certos para a IA e para o laboratorio abrirem no contexto correto."
+        title="Associar placa e arquivos técnicos"
+        description="Vincule este diagnóstico a uma placa e escolha o boardview e o esquema certos para a IA e para o laboratório abrirem no contexto correto."
       >
         <div className="grid gap-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <SummaryItem label="Placa associada" value={primaryBoard?.name ?? "Nao informada"} />
-            <SummaryItem label="Modelo associado" value={detail.model ?? "Nao informado"} />
+            <SummaryItem label="Placa associada" value={primaryBoard?.name ?? "Não informada"} />
+            <SummaryItem label="Modelo associado" value={detail.model ?? "Não informado"} />
             <SummaryItem
-              label="Arquivos tecnicos"
+              label="Arquivos técnicos"
               value={`${detail.technicalAssets.length} associado(s)`}
             />
             <SummaryItem
-              label="Abrir no laboratorio"
+              label="Abrir no laboratório"
               value={
                 boardviewAsset || schematicAsset
                   ? "Boardview e esquema prontos"
-                  : "Aguardando associacao"
+                  : "Aguardando associação"
               }
             />
           </div>
