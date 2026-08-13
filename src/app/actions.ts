@@ -1035,6 +1035,70 @@ export async function associateDiagnosticTechnicalAssetsAction(formData: FormDat
   );
 }
 
+export async function archiveDiagnosticFromQueueAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+  const equipmentLabel = String(formData.get("equipment_label") ?? "").trim() || "Equipamento";
+
+  if (!diagnosticId) {
+    redirect("/?error=Diagnostico invalido para exclusao.");
+  }
+
+  const { data: diagnostic, error: diagnosticError } = await supabase
+    .from("diagnostics")
+    .select("id, status, equipment_label, equipment_model_id")
+    .eq("id", diagnosticId)
+    .maybeSingle();
+
+  if (diagnosticError) {
+    redirect(`/?error=${encodeURIComponent(diagnosticError.message)}`);
+  }
+
+  if (!diagnostic) {
+    redirect("/?error=Diagnostico nao encontrado.");
+  }
+
+  const { error: clearBoardsError } = await supabase
+    .from("diagnostic_boards")
+    .delete()
+    .eq("diagnostic_id", diagnosticId);
+
+  if (clearBoardsError) {
+    redirect(`/?error=${encodeURIComponent(clearBoardsError.message)}`);
+  }
+
+  const { error: archiveError } = await supabase
+    .from("diagnostics")
+    .update({
+      status: "archived",
+      equipment_model_id: null,
+    })
+    .eq("id", diagnosticId);
+
+  if (archiveError) {
+    redirect(`/?error=${encodeURIComponent(archiveError.message)}`);
+  }
+
+  await supabase.from("change_history").insert({
+    entity_type: "diagnostic",
+    entity_id: diagnosticId,
+    change_type: "archive",
+    field_name: "status",
+    previous_value_text: diagnostic.status,
+    new_value_text: "archived",
+    change_reason: "Exclusao da fila ativa pelo dashboard",
+    changed_by_user_id: user.id,
+  });
+
+  revalidatePath("/");
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  redirect(
+    `/?message=${encodeURIComponent(`${diagnostic.equipment_label ?? equipmentLabel} removido da Fila ativa.`)}`,
+  );
+}
+
 export async function generateDiagnosticAssistantAction(formData: FormData) {
   await requireCurrentUser();
 

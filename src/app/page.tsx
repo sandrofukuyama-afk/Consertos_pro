@@ -2,12 +2,14 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { DashboardEmptyState } from "@/components/dashboard-empty-state";
+import { DeleteDiagnosticButton } from "@/components/delete-diagnostic-button";
 import { StatusPill } from "@/components/status-pill";
 import { requireCurrentUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/services/dashboard";
 
 type HomePageProps = {
   searchParams: Promise<{
+    error?: string;
     message?: string;
   }>;
 };
@@ -29,6 +31,12 @@ export default async function Home({ searchParams }: HomePageProps) {
         {params.message ? (
           <section className="rounded-[26px] border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] p-5 text-sm text-[var(--accent-teal)] shadow-[0_14px_32px_rgba(20,18,28,0.06)]">
             {params.message}
+          </section>
+        ) : null}
+
+        {params.error ? (
+          <section className="rounded-[26px] border border-[rgba(202,106,85,0.28)] bg-[rgba(202,106,85,0.08)] p-5 text-sm text-[var(--danger)] shadow-[0_14px_32px_rgba(20,18,28,0.06)]">
+            {params.error}
           </section>
         ) : null}
 
@@ -65,13 +73,13 @@ export default async function Home({ searchParams }: HomePageProps) {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--accent-teal)]">
-                Laboratório
+                Laboratorio
               </p>
               <h2 className="mt-2 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                 Boardview e esquema lado a lado
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                Abra o workspace técnico para cruzar boardview, PDF do esquema e seleções do reparo sem sair do fluxo principal.
+                Abra o workspace tecnico para cruzar boardview, PDF do esquema e selecoes do reparo sem sair do fluxo principal.
               </p>
             </div>
             <div className="flex shrink-0">
@@ -102,68 +110,80 @@ export default async function Home({ searchParams }: HomePageProps) {
 
           {dashboard.diagnostics.length ? (
             <div className="mt-4 overflow-hidden rounded-[24px] border border-[var(--panel-border)]">
-              <div className="hidden grid-cols-[1fr_1.2fr_1.05fr_1.05fr_0.9fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
+              <div className="hidden grid-cols-[1fr_1.2fr_1.05fr_1.05fr_0.9fr_0.7fr] gap-3 bg-[var(--background-strong)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)] lg:grid">
                 <span>Equipamento</span>
                 <span>Defeito atual</span>
-                <span>Último teste</span>
-                <span>Próximo passo</span>
+                <span>Ultimo teste</span>
+                <span>Proximo passo</span>
                 <span>Status</span>
+                <span>Acao</span>
               </div>
 
               {dashboard.diagnostics.map((diagnostic) => (
-                <Link
+                <div
                   key={diagnostic.id}
-                  href={`/diagnosticos/${diagnostic.recordId}`}
-                  className="grid gap-3 border-t border-[var(--panel-border)] p-4 transition hover:bg-white/2 lg:grid-cols-[1fr_1.2fr_1.05fr_1.05fr_0.9fr]"
+                  className="grid gap-3 border-t border-[var(--panel-border)] p-4 lg:grid-cols-[1fr_1.2fr_1.05fr_1.05fr_0.9fr_0.7fr]"
                 >
-                  <div className="min-w-0">
-                    <div className="flex items-center justify-between gap-3 lg:block">
-                      <p className="break-words text-sm font-semibold text-[var(--foreground)]">
-                        {diagnostic.equipment}
-                      </p>
-                      <div className="lg:hidden">
-                        <StatusPill label={diagnostic.status} />
+                  <Link
+                    href={`/diagnosticos/${diagnostic.recordId}`}
+                    className="grid gap-3 transition hover:bg-white/2 lg:col-span-5 lg:grid-cols-[1fr_1.2fr_1.05fr_1.05fr_0.9fr]"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-3 lg:block">
+                        <p className="break-words text-sm font-semibold text-[var(--foreground)]">
+                          {diagnostic.equipment}
+                        </p>
+                        <div className="lg:hidden">
+                          <StatusPill label={diagnostic.status} />
+                        </div>
                       </div>
+                      <p className="mt-1 break-words text-sm leading-6 text-[var(--muted)]">
+                        {diagnostic.category}
+                      </p>
+                      <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
+                        {diagnostic.id} • {diagnostic.updatedAt}
+                      </p>
                     </div>
-                    <p className="mt-1 break-words text-sm leading-6 text-[var(--muted)]">
-                      {diagnostic.category}
-                    </p>
-                    <p className="mt-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                      {diagnostic.id} • {diagnostic.updatedAt}
-                    </p>
-                  </div>
 
-                  <div className="min-w-0">
-                    <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted)] lg:hidden">
-                      Defeito atual
-                    </p>
-                    <p className="mt-1 break-words text-sm leading-6 text-[var(--foreground)] lg:mt-0">
-                      {diagnostic.symptom}
-                    </p>
-                  </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted)] lg:hidden">
+                        Defeito atual
+                      </p>
+                      <p className="mt-1 break-words text-sm leading-6 text-[var(--foreground)] lg:mt-0">
+                        {diagnostic.symptom}
+                      </p>
+                    </div>
 
-                  <div className="min-w-0">
-                    <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted)] lg:hidden">
-                      Último teste
-                    </p>
-                    <p className="mt-1 break-words text-sm leading-6 text-[var(--foreground)] lg:mt-0">
-                      {diagnostic.lastTest}
-                    </p>
-                  </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted)] lg:hidden">
+                        Ultimo teste
+                      </p>
+                      <p className="mt-1 break-words text-sm leading-6 text-[var(--foreground)] lg:mt-0">
+                        {diagnostic.lastTest}
+                      </p>
+                    </div>
 
-                  <div className="min-w-0">
-                    <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted)] lg:hidden">
-                      Próximo passo
-                    </p>
-                    <p className="mt-1 break-words text-sm leading-6 text-[var(--foreground)] lg:mt-0">
-                      {diagnostic.nextStep}
-                    </p>
-                  </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--muted)] lg:hidden">
+                        Proximo passo
+                      </p>
+                      <p className="mt-1 break-words text-sm leading-6 text-[var(--foreground)] lg:mt-0">
+                        {diagnostic.nextStep}
+                      </p>
+                    </div>
 
-                  <div className="hidden items-start lg:flex">
-                    <StatusPill label={diagnostic.status} />
+                    <div className="hidden items-start lg:flex">
+                      <StatusPill label={diagnostic.status} />
+                    </div>
+                  </Link>
+
+                  <div className="flex items-center justify-end lg:justify-center">
+                    <DeleteDiagnosticButton
+                      diagnosticId={diagnostic.recordId ?? diagnostic.id}
+                      equipmentLabel={diagnostic.equipment}
+                    />
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           ) : (
