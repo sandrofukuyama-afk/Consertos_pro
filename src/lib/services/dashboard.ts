@@ -23,6 +23,10 @@ function mapStatus(status: string): DiagnosticCase["status"] {
     return "Resolvido hoje";
   }
 
+  if (status === "archived") {
+    return "Encerrado sem solução";
+  }
+
   return "Ativo";
 }
 
