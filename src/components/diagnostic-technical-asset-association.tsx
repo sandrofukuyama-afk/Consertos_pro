@@ -102,6 +102,9 @@ export function DiagnosticTechnicalAssetAssociation({
   const [selectedModelId, setSelectedModelId] = useState(currentModelId ?? "");
   const [selectedManufacturerId, setSelectedManufacturerId] = useState(manufacturerId ?? "");
   const [selectedFormat, setSelectedFormat] = useState("all");
+  const [isCreatingBoard, setIsCreatingBoard] = useState(false);
+  const [newBoardCode, setNewBoardCode] = useState("");
+  const [newBoardDescription, setNewBoardDescription] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -291,6 +294,18 @@ export function DiagnosticTechnicalAssetAssociation({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => {
+              setIsCreatingBoard((current) => !current);
+              if (!isCreatingBoard) {
+                setSelectedBoardId("");
+              }
+            }}
+            className="mt-1 inline-flex self-start text-xs font-semibold text-[var(--accent-copper)]"
+          >
+            {isCreatingBoard ? "Cancelar criacao de placa" : "+ Criar nova placa"}
+          </button>
         </label>
 
         <label className="grid gap-1 text-xs text-[var(--muted)]">
@@ -325,6 +340,33 @@ export function DiagnosticTechnicalAssetAssociation({
           </select>
         </label>
       </div>
+
+      {isCreatingBoard ? (
+        <div className="grid gap-3 rounded-[18px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] p-4 md:grid-cols-2">
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Codigo da nova placa
+            <input
+              value={newBoardCode}
+              onChange={(event) => setNewBoardCode(event.target.value)}
+              placeholder="Ex.: 820-00239"
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            />
+          </label>
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Descricao (opcional)
+            <input
+              value={newBoardDescription}
+              onChange={(event) => setNewBoardDescription(event.target.value)}
+              placeholder="Ex.: Macbook Pro 1706 - placa principal"
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            />
+          </label>
+          <p className="text-xs text-[var(--muted)] md:col-span-2">
+            A placa sera criada usando o fabricante selecionado acima (se houver) e ficara
+            disponivel no Catalogo tecnico apos salvar a associacao.
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="grid gap-1 text-xs text-[var(--muted)]">
@@ -402,6 +444,16 @@ export function DiagnosticTechnicalAssetAssociation({
         <input type="hidden" name="board_id" value={selectedBoardId} />
         <input type="hidden" name="equipment_model_id" value={selectedModelId} />
         <input type="hidden" name="manufacturer_id" value={selectedManufacturerId} />
+        <input
+          type="hidden"
+          name="new_board_code"
+          value={isCreatingBoard ? newBoardCode.trim() : ""}
+        />
+        <input
+          type="hidden"
+          name="new_board_description"
+          value={isCreatingBoard ? newBoardDescription.trim() : ""}
+        />
         {selectedBoardviewAssetId ? (
           <input type="hidden" name="asset_ids" value={selectedBoardviewAssetId} />
         ) : null}

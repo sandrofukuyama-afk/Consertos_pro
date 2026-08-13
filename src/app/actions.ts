@@ -827,6 +827,122 @@ function pickAssociationValue(
   return null;
 }
 
+async function ensureDefaultBoardTypeId() {
+  const supabase = await createClient();
+  const slug = "boardview-lab";
+
+  const { data: existingBoardType, error: existingBoardTypeError } = await supabase
+    .from("board_types")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (existingBoardTypeError) {
+    throw new Error(existingBoardTypeError.message);
+  }
+
+  if (existingBoardType) {
+    return existingBoardType.id;
+  }
+
+  const { data: createdBoardType, error: createBoardTypeError } = await supabase
+    .from("board_types")
+    .insert({
+      name: "Boardview lab",
+      slug,
+      description: "Tipo criado automaticamente para placas associadas por diagnostico.",
+    })
+    .select("id")
+    .single();
+
+  if (createBoardTypeError) {
+    if (createBoardTypeError.code === "23505") {
+      const { data: duplicateBoardType } = await supabase
+        .from("board_types")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (duplicateBoardType) {
+        return duplicateBoardType.id;
+      }
+    }
+
+    throw new Error(createBoardTypeError.message);
+  }
+
+  return createdBoardType.id;
+}
+
+async function resolveOrCreateBoardFromForm({
+  boardCode,
+  description,
+  manufacturerId,
+  userId,
+}: {
+  boardCode: string;
+  description: string | null;
+  manufacturerId: string | null;
+  userId: string;
+}) {
+  const supabase = await createClient();
+
+  const { data: existingBoard, error: existingBoardError } = await supabase
+    .from("boards")
+    .select("id, board_code")
+    .eq("board_code", boardCode)
+    .maybeSingle();
+
+  if (existingBoardError) {
+    throw new Error(existingBoardError.message);
+  }
+
+  if (existingBoard) {
+    return existingBoard.id;
+  }
+
+  const boardTypeId = await ensureDefaultBoardTypeId();
+
+  const { data: createdBoard, error: createBoardError } = await supabase
+    .from("boards")
+    .insert({
+      board_type_id: boardTypeId,
+      manufacturer_id: manufacturerId,
+      board_code: boardCode,
+      description,
+    })
+    .select("id, board_code")
+    .single();
+
+  if (createBoardError) {
+    if (createBoardError.code === "23505") {
+      const { data: duplicateBoard } = await supabase
+        .from("boards")
+        .select("id")
+        .eq("board_code", boardCode)
+        .maybeSingle();
+
+      if (duplicateBoard) {
+        return duplicateBoard.id;
+      }
+    }
+
+    throw new Error(createBoardError.message);
+  }
+
+  await supabase.from("change_history").insert({
+    entity_type: "board",
+    entity_id: createdBoard.id,
+    change_type: "create",
+    field_name: "all",
+    new_value_text: createdBoard.board_code,
+    change_reason: "Placa criada durante associacao tecnica do diagnostico",
+    changed_by_user_id: userId,
+  });
+
+  return createdBoard.id;
+}
+
 async function ensureDiagnosticPrimaryBoardAssociation(
   diagnosticId: string,
   boardId: string,
@@ -969,9 +1085,12 @@ export async function associateDiagnosticTechnicalAssetsAction(formData: FormDat
   const supabase = await createClient();
 
   const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
-  const selectedBoardId = String(formData.get("board_id") ?? "").trim() || null;
+  let selectedBoardId = String(formData.get("board_id") ?? "").trim() || null;
   const selectedEquipmentModelId =
     String(formData.get("equipment_model_id") ?? "").trim() || null;
+  const selectedManufacturerId = String(formData.get("manufacturer_id") ?? "").trim() || null;
+  const newBoardCode = readOptionalText(formData, "new_board_code");
+  const newBoardDescription = readOptionalText(formData, "new_board_description");
   const assetIds = Array.from(
     new Set(
       formData
@@ -985,10 +1104,27 @@ export async function associateDiagnosticTechnicalAssetsAction(formData: FormDat
     redirect("/?error=Diagnostico invalido para associacao tecnica.");
   }
 
-  if (!assetIds.length && !selectedBoardId && !selectedEquipmentModelId) {
+  if (!assetIds.length && !selectedBoardId && !selectedEquipmentModelId && !newBoardCode) {
     redirect(
       `/diagnosticos/${diagnosticId}?error=${encodeURIComponent("Escolha pelo menos uma placa, modelo ou arquivo tecnico para associar.")}`,
     );
+  }
+
+  if (!selectedBoardId && newBoardCode) {
+    try {
+      selectedBoardId = await resolveOrCreateBoardFromForm({
+        boardCode: newBoardCode,
+        description: newBoardDescription,
+        manufacturerId: selectedManufacturerId,
+        userId: user.id,
+      });
+    } catch (error) {
+      redirect(
+        `/diagnosticos/${diagnosticId}?error=${encodeURIComponent(
+          error instanceof Error ? error.message : "Falha ao criar a placa.",
+        )}`,
+      );
+    }
   }
 
   const { data: diagnostic, error: diagnosticError } = await supabase
