@@ -293,6 +293,7 @@ export function BoardviewLab({
   const loadedInitialAssetsRef = useRef<string>("");
   const appliedInitialBoardviewFocusRef = useRef<string | null>(null);
   const pendingSelectionFocusRef = useRef(false);
+  const selectedRef = useRef<BoardviewLabSelection | null>(null);
   const splitResizeStateRef = useRef<{
     active: boolean;
     pointerId: number;
@@ -312,6 +313,7 @@ export function BoardviewLab({
   const [sideFilter, setSideFilter] = useState<BoardviewLabSideFilter>(initialBoardviewFocus.side);
   const [query, setQuery] = useState(initialQuery);
   const [selected, setSelected] = useState<BoardviewLabSelection | null>(null);
+  const [selectionHistory, setSelectionHistory] = useState<BoardviewLabSelection[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isReadingFile, setIsReadingFile] = useState(false);
   const [boardviewTechnicalFile, setBoardviewTechnicalFile] =
@@ -509,6 +511,10 @@ export function BoardviewLab({
   }, [initialViewerMode]);
 
   useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
+
+  useEffect(() => {
     if (!pendingSelectionFocusRef.current || !visibleSelected) {
       return;
     }
@@ -650,6 +656,7 @@ export function BoardviewLab({
               setFileName(asset.fileName);
               setModel(nextModel);
               setSelected(null);
+              setSelectionHistory([]);
               setQuery(initialQuery);
               setSideFilter("both");
               setBoardScale(1);
@@ -1185,10 +1192,35 @@ export function BoardviewLab({
     }
   }
 
-  function selectEntry(selection: BoardviewLabSelection, autoFocus = false) {
+  function selectEntry(
+    selection: BoardviewLabSelection,
+    autoFocus = false,
+    pushHistory = false,
+  ) {
+    if (pushHistory && selectedRef.current) {
+      const previous = selectedRef.current;
+      setSelectionHistory((history) => [...history, previous]);
+    } else if (!pushHistory) {
+      setSelectionHistory([]);
+    }
+
     setSelected(selection);
     setDetailsOpen(true);
     pendingSelectionFocusRef.current = autoFocus;
+  }
+
+  function goBackSelection() {
+    setSelectionHistory((history) => {
+      if (!history.length) {
+        return history;
+      }
+
+      const previous = history[history.length - 1];
+      setSelected(previous);
+      setDetailsOpen(true);
+      pendingSelectionFocusRef.current = true;
+      return history.slice(0, -1);
+    });
   }
 
   function handleFitToScreen() {
@@ -1231,6 +1263,7 @@ export function BoardviewLab({
         setFileName(file.name);
         setModel(nextModel);
         setSelected(null);
+        setSelectionHistory([]);
         setQuery("");
         setSideFilter("both");
         setBoardScale(1);
@@ -1247,6 +1280,7 @@ export function BoardviewLab({
       setModel(null);
       setFileName(file.name);
       setSelected(null);
+      setSelectionHistory([]);
       setBoardviewTechnicalFile(null);
     } finally {
       setIsReadingFile(false);
@@ -1366,7 +1400,7 @@ export function BoardviewLab({
               type="button"
               onClick={() =>
                 visibleSelected.net &&
-                selectEntry({ kind: "net", net: visibleSelected.net })
+                selectEntry({ kind: "net", net: visibleSelected.net }, false, true)
               }
               className="text-left text-[var(--accent-copper)] underline decoration-transparent transition hover:decoration-current"
             >
@@ -1397,7 +1431,7 @@ export function BoardviewLab({
               type="button"
               onClick={() =>
                 visibleSelected.net &&
-                selectEntry({ kind: "net", net: visibleSelected.net })
+                selectEntry({ kind: "net", net: visibleSelected.net }, false, true)
               }
               className="text-left text-[var(--accent-copper)] underline decoration-transparent transition hover:decoration-current"
             >
@@ -1452,6 +1486,7 @@ export function BoardviewLab({
                             net: model.netsByName.get(padPin.netName) ?? null,
                           },
                           true,
+                          true,
                         )
                       }
                       className="w-full text-left transition hover:text-white"
@@ -1468,7 +1503,7 @@ export function BoardviewLab({
                       onClick={() => {
                         const net = model.netsByName.get(padPin.netName);
                         if (net) {
-                          selectEntry({ kind: "net", net });
+                          selectEntry({ kind: "net", net }, false, true);
                         }
                       }}
                       className="mt-2 text-xs text-[var(--accent-copper)] underline decoration-transparent transition hover:decoration-current"
@@ -1498,7 +1533,7 @@ export function BoardviewLab({
                       key={component.ref}
                       type="button"
                       onClick={() =>
-                        selectEntry({ kind: "component", component }, true)
+                        selectEntry({ kind: "component", component }, true, true)
                       }
                       className="w-full rounded-[18px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-3 text-left transition hover:bg-white/5"
                     >
@@ -1538,6 +1573,7 @@ export function BoardviewLab({
                               component,
                               net: selectedNetDetails.net,
                             },
+                            true,
                             true,
                           )
                         }
@@ -2240,13 +2276,24 @@ export function BoardviewLab({
               <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
                 Drawer tecnico
               </p>
-              <button
-                type="button"
-                onClick={() => setDetailsOpen(false)}
-                className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
-              >
-                Fechar
-              </button>
+              <div className="flex items-center gap-2">
+                {selectionHistory.length ? (
+                  <button
+                    type="button"
+                    onClick={goBackSelection}
+                    className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+                  >
+                    Voltar
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(false)}
+                  className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
               {detailDrawerContent}
