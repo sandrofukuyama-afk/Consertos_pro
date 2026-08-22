@@ -89,6 +89,101 @@ function inferBoardviewSide(locationSummary: string | null | undefined) {
   return null;
 }
 
+type NetRow = {
+  key: string;
+  name: string;
+  expectedVoltage: string | null;
+  measurementPoint: string | null;
+  note: string | null;
+  boardviewHref: string | null;
+  boardviewLabel: string | null;
+};
+
+function normalizeNetKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function buildNetRows(
+  relatedLines: Array<{ name: string; expectedVoltage: string; note: string }>,
+  componentsToMeasure: Array<{
+    reference: string;
+    measurementPoint: string;
+    expectedValue: string;
+    note: string;
+  }>,
+  boardviewResults: Array<{
+    kind: "component" | "net";
+    title: string;
+    locationSummary?: string;
+    coordinateHint?: string | null;
+    openLabHref: string;
+  }>,
+): NetRow[] {
+  const rows = new Map<string, NetRow>();
+
+  for (const line of relatedLines) {
+    const key = normalizeNetKey(line.name);
+    rows.set(key, {
+      key,
+      name: line.name,
+      expectedVoltage: line.expectedVoltage || null,
+      measurementPoint: null,
+      note: line.note || null,
+      boardviewHref: null,
+      boardviewLabel: null,
+    });
+  }
+
+  for (const item of componentsToMeasure) {
+    const key = normalizeNetKey(item.reference);
+    const existing = rows.get(key);
+    if (existing) {
+      existing.measurementPoint = item.measurementPoint || existing.measurementPoint;
+      existing.expectedVoltage = existing.expectedVoltage ?? (item.expectedValue || null);
+      existing.note = existing.note ?? (item.note || null);
+    } else {
+      rows.set(key, {
+        key,
+        name: item.reference,
+        expectedVoltage: item.expectedValue || null,
+        measurementPoint: item.measurementPoint || null,
+        note: item.note || null,
+        boardviewHref: null,
+        boardviewLabel: null,
+      });
+    }
+  }
+
+  for (const result of boardviewResults) {
+    const key = normalizeNetKey(result.title);
+    const href = appendLabContext(result.openLabHref, {
+      component: result.kind === "component" ? result.title : null,
+      net: result.kind === "net" ? result.title : null,
+      side: inferBoardviewSide(result.locationSummary),
+    });
+    const label = result.kind === "net" ? "Abrir no boardview" : "Abrir componente";
+    const existing = rows.get(key);
+
+    if (existing) {
+      existing.boardviewHref = href;
+      existing.boardviewLabel = label;
+      existing.measurementPoint = existing.measurementPoint ?? result.coordinateHint ?? null;
+    } else {
+      rows.set(key, {
+        key,
+        name: result.title,
+        expectedVoltage: null,
+        measurementPoint: result.coordinateHint ?? null,
+        note: result.locationSummary ?? null,
+        boardviewHref: href,
+        boardviewLabel: label,
+      });
+    }
+  }
+
+  return Array.from(rows.values());
+}
+
 function getEquipmentDetailValue(detail: DiagnosticDetail, label: string) {
   return detail.equipmentDetails.find((item) => item.label === label)?.value ?? "Não informado";
 }
@@ -220,14 +315,13 @@ export function DiagnosticBenchWorkspace({
   const relatedLines = structured?.relatedLines ?? [];
   const componentsToMeasure = structured?.componentsToMeasure ?? [];
   const recommendedSequence = structured?.recommendedTestSequence ?? [];
-  const sourcesUsed =
-    structured?.sourcesUsed ??
-    [
-      technicalContext?.boardview?.assetTitle ? `Boardview: ${technicalContext.boardview.assetTitle}` : null,
-      technicalContext?.schematic?.assetTitle ? `Esquema PDF: ${technicalContext.schematic.assetTitle}` : null,
-    ].filter((item): item is string => Boolean(item));
   const limitations = structured?.limitations ?? technicalContext?.limitations ?? [];
   const needsTechnicalAssociation = !primaryBoard?.boardId || detail.technicalAssets.length === 0;
+  const netRows = buildNetRows(
+    relatedLines,
+    componentsToMeasure,
+    technicalContext?.boardview?.results ?? [],
+  );
 
   return (
     <div className="grid gap-4">
@@ -404,61 +498,23 @@ export function DiagnosticBenchWorkspace({
                 <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                   {structured?.technicalSummary ?? latestResponse.reasoningSummary}
                 </p>
+                {(structured?.evidence ?? []).length ? (
+                  <ul className="mt-3 space-y-1.5">
+                    {(structured?.evidence ?? []).map((item) => (
+                      <li key={item} className="text-sm leading-6 text-[var(--muted)]">
+                        • {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </ResponseBlock>
 
-              <ResponseBlock title="Evidências encontradas">
-                <div className="space-y-2">
-                  {(structured?.evidence ?? []).length ? (
-                    (structured?.evidence ?? []).map((item) => (
-                      <p
-                        key={item}
-                        className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm text-[var(--muted)]"
-                      >
-                        {item}
-                      </p>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[var(--muted)]">Sem evidências estruturadas na última resposta.</p>
-                  )}
-                </div>
-              </ResponseBlock>
-
-              <ResponseBlock title="Linhas e tensões esperadas">
-                <div className="space-y-3">
-                  {relatedLines.length ? (
-                    relatedLines.map((item) => (
-                      <div key={`${item.name}-${item.expectedVoltage}`} className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">{item.name}</p>
-                        <p className="mt-1 text-sm text-[var(--foreground)]">Esperado: {item.expectedVoltage}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">{item.note}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[var(--muted)]">Nenhuma linha consolidada ainda.</p>
-                  )}
-                </div>
-              </ResponseBlock>
-
-              <ResponseBlock title="Componentes para medir">
-                <div className="space-y-3">
-                  {componentsToMeasure.length ? (
-                    componentsToMeasure.map((item) => (
-                      <div key={`${item.reference}-${item.measurementPoint}`} className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3">
-                        <p className="text-sm font-semibold text-[var(--foreground)]">{item.reference}</p>
-                        <p className="mt-1 text-sm text-[var(--foreground)]">Ponto: {item.measurementPoint}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">Esperado: {item.expectedValue}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">{item.note}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[var(--muted)]">Nenhum componente consolidado ainda.</p>
-                  )}
-                </div>
-              </ResponseBlock>
-
-              <ResponseBlock title="Próximos testes em ordem">
+              <ResponseBlock title="Próximos testes">
+                <p className="text-sm font-medium text-[var(--foreground)]">
+                  Próximo passo: {structured?.nextTest ?? latestResponse.recommendedNextStep}
+                </p>
                 {recommendedSequence.length ? (
-                  <ol className="space-y-2 text-sm text-[var(--muted)]">
+                  <ol className="mt-3 space-y-2 text-sm text-[var(--muted)]">
                     {recommendedSequence.map((item, index) => (
                       <li key={item} className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2">
                         <span className="font-semibold text-[var(--foreground)]">{index + 1}.</span>{" "}
@@ -466,142 +522,82 @@ export function DiagnosticBenchWorkspace({
                       </li>
                     ))}
                   </ol>
-                ) : (
-                  <p className="text-sm text-[var(--muted)]">Sem sequência de testes estruturada.</p>
-                )}
-              </ResponseBlock>
-
-              <ResponseBlock title="Onde abrir no esquema e boardview">
-                <div className="space-y-4">
-                  {technicalContext?.boardview?.results.length ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        Boardview: {technicalContext.boardview.assetTitle}
-                      </p>
-                      {technicalContext.boardview.results.map((result) => (
-                        <div key={`${result.kind}-${result.title}`} className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-[var(--foreground)]">{result.title}</p>
-                              <p className="mt-1 text-sm text-[var(--muted)]">{result.subtitle}</p>
-                              {result.locationSummary ? (
-                                <p className="mt-1 text-sm text-[var(--muted)]">{result.locationSummary}</p>
-                              ) : null}
-                              {result.coordinateHint ? (
-                                <p className="mt-1 text-sm text-[var(--muted)]">{result.coordinateHint}</p>
-                              ) : null}
-                            </div>
-                            <ActionLink
-                              href={appendLabContext(result.openLabHref, {
-                                component: result.kind === "component" ? result.title : null,
-                                net: result.kind === "net" ? result.title : null,
-                                side: inferBoardviewSide(result.locationSummary),
-                              })}
-                              label={result.kind === "net" ? "Abrir boardview nesta net" : "Abrir componente"}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {technicalContext?.schematic?.matches.length ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-[var(--foreground)]">
-                        Esquema: {technicalContext.schematic.assetTitle}
-                      </p>
-                      {technicalContext.schematic.matches.map((match) => (
-                        <div key={`${match.term}-${match.pageNumber}`} className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-[var(--foreground)]">
-                                {match.term} • página {match.pageNumber}
-                              </p>
-                              <p className="mt-1 text-sm text-[var(--muted)]">{match.excerpt}</p>
-                            </div>
-                            <ActionLink
-                              href={appendLabContext(match.openLabHref, {
-                                page: String(match.pageNumber),
-                              })}
-                              label="Abrir página do esquema"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {!technicalContext?.boardview?.results.length &&
-                  !technicalContext?.schematic?.matches.length ? (
-                    <p className="text-sm text-[var(--muted)]">
-                      A última análise não encontrou alvo concreto em boardview ou esquema.
-                    </p>
-                  ) : null}
-                </div>
-              </ResponseBlock>
-
-              <ResponseBlock title="Confiança e limitações">
-                <div className="space-y-3">
-                  <p className="text-sm text-[var(--foreground)]">
-                    Próximo passo principal: {structured?.nextTest ?? latestResponse.recommendedNextStep}
-                  </p>
-                  <p className="text-sm text-[var(--muted)]">
-                    Validação: {structured?.validationGoal ?? "Sem objetivo de validação detalhado."}
-                  </p>
-                  <p className="text-sm text-[var(--muted)]">
-                    Segurança: {structured?.safetyNote ?? "Sem observação de segurança registrada."}
-                  </p>
-                  {structured?.nextQuestionForTechnician ? (
-                    <p className="text-sm text-[var(--muted)]">
-                      Próxima medição sugerida: {structured.nextQuestionForTechnician}
-                    </p>
-                  ) : null}
-                  <p className="text-sm text-[var(--muted)]">
-                    Embedding: {latestResponse.embeddingProvider}
-                  </p>
-                  <p className="text-sm text-[var(--muted)]">
-                    Narrativa: {latestResponse.narrativeProvider} ({latestResponse.modelName})
-                  </p>
-                  <p className="text-sm text-[var(--muted)]">
-                    Fallback local: {latestResponse.fallbackUsed ? "sim" : "não"}
-                  </p>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--foreground)]">Fontes usadas</p>
-                    <div className="mt-2 space-y-2">
-                      {sourcesUsed.length ? (
-                        sourcesUsed.map((item) => (
-                          <p
-                            key={item}
-                            className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm text-[var(--muted)]"
-                          >
-                            {item}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-sm text-[var(--muted)]">Sem fontes estruturadas registradas.</p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--foreground)]">Limitações</p>
-                    <div className="mt-2 space-y-2">
-                      {limitations.length ? (
-                        limitations.map((item) => (
-                          <p
-                            key={item}
-                            className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm text-[var(--muted)]"
-                          >
-                            {item}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-sm text-[var(--muted)]">Sem limitações registradas.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                ) : null}
+                {structured?.safetyNote ? (
+                  <p className="mt-3 text-sm text-[var(--danger)]">Segurança: {structured.safetyNote}</p>
+                ) : null}
               </ResponseBlock>
             </div>
+
+            <ResponseBlock title="Onde medir">
+              {netRows.length ? (
+                <div className="space-y-2">
+                  {netRows.map((row) => (
+                    <div
+                      key={row.key}
+                      className="flex flex-wrap items-start justify-between gap-3 rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">{row.name}</p>
+                        <p className="mt-1 text-sm text-[var(--muted)]">
+                          {[
+                            row.expectedVoltage ? `Esperado: ${row.expectedVoltage}` : null,
+                            row.measurementPoint ? `Ponto: ${row.measurementPoint}` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" • ") || row.note}
+                        </p>
+                      </div>
+                      {row.boardviewHref ? (
+                        <ActionLink href={row.boardviewHref} label={row.boardviewLabel ?? "Abrir no boardview"} />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--muted)]">Nenhuma net ou componente consolidado ainda.</p>
+              )}
+
+              {technicalContext?.schematic?.matches.length ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    Esquema: {technicalContext.schematic.assetTitle}
+                  </p>
+                  {technicalContext.schematic.matches.map((match) => (
+                    <div
+                      key={`${match.term}-${match.pageNumber}`}
+                      className="flex flex-wrap items-start justify-between gap-3 rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
+                          {match.term} • página {match.pageNumber}
+                        </p>
+                        <p className="mt-1 text-sm text-[var(--muted)]">{match.excerpt}</p>
+                      </div>
+                      <ActionLink
+                        href={appendLabContext(match.openLabHref, { page: String(match.pageNumber) })}
+                        label="Abrir página do esquema"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </ResponseBlock>
+
+            {limitations.length ? (
+              <ResponseBlock title="Limitações">
+                <div className="space-y-2">
+                  {limitations.map((item) => (
+                    <p
+                      key={item}
+                      className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm text-[var(--muted)]"
+                    >
+                      {item}
+                    </p>
+                  ))}
+                </div>
+              </ResponseBlock>
+            ) : null}
           </div>
         ) : null}
       </SectionCard>
