@@ -177,6 +177,27 @@ function buildAssociationSnapshot(
   };
 }
 
+function inferNetVoltageHint(netName: string): string | null {
+  const normalized = netName.trim().toUpperCase();
+
+  const isGround =
+    /^(A|D|P)?GND(_|\d*$)/.test(normalized) ||
+    /_GND(_|\d*$)/.test(normalized) ||
+    /^VSS(_|\d*$)/.test(normalized);
+
+  if (isGround) {
+    return "0V (GND)";
+  }
+
+  const railMatch = normalized.match(/^PP(\d+)V(\d+)?(?:_|$)/);
+  if (railMatch) {
+    const [, whole, decimals] = railMatch;
+    return decimals ? `${whole}.${decimals}V` : `${whole}V`;
+  }
+
+  return null;
+}
+
 async function computeFileSha256(file: File) {
   const buffer = await file.arrayBuffer();
   const hashBuffer = await window.crypto.subtle.digest("SHA-256", buffer);
@@ -1516,6 +1537,11 @@ export function BoardviewLab({
             >
               Net: {visibleSelected.padPin.netName}
             </button>
+            {inferNetVoltageHint(visibleSelected.padPin.netName) ? (
+              <p className="text-[var(--accent-teal)]">
+                Esperado: ~{inferNetVoltageHint(visibleSelected.padPin.netName)} (pelo nome da net, confirme no esquema)
+              </p>
+            ) : null}
             <p>Lado: {visibleSelected.padPin.side}</p>
             <p>Probe: {visibleSelected.padPin.probe}</p>
             <p>
@@ -1528,6 +1554,11 @@ export function BoardviewLab({
         {visibleSelected?.kind === "net" ? (
           <div className="mt-4 grid gap-2 text-sm text-[var(--foreground)]">
             <p>Net: {visibleSelected.net.name}</p>
+            {inferNetVoltageHint(visibleSelected.net.name) ? (
+              <p className="text-[var(--accent-teal)]">
+                Esperado: ~{inferNetVoltageHint(visibleSelected.net.name)} (pelo nome da net, confirme no esquema)
+              </p>
+            ) : null}
             <p>Pads: {visibleSelected.net.padPinCount}</p>
             <p>Test points: {visibleSelected.net.testPointCount}</p>
             <p>Probes: {visibleSelected.net.probeIds.length}</p>
@@ -1547,6 +1578,11 @@ export function BoardviewLab({
             >
               Net: {visibleSelected.testPoint.netName}
             </button>
+            {inferNetVoltageHint(visibleSelected.testPoint.netName) ? (
+              <p className="text-[var(--accent-teal)]">
+                Esperado: ~{inferNetVoltageHint(visibleSelected.testPoint.netName)} (pelo nome da net, confirme no esquema)
+              </p>
+            ) : null}
             <p>Lado: {visibleSelected.testPoint.side}</p>
             <p>Probe: {visibleSelected.testPoint.probe}</p>
             <p>
@@ -1620,6 +1656,11 @@ export function BoardviewLab({
                     >
                       Net ligada: {padPin.netName}
                     </button>
+                    {inferNetVoltageHint(padPin.netName) ? (
+                      <p className="mt-1 text-xs text-[var(--accent-teal)]">
+                        Esperado: ~{inferNetVoltageHint(padPin.netName)} (pelo nome da net, confirme no esquema)
+                      </p>
+                    ) : null}
                   </div>
                 ))}
               </div>
