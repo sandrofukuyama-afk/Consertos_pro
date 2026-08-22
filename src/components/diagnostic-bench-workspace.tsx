@@ -99,6 +99,10 @@ type NetRow = {
   boardviewLabel: string | null;
 };
 
+function stripBoardviewCoordinates(value: string) {
+  return value.replace(/\s*em\s+[\d.]+\s*mil\s*x\s*[\d.]+\s*mil/i, "").trim();
+}
+
 function normalizeNetKey(value: string) {
   return value.trim().toLowerCase();
 }
@@ -543,9 +547,11 @@ export function DiagnosticBenchWorkspace({
                         <p className="mt-1 text-sm text-[var(--muted)]">
                           {[
                             row.expectedVoltage ? `Esperado: ${row.expectedVoltage}` : null,
-                            row.measurementPoint ? `Ponto: ${row.measurementPoint}` : null,
+                            row.measurementPoint
+                              ? `Ponto: ${stripBoardviewCoordinates(row.measurementPoint)}`
+                              : null,
                           ]
-                            .filter(Boolean)
+                            .filter((entry) => Boolean(entry) && !entry?.endsWith(": "))
                             .join(" • ") || row.note}
                         </p>
                       </div>
