@@ -466,6 +466,7 @@ export function DiagnosticBenchWorkspace({
             <textarea
               name="assistant_prompt"
               rows={5}
+              defaultValue={latestResponse ? undefined : detail.initialReport}
               placeholder="Ex.: não liga; entrada com 20V; PP3V3_G3H em 0V; sem consumo ao pressionar power; suspeita em U6990/linha 3V3. Quero direção prática de diagnóstico."
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
             />
