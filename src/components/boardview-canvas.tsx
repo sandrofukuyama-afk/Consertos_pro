@@ -25,6 +25,7 @@ import {
   getNetDetails,
   getSelectionHighlightNetName,
   getSelectionVisibleComponents,
+  inferNetVoltageHint,
 } from "@/lib/boardview/lab";
 import {
   resolveObservedCanvasMetrics,
@@ -67,6 +68,45 @@ function sameViewport(left: BoardviewViewport, right: BoardviewViewport) {
   );
 }
 
+function getTooltipNetName(selection: BoardviewLabSelection): string | null {
+  switch (selection.kind) {
+    case "padPin":
+      return selection.padPin.netName;
+    case "testPoint":
+      return selection.testPoint.netName;
+    case "net":
+      return selection.net.name;
+    default:
+      return null;
+  }
+}
+
+function getTooltipTitle(selection: BoardviewLabSelection): string {
+  switch (selection.kind) {
+    case "component":
+      return selection.component.ref;
+    case "padPin":
+      return selection.padPin.id;
+    case "testPoint":
+      return selection.testPoint.id;
+    case "net":
+      return selection.net.name;
+  }
+}
+
+function getTooltipSubtitle(selection: BoardviewLabSelection): string {
+  switch (selection.kind) {
+    case "component":
+      return `${selection.component.pinCount} pads • ${selection.component.mountingSide}`;
+    case "padPin":
+      return `Pad/pino • ${selection.padPin.side}`;
+    case "testPoint":
+      return `Test point • ${selection.testPoint.side}`;
+    case "net":
+      return "Net";
+  }
+}
+
 export const BoardviewCanvas = forwardRef<
   BoardviewCanvasHandle,
   BoardviewCanvasProps
@@ -107,10 +147,16 @@ export const BoardviewCanvas = forwardRef<
   });
   const [canvasPixelRatio, setCanvasPixelRatio] = useState(1);
   const [viewport, setViewport] = useState<BoardviewViewport>(DEFAULT_VIEWPORT);
+  const [tooltip, setTooltip] = useState<{
+    x: number;
+    y: number;
+    selection: BoardviewLabSelection;
+  } | null>(null);
 
   useEffect(() => {
     pendingFitToScreenRef.current = true;
     setViewport(DEFAULT_VIEWPORT);
+    setTooltip(null);
   }, [model]);
 
   useEffect(() => {
@@ -206,6 +252,7 @@ export const BoardviewCanvas = forwardRef<
         return;
       }
 
+      setTooltip(null);
       const rect = canvasRef.current.getBoundingClientRect();
       const anchorPoint = {
         x: clientX - rect.left,
@@ -697,6 +744,7 @@ export const BoardviewCanvas = forwardRef<
     dragStateRef.current.lastX = event.clientX;
     dragStateRef.current.lastY = event.clientY;
     pendingFitToScreenRef.current = false;
+    setTooltip(null);
 
     setViewport((current) => ({
       ...current,
@@ -725,9 +773,10 @@ export const BoardviewCanvas = forwardRef<
     }
 
     const rect = canvasRef.current.getBoundingClientRect();
+    const localPoint = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const mirrorX = side === "bottom";
     const boardPoint = canvasToBoardPoint(
-      { x: event.clientX - rect.left, y: event.clientY - rect.top },
+      localPoint,
       viewport,
       model.parsed.metadata.bounds,
       mirrorX,
@@ -737,6 +786,9 @@ export const BoardviewCanvas = forwardRef<
 
     if (nearest) {
       onSelectItem(nearest);
+      setTooltip({ x: localPoint.x, y: localPoint.y, selection: nearest });
+    } else {
+      setTooltip(null);
     }
   }
 
@@ -750,6 +802,21 @@ export const BoardviewCanvas = forwardRef<
       canvasRef.current.releasePointerCapture(event.pointerId);
     }
   }
+
+  const tooltipNetName = tooltip ? getTooltipNetName(tooltip.selection) : null;
+  const tooltipNetDetails =
+    model && tooltipNetName ? getNetDetails(model, tooltipNetName) : null;
+  const tooltipTopCount =
+    tooltipNetDetails?.padPins.filter((pad) => pad.side === "top").length ?? 0;
+  const tooltipBottomCount =
+    tooltipNetDetails?.padPins.filter((pad) => pad.side === "bottom").length ?? 0;
+  const tooltipVoltageHint = tooltipNetName ? inferNetVoltageHint(tooltipNetName) : null;
+  const tooltipLeft = tooltip
+    ? Math.min(Math.max(tooltip.x + 14, 8), Math.max(8, canvasSize.width - 272))
+    : 0;
+  const tooltipTop = tooltip
+    ? Math.min(Math.max(tooltip.y + 14, 8), Math.max(8, canvasSize.height - 200))
+    : 0;
 
   return (
     <div className="relative h-full min-h-0 min-w-0 w-full flex-1 overflow-hidden bg-[#12111a]">
@@ -765,6 +832,49 @@ export const BoardviewCanvas = forwardRef<
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
         />
+
+        {tooltip ? (
+          <div
+            className="pointer-events-auto absolute z-20 w-64 rounded-[16px] border border-[var(--panel-border)] bg-[rgba(18,17,26,0.96)] p-3 text-xs shadow-[0_18px_40px_rgba(0,0,0,0.4)] backdrop-blur"
+            style={{ left: tooltipLeft, top: tooltipTop }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[var(--foreground)]">
+                  {getTooltipTitle(tooltip.selection)}
+                </p>
+                <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+                  {getTooltipSubtitle(tooltip.selection)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTooltip(null)}
+                className="shrink-0 rounded-full border border-[var(--panel-border)] bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] transition hover:bg-white/10"
+              >
+                Fechar
+              </button>
+            </div>
+
+            {tooltipNetName ? (
+              <div className="mt-2 grid gap-1">
+                <p className="text-[var(--muted)]">
+                  Net:{" "}
+                  <span className="font-semibold text-[var(--foreground)]">
+                    {tooltipNetName}
+                  </span>
+                </p>
+                {tooltipVoltageHint ? (
+                  <p className="text-[var(--accent-teal)]">Esperado: ~{tooltipVoltageHint}</p>
+                ) : null}
+                <p className="text-[var(--muted)]">
+                  Lado superior: {tooltipTopCount} ponto{tooltipTopCount === 1 ? "" : "s"} • Lado
+                  inferior: {tooltipBottomCount} ponto{tooltipBottomCount === 1 ? "" : "s"}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

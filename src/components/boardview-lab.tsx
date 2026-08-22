@@ -24,6 +24,7 @@ import {
   buildBoardviewLabModel,
   getComponentPadPins,
   getNetDetails,
+  inferNetVoltageHint,
   isSelectionOnVisibleSide,
   searchBoardviewLabModel,
 } from "@/lib/boardview/lab";
@@ -175,37 +176,6 @@ function buildAssociationSnapshot(
     equipmentModelId: association?.equipmentModelId ?? null,
     equipmentModelName: association?.equipmentModelName ?? null,
   };
-}
-
-function inferNetVoltageHint(netName: string): string | null {
-  const normalized = netName.trim().toUpperCase();
-
-  const isGround =
-    /^(A|D|P)?GND(_|\d*$)/.test(normalized) ||
-    /_GND(_|\d*$)/.test(normalized) ||
-    /^VSS(_|\d*$)/.test(normalized);
-
-  if (isGround) {
-    return "0V (GND)";
-  }
-
-  const railMatches = [...normalized.matchAll(/P{1,2}(\d+)V(\d+)?(?=_|$)/g)];
-  if (!railMatches.length) {
-    return null;
-  }
-
-  const distinctValues = new Set(
-    railMatches.map(([, whole, decimals]) => (decimals ? `${whole}.${decimals}` : whole)),
-  );
-
-  if (distinctValues.size !== 1) {
-    return null;
-  }
-
-  const value = `${[...distinctValues][0]}V`;
-  const isDerivedReference = /(VREF|_REF\d*$|SENSE)/.test(normalized);
-
-  return isDerivedReference ? `${value} (referencia, pode ser reduzida - confira)` : value;
 }
 
 async function computeFileSha256(file: File) {
