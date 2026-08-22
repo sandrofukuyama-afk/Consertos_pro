@@ -1480,6 +1480,16 @@ export function BoardviewLab({
     pdfInputRef.current?.click();
   }
 
+  async function handleOpenSelectionInSchematic() {
+    if (!pdfBytes) {
+      await handleOpenPdfClick();
+    }
+
+    setViewerMode((current) => (current === "boardview" ? "split" : current));
+    setMobileTab("schematic");
+    setDetailsOpen(false);
+  }
+
   function handleZoomStep(multiplier: number) {
     boardviewCanvasRef.current?.zoomBy(multiplier);
   }
@@ -2461,6 +2471,16 @@ export function BoardviewLab({
                     className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
                   >
                     Voltar
+                  </button>
+                ) : null}
+                {linkedSchematicQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenSelectionInSchematic()}
+                    disabled={isCheckingPdfAssociation}
+                    className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-copper)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isCheckingPdfAssociation ? "Verificando..." : "Abrir no esquema"}
                   </button>
                 ) : null}
                 <button
