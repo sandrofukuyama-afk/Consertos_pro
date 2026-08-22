@@ -108,6 +108,7 @@ export function DiagnosticTechnicalAssetAssociation({
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingAssetId, setDeletingAssetId] = useState<string | null>(null);
   const [selectedBoardviewAssetId, setSelectedBoardviewAssetId] = useState(
     currentBoardviewAsset?.id ?? "",
   );
@@ -216,6 +217,48 @@ export function DiagnosticTechnicalAssetAssociation({
       setResults([]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleDeleteAsset(item: SearchResultItem) {
+    const confirmed = window.confirm(
+      `Excluir "${item.title}" da biblioteca tecnica?\n\nIsso remove o registro (e o arquivo do Storage, se nao houver outra copia usando o mesmo arquivo) e qualquer vinculo com placa ou modelo.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingAssetId(item.id);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/technical-assets/${item.id}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Falha ao excluir o arquivo tecnico.");
+      }
+
+      setResults((current) => current.filter((entry) => entry.id !== item.id));
+      if (selectedBoardviewAssetId === item.id) {
+        setSelectedBoardviewAssetId("");
+      }
+      if (selectedSchematicAssetId === item.id) {
+        setSelectedSchematicAssetId("");
+      }
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Falha ao excluir o arquivo tecnico.",
+      );
+    } finally {
+      setDeletingAssetId(null);
     }
   }
 
@@ -534,6 +577,14 @@ export function DiagnosticTechnicalAssetAssociation({
                           {isSelectedSchematic ? "Esquema escolhido" : "Usar como esquema"}
                         </button>
                       ) : null}
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteAsset(item)}
+                        disabled={deletingAssetId === item.id}
+                        className="rounded-full border border-[rgba(202,106,85,0.32)] bg-[rgba(202,106,85,0.08)] px-3 py-2 text-xs font-semibold text-[var(--danger)] transition hover:bg-[rgba(202,106,85,0.14)] disabled:opacity-50"
+                      >
+                        {deletingAssetId === item.id ? "Excluindo..." : "Excluir"}
+                      </button>
                     </div>
                   </div>
 
