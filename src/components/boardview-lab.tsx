@@ -189,13 +189,23 @@ function inferNetVoltageHint(netName: string): string | null {
     return "0V (GND)";
   }
 
-  const railMatch = normalized.match(/^PP(\d+)V(\d+)?(?:_|$)/);
-  if (railMatch) {
-    const [, whole, decimals] = railMatch;
-    return decimals ? `${whole}.${decimals}V` : `${whole}V`;
+  const railMatches = [...normalized.matchAll(/P{1,2}(\d+)V(\d+)?(?=_|$)/g)];
+  if (!railMatches.length) {
+    return null;
   }
 
-  return null;
+  const distinctValues = new Set(
+    railMatches.map(([, whole, decimals]) => (decimals ? `${whole}.${decimals}` : whole)),
+  );
+
+  if (distinctValues.size !== 1) {
+    return null;
+  }
+
+  const value = `${[...distinctValues][0]}V`;
+  const isDerivedReference = /(VREF|_REF\d*$|SENSE)/.test(normalized);
+
+  return isDerivedReference ? `${value} (referencia, pode ser reduzida - confira)` : value;
 }
 
 async function computeFileSha256(file: File) {
