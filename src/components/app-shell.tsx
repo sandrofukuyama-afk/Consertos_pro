@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
+import { BackButton } from "@/components/back-button";
 import { Logo } from "@/components/logo";
 import { LogoutButton } from "@/components/logout-button";
 import { navItems } from "@/lib/mock-data";
@@ -17,6 +18,8 @@ type AppShellProps = {
   user: AppUser;
   children: ReactNode;
   shellMode?: "default" | "workspace";
+  showBackButton?: boolean;
+  backFallbackHref?: string;
 };
 
 export function AppShell({
@@ -27,6 +30,8 @@ export function AppShell({
   user,
   children,
   shellMode = "default",
+  showBackButton = false,
+  backFallbackHref = "/",
 }: AppShellProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -318,6 +323,12 @@ const renderSidebarContent = () => (
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
               <div className={`grid gap-2 ${isWorkspaceMode ? "grid-cols-2 w-full sm:flex sm:w-auto sm:flex-wrap" : "grid-cols-2 w-full sm:flex sm:w-auto sm:gap-3"}`}>
+                {showBackButton ? (
+                  <BackButton
+                    fallbackHref={backFallbackHref}
+                    className={`flex items-center justify-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] text-sm font-semibold text-white transition hover:bg-white/5 ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
+                  />
+                ) : null}
                 <Link
                   href={actionHref}
                   className={`rounded-full bg-[var(--accent-copper)] text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9] ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}

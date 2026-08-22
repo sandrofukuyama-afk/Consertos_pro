@@ -266,6 +266,8 @@ export default async function BoardviewLabPage({
       actionHref="/"
       user={user}
       shellMode="workspace"
+      showBackButton
+      backFallbackHref={diagnosticId ? `/diagnosticos/${diagnosticId}` : "/"}
     >
       <BoardviewLab
         initialAssociation={{
