@@ -294,6 +294,7 @@ export function BoardviewLab({
   const appliedInitialBoardviewFocusRef = useRef<string | null>(null);
   const pendingSelectionFocusRef = useRef(false);
   const selectedRef = useRef<BoardviewLabSelection | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
   const splitResizeStateRef = useRef<{
     active: boolean;
     pointerId: number;
@@ -322,6 +323,7 @@ export function BoardviewLab({
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
   const [pdfErrorMessage, setPdfErrorMessage] = useState<string | null>(null);
   const [isReadingPdfFile, setIsReadingPdfFile] = useState(false);
+  const [isCheckingPdfAssociation, setIsCheckingPdfAssociation] = useState(false);
   const [pdfTechnicalFile, setPdfTechnicalFile] =
     useState<SaveableTechnicalFileState | null>(null);
   const [viewerMode, setViewerMode] = useState<LabViewerMode>(initialViewerMode);
@@ -1339,6 +1341,114 @@ export function BoardviewLab({
     }
   }
 
+  async function loadAssociatedPdfAsset(item: {
+    id: string;
+    originalFileName: string;
+  }) {
+    setIsReadingPdfFile(true);
+    setPdfErrorMessage(null);
+
+    try {
+      const response = await fetch(`/api/technical-assets/${item.id}/content`, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const payload = await readApiResponsePayload(response);
+        throw new Error(payload?.error ?? "Falha ao carregar o PDF salvo.");
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const file = new File([arrayBuffer], item.originalFileName, {
+        type: "application/pdf",
+      });
+      const savedTechnicalFile = {
+        ...buildSaveableTechnicalFileState("schematic", file),
+        existingAssetId: item.id,
+        associationLinked: true,
+        association: buildAssociationSnapshot(initialAssociation),
+        status: "saved" as const,
+        message: "Arquivo ja salvo.",
+      };
+
+      startTransition(() => {
+        setPdfFileName(item.originalFileName);
+        setPdfBytes(new Uint8Array(arrayBuffer));
+        setViewerMode((current) => (current === "boardview" ? "split" : current));
+        setPdfTechnicalFile(savedTechnicalFile);
+      });
+
+      return true;
+    } catch (error) {
+      setPdfErrorMessage(
+        error instanceof Error ? error.message : "Falha ao carregar o PDF salvo.",
+      );
+      return false;
+    } finally {
+      setIsReadingPdfFile(false);
+    }
+  }
+
+  async function handleOpenPdfClick() {
+    if (pdfBytes) {
+      pdfInputRef.current?.click();
+      return;
+    }
+
+    const boardId = initialAssociation.boardId;
+    const equipmentModelId = initialAssociation.equipmentModelId;
+
+    if (!boardId && !equipmentModelId) {
+      pdfInputRef.current?.click();
+      return;
+    }
+
+    setIsCheckingPdfAssociation(true);
+
+    try {
+      const params = new URLSearchParams({ file_format: "pdf", limit: "20" });
+      if (boardId) {
+        params.set("board_id", boardId);
+      }
+      if (equipmentModelId) {
+        params.set("equipment_model_id", equipmentModelId);
+      }
+
+      const response = await fetch(`/api/technical-assets?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const payload = response.ok ? await response.json() : null;
+      const items = (
+        Array.isArray(payload?.items) ? payload.items : []
+      ) as Array<{
+        id: string;
+        originalFileName: string;
+        fileFormat: string;
+        boardId: string | null;
+        equipmentModelId: string | null;
+      }>;
+
+      const strictMatch = items.find(
+        (item) =>
+          (boardId && item.boardId === boardId) ||
+          (equipmentModelId && item.equipmentModelId === equipmentModelId),
+      );
+
+      if (strictMatch) {
+        const loaded = await loadAssociatedPdfAsset(strictMatch);
+        if (loaded) {
+          return;
+        }
+      }
+    } catch {
+      // Falha na busca da biblioteca: cai no fallback do seletor de arquivo local.
+    } finally {
+      setIsCheckingPdfAssociation(false);
+    }
+
+    pdfInputRef.current?.click();
+  }
+
   function handleZoomStep(multiplier: number) {
     boardviewCanvasRef.current?.zoomBy(multiplier);
   }
@@ -1686,15 +1796,21 @@ export function BoardviewLab({
             onChange={handleFileSelection}
           />
         </label>
-        <label className="cursor-pointer rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5">
-          Abrir PDF
-          <input
-            type="file"
-            accept=".pdf,application/pdf"
-            className="hidden"
-            onChange={handlePdfFileSelection}
-          />
-        </label>
+        <button
+          type="button"
+          onClick={handleOpenPdfClick}
+          disabled={isCheckingPdfAssociation}
+          className="cursor-pointer rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isCheckingPdfAssociation ? "Verificando biblioteca..." : "Abrir PDF"}
+        </button>
+        <input
+          ref={pdfInputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          className="hidden"
+          onChange={handlePdfFileSelection}
+        />
       </div>
     </div>
   );
@@ -1718,15 +1834,25 @@ export function BoardviewLab({
               onChange={handleFileSelection}
             />
           </label>
-          <label className="cursor-pointer rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3.5 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5">
-            {isReadingPdfFile ? "Lendo PDF..." : "Abrir PDF"}
-            <input
-              type="file"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={handlePdfFileSelection}
-            />
-          </label>
+          <button
+            type="button"
+            onClick={handleOpenPdfClick}
+            disabled={isCheckingPdfAssociation}
+            className="cursor-pointer rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3.5 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCheckingPdfAssociation
+              ? "Verificando biblioteca..."
+              : isReadingPdfFile
+                ? "Lendo PDF..."
+                : "Abrir PDF"}
+          </button>
+          <input
+            ref={pdfInputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            onChange={handlePdfFileSelection}
+          />
           <input
             type="text"
             value={query}
