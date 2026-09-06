@@ -54,10 +54,6 @@ const INITIAL_FORM: MeasurementPayload = {
   isOutOfRange: false,
 };
 
-function buildBoardLabel(board: MeasurementBoardOption) {
-  return board.name ?? board.boardCode ?? board.roleLabel;
-}
-
 export function MeasurementForm({
   diagnosticId,
   tests = [],
@@ -288,55 +284,6 @@ export function MeasurementForm({
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-4">
-        <div className="grid gap-3 lg:grid-cols-2">
-          <label className="grid gap-1 text-xs text-[var(--muted)]">
-            Vincular a um teste (opcional)
-            <select
-              value={form.diagnosticTestRunId}
-              onChange={(event) => {
-                const nextTestId = event.target.value;
-                const nextTest = tests.find((item) => item.id === nextTestId);
-                setForm((current) => ({
-                  ...current,
-                  diagnosticTestRunId: nextTestId,
-                  expectedValueText:
-                    current.expectedValueText || !nextTest?.expectedResult
-                      ? current.expectedValueText
-                      : nextTest.expectedResult === "Sem resultado esperado definido."
-                        ? current.expectedValueText
-                        : nextTest.expectedResult,
-                }));
-              }}
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
-            >
-              <option value="">Sem vincular a um teste especifico</option>
-              {tests.map((item) => (
-                <option key={item.id} value={item.id}>
-                  Etapa {item.stepOrder} - {item.testName}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="grid gap-1 text-xs text-[var(--muted)]">
-            Placa medida (opcional)
-            <select
-              value={form.diagnosticBoardId}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, diagnosticBoardId: event.target.value }))
-              }
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
-            >
-              <option value="">Placa nao informada</option>
-              {boards.map((board) => (
-                <option key={board.id} value={board.id}>
-                  {buildBoardLabel(board)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
         {selectedTest ? (
           <div className="rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4 text-sm">
             <p className="font-semibold text-[var(--foreground)]">
