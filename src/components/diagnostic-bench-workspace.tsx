@@ -654,49 +654,65 @@ export function DiagnosticBenchWorkspace({
             <input type="hidden" name="diagnostic_id" value={detail.id} />
             <input type="hidden" name="requested_by_ai_response_id" value={latestResponse?.id ?? ""} />
             <input type="hidden" name="diagnostic_board_id" value={primaryBoard?.id ?? ""} />
-            <select
-              required
-              name="test_id"
-              defaultValue={structured?.recommendedTestId ?? ""}
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-            >
-              <option value="" disabled>
-                Selecionar teste
-              </option>
-              {options.tests.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Teste executado
+              <select
+                required
+                name="test_id"
+                defaultValue={structured?.recommendedTestId ?? ""}
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              >
+                <option value="" disabled>
+                  Selecionar teste
                 </option>
-              ))}
-            </select>
-            <textarea
-              name="procedure_notes"
-              rows={3}
-              placeholder="Procedimento executado"
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-            />
-            <textarea
-              name="actual_result"
-              rows={3}
-              placeholder="Resultado observado"
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-            />
-            <textarea
-              name="conclusion"
-              rows={3}
-              placeholder="Conclusão prática da bancada"
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-            />
-            <select
-              name="result_status"
-              defaultValue="pending"
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-            >
-              <option value="pending">Aguardando teste</option>
-              <option value="passed">Passou</option>
-              <option value="failed">Falhou</option>
-              <option value="inconclusive">Inconclusivo</option>
-            </select>
+                {options.tests.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Procedimento executado (opcional)
+              <textarea
+                name="procedure_notes"
+                rows={3}
+                placeholder="Ex.: removida bateria, medida DC-IN com fonte de bancada em 20V"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              />
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Resultado observado
+              <textarea
+                required
+                name="actual_result"
+                rows={3}
+                placeholder="Ex.: DC-IN estabilizou em 19.8V, sem quedas"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              />
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Conclusão prática da bancada (opcional)
+              <textarea
+                name="conclusion"
+                rows={3}
+                placeholder="Ex.: fonte de entrada ok, seguir para o circuito de habilitação"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              />
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Resultado do teste
+              <select
+                name="result_status"
+                defaultValue="pending"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              >
+                <option value="pending">Aguardando teste</option>
+                <option value="passed">Passou</option>
+                <option value="failed">Falhou</option>
+                <option value="inconclusive">Inconclusivo</option>
+              </select>
+            </label>
             <FormSubmitButton idleLabel="Registrar teste feito" pendingLabel="Salvando teste..." />
           </form>
         </SectionCard>

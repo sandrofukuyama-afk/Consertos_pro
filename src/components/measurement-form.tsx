@@ -219,11 +219,19 @@ export function MeasurementForm({
     return `${pendingItems.length} medicao(oes) aguardando sincronizacao`;
   }, [pendingItems.length]);
 
+  const hasValue = Boolean(form.measuredValueNumeric.trim() || form.measuredValueText.trim());
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSubmitting(true);
     setSyncMessage(null);
     setSyncError(null);
+
+    if (!hasValue) {
+      setSyncError("Informe o valor numérico ou uma leitura textual antes de salvar.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       if (!isOnline) {
@@ -279,48 +287,54 @@ export function MeasurementForm({
         ) : null}
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-3">
+      <form onSubmit={handleSubmit} className="grid gap-4">
         <div className="grid gap-3 lg:grid-cols-2">
-          <select
-            value={form.diagnosticTestRunId}
-            onChange={(event) => {
-              const nextTestId = event.target.value;
-              const nextTest = tests.find((item) => item.id === nextTestId);
-              setForm((current) => ({
-                ...current,
-                diagnosticTestRunId: nextTestId,
-                expectedValueText:
-                  current.expectedValueText || !nextTest?.expectedResult
-                    ? current.expectedValueText
-                    : nextTest.expectedResult === "Sem resultado esperado definido."
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Vincular a um teste (opcional)
+            <select
+              value={form.diagnosticTestRunId}
+              onChange={(event) => {
+                const nextTestId = event.target.value;
+                const nextTest = tests.find((item) => item.id === nextTestId);
+                setForm((current) => ({
+                  ...current,
+                  diagnosticTestRunId: nextTestId,
+                  expectedValueText:
+                    current.expectedValueText || !nextTest?.expectedResult
                       ? current.expectedValueText
-                      : nextTest.expectedResult,
-              }));
-            }}
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-          >
-            <option value="">Sem vincular a um teste especifico</option>
-            {tests.map((item) => (
-              <option key={item.id} value={item.id}>
-                Etapa {item.stepOrder} - {item.testName}
-              </option>
-            ))}
-          </select>
+                      : nextTest.expectedResult === "Sem resultado esperado definido."
+                        ? current.expectedValueText
+                        : nextTest.expectedResult,
+                }));
+              }}
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+            >
+              <option value="">Sem vincular a um teste especifico</option>
+              {tests.map((item) => (
+                <option key={item.id} value={item.id}>
+                  Etapa {item.stepOrder} - {item.testName}
+                </option>
+              ))}
+            </select>
+          </label>
 
-          <select
-            value={form.diagnosticBoardId}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, diagnosticBoardId: event.target.value }))
-            }
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-          >
-            <option value="">Placa nao informada</option>
-            {boards.map((board) => (
-              <option key={board.id} value={board.id}>
-                {buildBoardLabel(board)}
-              </option>
-            ))}
-          </select>
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Placa medida (opcional)
+            <select
+              value={form.diagnosticBoardId}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, diagnosticBoardId: event.target.value }))
+              }
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+            >
+              <option value="">Placa nao informada</option>
+              {boards.map((board) => (
+                <option key={board.id} value={board.id}>
+                  {buildBoardLabel(board)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {selectedTest ? (
@@ -334,93 +348,135 @@ export function MeasurementForm({
           </div>
         ) : null}
 
-        <select
-          required
-          value={form.measurementType}
-          onChange={(event) => setForm((current) => ({ ...current, measurementType: event.target.value }))}
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-        >
-          <option value="" disabled>
-            Tipo de medicao
-          </option>
-          <option value="voltage">Tensao</option>
-          <option value="current">Corrente</option>
-          <option value="resistance">Resistencia</option>
-          <option value="temperature">Temperatura</option>
-          <option value="consumption">Consumo</option>
-          <option value="frequency">Frequencia</option>
-          <option value="continuity">Continuidade</option>
-          <option value="other">Outra</option>
-        </select>
+        <div className="grid gap-3 rounded-[20px] border border-[var(--panel-border)] bg-[var(--card-surface-soft)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+            Leitura da bancada
+          </p>
 
-        <input
-          type="text"
-          value={form.pointLabel}
-          onChange={(event) => setForm((current) => ({ ...current, pointLabel: event.target.value }))}
-          placeholder="Ponto medido. Ex.: PL401, 3V_ALW, gate do MOSFET"
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-        />
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Tipo de medição
+              <select
+                required
+                value={form.measurementType}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, measurementType: event.target.value }))
+                }
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              >
+                <option value="" disabled>
+                  Selecione o tipo
+                </option>
+                <option value="voltage">Tensao</option>
+                <option value="current">Corrente</option>
+                <option value="resistance">Resistencia</option>
+                <option value="temperature">Temperatura</option>
+                <option value="consumption">Consumo</option>
+                <option value="frequency">Frequencia</option>
+                <option value="continuity">Continuidade</option>
+                <option value="other">Outra</option>
+              </select>
+            </label>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <input
-            type="number"
-            step="0.0001"
-            value={form.measuredValueNumeric}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, measuredValueNumeric: event.target.value }))
-            }
-            placeholder="Valor numerico"
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-          />
-          <input
-            type="text"
-            value={form.unit}
-            onChange={(event) => setForm((current) => ({ ...current, unit: event.target.value }))}
-            placeholder="Unidade. Ex.: V, A, Ohm"
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-          />
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Ponto medido (opcional)
+              <input
+                type="text"
+                value={form.pointLabel}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, pointLabel: event.target.value }))
+                }
+                placeholder="Ex.: PL401, 3V_ALW, gate do MOSFET"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Valor medido
+              <input
+                type="number"
+                step="0.0001"
+                value={form.measuredValueNumeric}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, measuredValueNumeric: event.target.value }))
+                }
+                placeholder="Ex.: 3.28"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              />
+            </label>
+            <label className="grid gap-1 text-xs text-[var(--muted)]">
+              Unidade
+              <input
+                type="text"
+                value={form.unit}
+                onChange={(event) => setForm((current) => ({ ...current, unit: event.target.value }))}
+                placeholder="Ex.: V, A, Ohm"
+                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+              />
+            </label>
+          </div>
+
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Leitura textual (use se não houver valor numérico)
+            <input
+              type="text"
+              value={form.measuredValueText}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, measuredValueText: event.target.value }))
+              }
+              placeholder="Ex.: sem 3.3V, pulando consumo, linha zerada"
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+            />
+          </label>
+
+          {!hasValue ? (
+            <p className="text-xs text-[var(--danger)]">
+              Preencha o valor medido ou a leitura textual para poder salvar.
+            </p>
+          ) : null}
         </div>
 
-        <input
-          type="text"
-          value={form.measuredValueText}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, measuredValueText: event.target.value }))
-          }
-          placeholder="Leitura textual. Ex.: sem 3.3V, pulando consumo, linha zerada"
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-        />
-
         <div className="grid gap-3 md:grid-cols-2">
-          <input
-            type="text"
-            value={form.expectedValueText}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, expectedValueText: event.target.value }))
-            }
-            placeholder="Valor esperado"
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-          />
-          <input
-            type="text"
-            value={form.toleranceText}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, toleranceText: event.target.value }))
-            }
-            placeholder="Tolerancia. Ex.: +/-5%, 0.1V"
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-          />
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Valor esperado (opcional)
+            <input
+              type="text"
+              value={form.expectedValueText}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, expectedValueText: event.target.value }))
+              }
+              placeholder="Ex.: 3.3V"
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+            />
+          </label>
+          <label className="grid gap-1 text-xs text-[var(--muted)]">
+            Tolerância (opcional)
+            <input
+              type="text"
+              value={form.toleranceText}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, toleranceText: event.target.value }))
+              }
+              placeholder="Ex.: +/-5%, 0.1V"
+              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+            />
+          </label>
         </div>
 
-        <textarea
-          rows={3}
-          value={form.measurementContext}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, measurementContext: event.target.value }))
-          }
-          placeholder="Contexto da medicao. Ex.: fonte assimetrica 19V, bateria desconectada, apos pressionar power"
-          className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-        />
+        <label className="grid gap-1 text-xs text-[var(--muted)]">
+          Contexto da medição (opcional)
+          <textarea
+            rows={3}
+            value={form.measurementContext}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, measurementContext: event.target.value }))
+            }
+            placeholder="Ex.: fonte assimetrica 19V, bateria desconectada, apos pressionar power"
+            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
+          />
+        </label>
 
         <label className="inline-flex items-center gap-2 text-sm text-[var(--foreground)]">
           <input
@@ -435,7 +491,7 @@ export function MeasurementForm({
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !hasValue}
           className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
           {isSubmitting ? "Salvando..." : isOnline ? "Registrar medicao" : "Salvar offline"}
