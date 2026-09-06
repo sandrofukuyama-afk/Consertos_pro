@@ -64,12 +64,18 @@ export function MeasurementForm({
   boards = [],
   suggestedTestId,
   activeScenarioTitle,
+  initialPointLabel,
+  initialExpectedValueText,
+  initialMeasurementType,
 }: {
   diagnosticId: string;
   tests?: MeasurementTestOption[];
   boards?: MeasurementBoardOption[];
   suggestedTestId?: string;
   activeScenarioTitle?: string;
+  initialPointLabel?: string;
+  initialExpectedValueText?: string;
+  initialMeasurementType?: string;
 }) {
   const router = useRouter();
   const defaultTestId = suggestedTestId || tests[0]?.id || "";
@@ -80,6 +86,9 @@ export function MeasurementForm({
     diagnosticId,
     diagnosticTestRunId: defaultTestId,
     diagnosticBoardId: defaultBoardId,
+    pointLabel: initialPointLabel ?? "",
+    expectedValueText: initialExpectedValueText ?? "",
+    measurementType: initialMeasurementType ?? "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(
@@ -105,12 +114,24 @@ export function MeasurementForm({
       diagnosticId,
       diagnosticTestRunId: suggestedTestId || tests[0]?.id || "",
       diagnosticBoardId: boards[0]?.id || "",
+      pointLabel: initialPointLabel ?? "",
+      measurementType: initialMeasurementType ?? "",
       expectedValueText:
         suggestedTestId || tests[0]?.id
-          ? (tests.find((item) => item.id === (suggestedTestId || tests[0]?.id))?.expectedResult ?? "")
-          : "",
+          ? (tests.find((item) => item.id === (suggestedTestId || tests[0]?.id))?.expectedResult ??
+            initialExpectedValueText ??
+            "")
+          : (initialExpectedValueText ?? ""),
     });
-  }, [boards, diagnosticId, suggestedTestId, tests]);
+  }, [
+    boards,
+    diagnosticId,
+    initialExpectedValueText,
+    initialMeasurementType,
+    initialPointLabel,
+    suggestedTestId,
+    tests,
+  ]);
 
   const syncPendingItems = useCallback(async () => {
     if (!navigator.onLine) {

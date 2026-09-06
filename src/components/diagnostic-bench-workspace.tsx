@@ -30,6 +30,11 @@ type DiagnosticBenchWorkspaceProps = {
     models: EquipmentModelCatalogOption[];
     manufacturers: CatalogOption[];
   };
+  prefillMeasurement?: {
+    pointLabel?: string;
+    expectedValueText?: string;
+    measurementType?: string;
+  };
 };
 
 function buildAssetHref(
@@ -292,6 +297,7 @@ export function DiagnosticBenchWorkspace({
   detail,
   options,
   catalog,
+  prefillMeasurement,
 }: DiagnosticBenchWorkspaceProps) {
   const primaryBoard = detail.boards.find((board) => board.isPrimary) ?? detail.boards[0] ?? null;
   const latestTest = detail.tests[0] ?? null;
@@ -632,6 +638,9 @@ export function DiagnosticBenchWorkspace({
             }))}
             suggestedTestId={structured?.recommendedTestId ?? undefined}
             activeScenarioTitle={structured?.probableArea ?? undefined}
+            initialPointLabel={prefillMeasurement?.pointLabel}
+            initialExpectedValueText={prefillMeasurement?.expectedValueText}
+            initialMeasurementType={prefillMeasurement?.measurementType}
           />
         </SectionCard>
 

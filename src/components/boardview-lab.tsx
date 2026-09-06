@@ -167,6 +167,19 @@ async function readApiResponsePayload(response: Response) {
   }
 }
 
+function buildMeasurementHref(
+  diagnosticId: string,
+  pointLabel: string,
+  expectedValueText: string | null,
+) {
+  const params = new URLSearchParams({ point_label: pointLabel, measurement_type: "voltage" });
+  if (expectedValueText) {
+    params.set("expected_value_text", expectedValueText);
+  }
+
+  return `/diagnosticos/${diagnosticId}?${params.toString()}#registrar-medicao`;
+}
+
 function buildAssociationSnapshot(
   association: Partial<TechnicalFileAssociation> | BoardviewLabAssociation | null | undefined,
 ): TechnicalFileAssociation {
@@ -1538,6 +1551,20 @@ export function BoardviewLab({
               Coordenadas: {visibleSelected.padPin.xMil} /{" "}
               {visibleSelected.padPin.yMil} mil
             </p>
+            {initialAssociation.diagnosticId ? (
+              <a
+                href={buildMeasurementHref(
+                  initialAssociation.diagnosticId,
+                  visibleSelected.padPin.id,
+                  inferNetVoltageHint(visibleSelected.padPin.netName),
+                )}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-flex w-fit rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+              >
+                Registrar medicao
+              </a>
+            ) : null}
           </div>
         ) : null}
 
@@ -1650,6 +1677,26 @@ export function BoardviewLab({
                       <p className="mt-1 text-xs text-[var(--accent-teal)]">
                         Esperado: ~{inferNetVoltageHint(padPin.netName)} (pelo nome da net, confirme no esquema)
                       </p>
+                    ) : null}
+                    {initialAssociation.diagnosticId ? (
+                      <>
+                        <a
+                          href={buildMeasurementHref(
+                            initialAssociation.diagnosticId,
+                            padPin.id,
+                            inferNetVoltageHint(padPin.netName),
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:bg-white/5"
+                        >
+                          Registrar medicao
+                        </a>
+                        <p className="mt-1 text-[10px] leading-4 text-[var(--muted)]">
+                          Abre em nova aba: Diagnostico → Assistente de bancada → Registrar
+                          medicao, com o ponto ja preenchido.
+                        </p>
+                      </>
                     ) : null}
                   </div>
                 ))}

@@ -12,6 +12,9 @@ type DiagnosticDetailPageProps = {
   searchParams: Promise<{
     error?: string;
     message?: string;
+    point_label?: string;
+    expected_value_text?: string;
+    measurement_type?: string;
   }>;
 };
 
@@ -50,7 +53,16 @@ export default async function DiagnosticDetailPage({
           </section>
         ) : null}
 
-        <DiagnosticBenchWorkspace detail={detail} options={options} catalog={catalog} />
+        <DiagnosticBenchWorkspace
+          detail={detail}
+          options={options}
+          catalog={catalog}
+          prefillMeasurement={{
+            pointLabel: query.point_label,
+            expectedValueText: query.expected_value_text,
+            measurementType: query.measurement_type,
+          }}
+        />
       </div>
     </AppShell>
   );
