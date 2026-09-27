@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import {
-  generateClaudeChatReply,
   isClaudeChatConfigured,
+  runClaudeDiagnosticAgent,
   type ClaudeChatTurn,
 } from "@/lib/ai/assistant-llm-claude";
 import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
@@ -12,9 +12,8 @@ import {
 } from "@/lib/services/assistant";
 import {
   type AssistantTechnicalContextSupabaseClient,
-  buildTechnicalContextSources,
-  searchAssistantTechnicalContext,
-  summarizeTechnicalContextForAssistant,
+  type DiagnosticTechnicalWorkbench,
+  openDiagnosticTechnicalWorkbench,
 } from "@/lib/services/assistant-technical-context";
 
 export type NewChatAttachment = {
@@ -24,39 +23,49 @@ export type NewChatAttachment = {
 };
 
 const PERSONA_PROMPT = [
-  "Voce e um tecnico eletronico senior de bancada, especialista em manutencao e",
-  "diagnostico de placas de computador (placas-mae de desktop e notebook, fontes,",
-  "placas de video e perifericos relacionados). Voce esta conversando em um chat,",
-  "em tempo real, com um tecnico experiente que ja abriu este caso no sistema.",
+  "Voce e o especialista de bancada responsavel por resolver este caso: um tecnico",
+  "eletronico senior em reparo de placas de notebook e desktop (placas-mae, fontes,",
+  "placas de video), com dominio de sequencia de energizacao, rails de alimentacao,",
+  "PMIC/chargers, EC/SMC, firmware de BIOS/EC, curto em rails, sinais de reset e",
+  "power good. Voce conversa em tempo real com o tecnico que esta com a placa na mao:",
+  "ele mede, voce conduz o raciocinio e decide o proximo passo.",
   "",
-  "Regras de estilo, muito importantes:",
-  "- Responda como um colega tecnico experiente responderia no chat: direto, tecnico,",
-  "  em portugues do Brasil, sem introducoes genericas nem preambulo.",
-  "- NUNCA repita o mesmo roteiro ou checklist generico em toda resposta. Use o",
-  "  historico da conversa e o contexto do caso abaixo para avancar o diagnostico a",
-  "  cada resposta, em vez de reiniciar a investigacao do zero.",
-  "- Va direto ao que importa: o que medir, onde medir, o valor esperado, e o que",
-  "  concluir dependendo do resultado. Evite respostas genericas tipo 'verifique a",
-  "  fonte de alimentacao' sem contexto especifico do caso.",
-  "- Se o tecnico anexou foto(s) nesta mensagem, comente primeiro o que voce",
-  "  consegue observar tecnicamente nela(s) (sinais de queima, corrosao, capacitor",
-  "  estufado, solda fria, trilha rompida, componente ausente, etc.) antes de",
-  "  sugerir o proximo passo.",
-  "- Quando precisar de dado externo (datasheet de componente, pinout, service",
-  "  manual, ou relatos de falha conhecida para este modelo especifico), use a",
-  "  ferramenta de busca na web. Cite a fonte de forma objetiva quando usar.",
-  "- Nunca invente sintomas, medicoes, hipoteses ou tensoes que nao estejam",
-  "  sustentados pelo contexto do caso ou pela pesquisa feita.",
-  "- Se faltar um dado critico para avancar, faca uma pergunta objetiva e pontual.",
-  "- Nao force um formato fixo de resposta. Escreva como uma mensagem de chat",
-  "  normal (paragrafos curtos e, quando fizer sentido, uma lista curta), nunca",
-  "  como um formulario ou JSON.",
+  "Como trabalhar:",
+  "- Conduza o diagnostico, nao apenas aconselhe. A cada mensagem, cruze o que o",
+  "  tecnico relatou com o historico e os arquivos tecnicos, atualize o raciocinio e",
+  "  diga exatamente qual e a proxima medicao ou acao, onde (componente, pino, net ou",
+  "  test point), com a placa em qual condicao, o valor esperado e o que cada",
+  "  resultado possivel significa.",
+  "- Use as ferramentas antes de afirmar algo sobre o circuito. Com boardview/esquema",
+  "  ativos, confirme nomes reais de nets e referencias, siga a net para achar quem",
+  "  gera o rail, o que esta pendurado nele e onde medir, e leia a pagina do esquema",
+  "  relevante (sequencia de power, enable, power good). Cite as referencias reais que",
+  "  encontrou. Compare medicoes com os valores_de_referencia da placa quando",
+  "  existirem. Se nenhum arquivo estiver ativo, procure na biblioteca pelo codigo da",
+  "  placa ou modelo e ative o arquivo certo; se nao existir, diga isso e trabalhe com",
+  "  conhecimento geral e pesquisa na web, deixando claro o que e inferencia.",
+  "- Mantenha o caso registrado: quando o tecnico informar uma medicao, grave-a com",
+  "  registrar_medicao; registre hipoteses com evidencias, e fortaleca, enfraqueca,",
+  "  descarte ou confirme as existentes conforme os resultados; mantenha o resumo do",
+  "  caso atualizado quando o quadro mudar. Nunca registre como medido algo que o",
+  "  tecnico nao mediu.",
+  "- Use a busca na web para datasheets, pinouts, service manuals e falhas conhecidas",
+  "  do modelo/placa quando isso mudar a decisao. Cite a fonte de forma curta.",
+  "- Nao invente medicoes, nets, referencias ou tensoes. Se faltar um dado critico,",
+  "  peca a medicao especifica que resolve a duvida.",
+  "- Pense na seguranca da placa e do tecnico: avise antes de passos com risco",
+  "  (injetar tensao, retirar componente, aplicar calor perto de conectores/BGA).",
+  "",
+  "Formato da resposta: mensagem de chat em portugues do Brasil, direta, sem",
+  "preambulo nem checklist generico repetido. Comece pelo que mudou com a",
+  "informacao nova (e pelo que voce observa nas fotos, se houver), depois o",
+  "raciocinio em poucas linhas e o proximo passo concreto. Listas curtas quando",
+  "ajudarem; nada de JSON ou formulario.",
 ].join("\n");
 
 function buildCaseBrief(
   context: DiagnosticAssistantContext,
-  technicalContextSummary: string | null,
-  technicalSources: string[],
+  workbench: DiagnosticTechnicalWorkbench,
   similarCases: Array<{ title: string; excerpt: string; similarityLabel: string }>,
   relatedDocuments: Array<{ title: string; excerpt: string; similarityLabel: string }>,
 ): string {
@@ -97,8 +106,8 @@ function buildCaseBrief(
 
   lines.push(
     context.measurements.length
-      ? `Medicoes registradas: ${context.measurements
-          .slice(0, 10)
+      ? `Medicoes registradas (use consultar_registros_do_caso para a lista completa e em ordem): ${context.measurements
+          .slice(0, 15)
           .map(
             (item) =>
               `${item.measurementType} em ${item.pointLabel ?? "ponto nao informado"} = ${item.measuredValueText ?? item.measuredValueNumeric ?? "?"}${item.unit ? ` ${item.unit}` : ""}${item.expectedValueText ? ` (esperado: ${item.expectedValueText})` : ""}`,
@@ -123,13 +132,11 @@ function buildCaseBrief(
       : "Nenhum boardview ou esquema associado a este caso ainda.",
   );
 
-  if (technicalContextSummary) {
-    lines.push(`Achados tecnicos (boardview/esquema) ja consultados: ${technicalContextSummary}`);
-  }
-
-  if (technicalSources.length) {
-    lines.push(`Fontes tecnicas ja usadas neste caso: ${technicalSources.slice(0, 6).join("; ")}.`);
-  }
+  const activeBoardview = workbench.getActiveAsset("boardview");
+  const activeSchematic = workbench.getActiveAsset("schematic");
+  lines.push(
+    `Boardview ativo para consulta: ${activeBoardview ? activeBoardview.title : "nenhum"} | Esquema ativo: ${activeSchematic ? activeSchematic.title : "nenhum"}.`,
+  );
 
   if (similarCases.length) {
     lines.push(
@@ -156,7 +163,8 @@ export async function sendDiagnosticChatMessage(
   diagnosticId: string,
   userMessage: string,
   newAttachments: NewChatAttachment[],
-): Promise<{ replyText: string }> {
+  userId: string,
+): Promise<{ replyText: string; wroteToCase: boolean }> {
   if (!isClaudeChatConfigured()) {
     throw new Error(
       "O chat de diagnóstico com IA (Claude) ainda não está configurado. Adicione a variável ANTHROPIC_API_KEY.",
@@ -170,38 +178,13 @@ export async function sendDiagnosticChatMessage(
     throw new Error("Diagnóstico não encontrado para o chat.");
   }
 
-  const technicalContextClient = supabase as unknown as AssistantTechnicalContextSupabaseClient;
-  const technicalContext = await searchAssistantTechnicalContext({
+  const workbench = await openDiagnosticTechnicalWorkbench(
     diagnosticId,
-    benchPrompt: userMessage || null,
-    contextSources: {
-      summary: context.summary,
-      initialReport: context.initialReport,
-      symptoms: context.symptoms.map((item) => `${item.name} ${item.notes ?? ""}`),
-      measurements: context.measurements.flatMap((item) => [
-        item.pointLabel,
-        item.measuredValueText,
-        item.expectedValueText,
-        item.context,
-        item.observation,
-        ...item.inferredTerms,
-      ]),
-      hypotheses: context.hypotheses.map((item) => `${item.title} ${item.evidenceSummary ?? ""}`),
-      tests: context.tests.map(
-        (item) =>
-          `${item.testName} ${item.resultStatus} ${item.actualResult ?? ""} ${item.conclusion ?? ""}`,
-      ),
-      recentHistory: context.recentAssistantHistory.map((item) => `${item.role} ${item.summary}`),
-      attachments: context.attachments.map((item) => `${item.title} ${item.description ?? ""} ${item.summary}`),
-      assetNames: context.technicalAssets.map((item) => item.title),
-    },
-    supabase: technicalContextClient,
-  });
+    supabase as unknown as AssistantTechnicalContextSupabaseClient,
+  );
 
   const { similarCases, relatedDocuments } = await getSimilarCasesAndDocuments(context, supabase);
 
-  const technicalContextSummary = summarizeTechnicalContextForAssistant(technicalContext);
-  const technicalSources = buildTechnicalContextSources(technicalContext);
   const specialist = getSpecialistAgent(context.category, context.manufacturer);
 
   const trimmedMessage = userMessage.trim();
@@ -240,7 +223,7 @@ export async function sendDiagnosticChatMessage(
   // mensagem que acabamos de inserir.
   const { data: historyRows } = await supabase
     .from("ai_responses")
-    .select("id, response_role, raw_response_text, created_at")
+    .select("id, response_role, raw_response_text, structured_response_json, created_at")
     .eq("diagnostic_id", diagnosticId)
     .in("response_role", ["user", "assistant"])
     .order("created_at", { ascending: true });
@@ -265,6 +248,15 @@ export async function sendDiagnosticChatMessage(
     const isCurrentTurn = row.id === userResponseId;
     const photos = attachmentsByResponseId.get(row.id) ?? [];
     let text = row.raw_response_text ?? "";
+    const structured = row.structured_response_json as { agentActions?: unknown } | null;
+    const previousActions = Array.isArray(structured?.agentActions)
+      ? (structured.agentActions as unknown[]).map(String)
+      : [];
+
+    if (previousActions.length) {
+      text = `${text}
+(acoes executadas nesta resposta: ${previousActions.join("; ")})`;
+    }
 
     if (photos.length && !isCurrentTurn) {
       const photoNotes = photos
@@ -289,17 +281,16 @@ export async function sendDiagnosticChatMessage(
     };
   });
 
-  const caseBrief = buildCaseBrief(
-    context,
-    technicalContextSummary || null,
-    technicalSources,
-    similarCases,
-    relatedDocuments,
-  );
+  const caseBrief = buildCaseBrief(context, workbench, similarCases, relatedDocuments);
+  const actions: string[] = [];
+  const wroteToCase = { value: false };
 
-  const systemPrompt = [PERSONA_PROMPT, "", specialist.systemInstructions, "", caseBrief].join("\n");
-
-  const result = await generateClaudeChatReply({ systemPrompt, turns });
+  const result = await runClaudeDiagnosticAgent({
+    stableSystemPrompt: [PERSONA_PROMPT, "", specialist.systemInstructions].join("\n"),
+    caseSystemPrompt: caseBrief,
+    turns,
+    toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
+  });
 
   const { error: insertAssistantError } = await supabase.from("ai_responses").insert({
     diagnostic_id: diagnosticId,
@@ -310,6 +301,7 @@ export async function sendDiagnosticChatMessage(
       provider: "claude",
       sourcesUsed: result.sourcesUsed,
       modelName: result.modelName,
+      agentActions: actions,
     },
     model_name: result.modelName,
     tokens_input: result.tokensInput || null,
@@ -320,5 +312,5 @@ export async function sendDiagnosticChatMessage(
     throw insertAssistantError;
   }
 
-  return { replyText: result.replyText };
+  return { replyText: result.replyText, wroteToCase: wroteToCase.value };
 }

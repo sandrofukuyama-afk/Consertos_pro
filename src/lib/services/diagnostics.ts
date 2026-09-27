@@ -1051,6 +1051,12 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           text: item.raw_response_text ?? item.reasoning_summary ?? "",
           createdAt: formatRelativeTime(item.created_at),
           modelName,
+          agentActions: Array.isArray(structured?.agentActions)
+            ? (structured.agentActions as unknown[]).map(String)
+            : [],
+          sources: Array.isArray(structured?.sourcesUsed)
+            ? (structured.sourcesUsed as unknown[]).map(String)
+            : [],
           photos: attachments
             .filter((attachment) => attachment.chatAiResponseId === item.id)
             .map((attachment) => ({

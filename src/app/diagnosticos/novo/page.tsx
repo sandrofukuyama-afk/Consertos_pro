@@ -5,6 +5,10 @@ import { QuickChatStart } from "@/components/quick-chat-start";
 import { requireCurrentUser } from "@/lib/auth";
 import { getDiagnosticCatalog } from "@/lib/services/catalog";
 
+// O chat com o agente de IA roda como server action desta pagina e pode levar
+// alguns minutos (varias consultas ao boardview/esquema e raciocinio estendido).
+export const maxDuration = 300;
+
 type NewDiagnosticPageProps = {
   searchParams: Promise<{
     error?: string;

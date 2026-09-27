@@ -7,6 +7,10 @@ import {
   getDiagnosticFormOptions,
 } from "@/lib/services/diagnostics";
 
+// O chat com o agente de IA roda como server action desta pagina e pode levar
+// alguns minutos (varias consultas ao boardview/esquema e raciocinio estendido).
+export const maxDuration = 300;
+
 type DiagnosticDetailPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{

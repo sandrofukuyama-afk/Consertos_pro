@@ -1114,3 +1114,204 @@ export function selectPreferredAssetForTest(args: {
 }) {
   return selectPreferredAsset(args.assets, args.context, args.kind);
 }
+
+export type TechnicalAssetSummary = {
+  id: string;
+  title: string;
+  fileFormat: string;
+  kind: "boardview" | "schematic";
+  boardName: string | null;
+  modelName: string | null;
+};
+
+function toAssetKind(fileFormat: string): "boardview" | "schematic" | null {
+  if (fileFormat === "pdf") {
+    return "schematic";
+  }
+
+  return fileFormat === "brd" || fileFormat === "bdv" ? "boardview" : null;
+}
+
+function summarizeAsset(asset: AssociatedTechnicalAsset): TechnicalAssetSummary | null {
+  const kind = toAssetKind(asset.fileFormat);
+
+  return kind
+    ? {
+        id: asset.id,
+        title: asset.title,
+        fileFormat: asset.fileFormat,
+        kind,
+        boardName: asset.boardName,
+        modelName: asset.modelName,
+      }
+    : null;
+}
+
+type TechnicalAssetRow = {
+  id: string;
+  original_filename: string;
+  asset_type: string;
+  file_format: string;
+  storage_bucket: string;
+  storage_path: string;
+  created_at: string;
+};
+
+type TechnicalAssetQueryClient = {
+  from: (table: string) => {
+    select: (query: string) => {
+      eq: (column: string, value: string) => {
+        maybeSingle: () => Promise<{ data: TechnicalAssetRow | null; error: { message: string } | null }>;
+      };
+      ilike: (column: string, pattern: string) => {
+        order: (column: string, options: { ascending: boolean }) => {
+          limit: (count: number) => Promise<{ data: TechnicalAssetRow[] | null; error: { message: string } | null }>;
+        };
+      };
+    };
+  };
+};
+
+function mapTechnicalAssetRow(row: TechnicalAssetRow): AssociatedTechnicalAsset {
+  return {
+    id: row.id,
+    title: row.original_filename,
+    assetType: row.asset_type,
+    fileFormat: row.file_format,
+    storageBucket: row.storage_bucket,
+    storagePath: row.storage_path,
+    createdAt: row.created_at,
+    boardId: null,
+    equipmentModelId: null,
+    boardName: null,
+    modelName: null,
+  };
+}
+
+const TECHNICAL_ASSET_COLUMNS =
+  "id, original_filename, asset_type, file_format, storage_bucket, storage_path, created_at";
+
+/**
+ * Acesso sob demanda ao boardview e ao esquema de um diagnostico, usado pelas
+ * ferramentas do agente de chat. Os arquivos so sao baixados e processados na
+ * primeira consulta, e ficam em memoria durante a resposta.
+ */
+export async function openDiagnosticTechnicalWorkbench(
+  diagnosticId: string,
+  supabase: AssistantTechnicalContextSupabaseClient,
+) {
+  const assetContext = await loadDiagnosticAssetContext(diagnosticId, supabase);
+  const associatedAssets = assetContext
+    ? await loadAssociatedTechnicalAssets(assetContext, supabase)
+    : [];
+  const active: Record<"boardview" | "schematic", AssociatedTechnicalAsset | null> = {
+    boardview: assetContext
+      ? selectPreferredAsset(associatedAssets, assetContext, "boardview").asset
+      : null,
+    schematic: assetContext
+      ? selectPreferredAsset(associatedAssets, assetContext, "schematic").asset
+      : null,
+  };
+  let boardviewCache: { assetId: string; model: ReturnType<typeof buildBoardviewLabModel> } | null =
+    null;
+  let schematicCache: { assetId: string; pages: SchematicPdfPageText[] } | null = null;
+  const assetClient = supabase as unknown as TechnicalAssetQueryClient;
+
+  return {
+    listAssociatedAssets() {
+      return associatedAssets
+        .map(summarizeAsset)
+        .filter((item): item is TechnicalAssetSummary => Boolean(item));
+    },
+    getActiveAsset(kind: "boardview" | "schematic") {
+      const asset = active[kind];
+      return asset ? summarizeAsset(asset) : null;
+    },
+    async searchLibrary(query: string) {
+      const pattern = `%${query.replace(/[%_]/g, " ").trim()}%`;
+      const { data, error } = await assetClient
+        .from("technical_assets")
+        .select(TECHNICAL_ASSET_COLUMNS)
+        .ilike("original_filename", pattern)
+        .order("created_at", { ascending: false })
+        .limit(15);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return (data ?? [])
+        .map((row) => summarizeAsset(mapTechnicalAssetRow(row)))
+        .filter((item): item is TechnicalAssetSummary => Boolean(item));
+    },
+    async activateAsset(assetId: string) {
+      const known = associatedAssets.find((asset) => asset.id === assetId);
+      let asset = known ?? null;
+
+      if (!asset) {
+        const { data, error } = await assetClient
+          .from("technical_assets")
+          .select(TECHNICAL_ASSET_COLUMNS)
+          .eq("id", assetId)
+          .maybeSingle();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        asset = data ? mapTechnicalAssetRow(data) : null;
+      }
+
+      const kind = asset ? toAssetKind(asset.fileFormat) : null;
+
+      if (!asset || !kind) {
+        return null;
+      }
+
+      active[kind] = asset;
+      return summarizeAsset(asset);
+    },
+    async loadBoardview() {
+      const asset = active.boardview;
+
+      if (!asset) {
+        return null;
+      }
+
+      if (boardviewCache?.assetId !== asset.id) {
+        const download = await downloadAssetBytes(asset, supabase);
+        boardviewCache = {
+          assetId: asset.id,
+          model: buildBoardviewLabModel(parseLandrexTestlinkBoardview(download.bytes)),
+        };
+      }
+
+      return { asset, model: boardviewCache.model };
+    },
+    async loadSchematicPages() {
+      const asset = active.schematic;
+
+      if (!asset) {
+        return null;
+      }
+
+      if (schematicCache?.assetId !== asset.id) {
+        const download = await downloadAssetBytes(asset, supabase);
+        schematicCache = {
+          assetId: asset.id,
+          pages: await extractSchematicPageTexts(download.bytes),
+        };
+      }
+
+      return { asset, pages: schematicCache.pages };
+    },
+    buildLabHref(kind: "boardview" | "schematic", focus: AssetFocusTarget) {
+      const asset = active[kind];
+      return asset ? buildLabSearchHref(diagnosticId, asset, focus) : null;
+    },
+  };
+}
+
+export type DiagnosticTechnicalWorkbench = Awaited<
+  ReturnType<typeof openDiagnosticTechnicalWorkbench>
+>;

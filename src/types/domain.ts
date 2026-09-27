@@ -434,6 +434,8 @@ export type DiagnosticDetail = {
     text: string;
     createdAt: string;
     modelName: string | null;
+    agentActions: string[];
+    sources: string[];
     photos: Array<{
       id: string;
       title: string;

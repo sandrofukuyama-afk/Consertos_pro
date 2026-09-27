@@ -484,7 +484,24 @@ export function DiagnosticBenchWorkspace({
                       : "self-start border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
                   }`}
                 >
+                  {entry.agentActions.length ? (
+                    <details className="mb-2 rounded-xl bg-[var(--background)] px-3 py-2 text-xs text-[var(--muted)]">
+                      <summary className="cursor-pointer font-semibold">
+                        {entry.agentActions.length} consulta(s) e registro(s) feitos pela IA
+                      </summary>
+                      <ul className="mt-1 list-disc pl-4">
+                        {entry.agentActions.map((action, index) => (
+                          <li key={`${entry.id}-action-${index}`}>{action}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                   <p className="whitespace-pre-wrap">{entry.text}</p>
+                  {entry.sources.length ? (
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      Fontes: {entry.sources.join(" • ")}
+                    </p>
+                  ) : null}
                   {entry.photos.length ? (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {entry.photos.map((photo) =>

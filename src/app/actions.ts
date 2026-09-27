@@ -1385,11 +1385,18 @@ async function postDiagnosticChatMessage(
     });
   }
 
-  await sendDiagnosticChatMessage(
+  const { wroteToCase } = await sendDiagnosticChatMessage(
     diagnosticId,
     message,
     newAttachments.map(({ id, mimeType, base64 }) => ({ id, mimeType, base64 })),
+    userId,
   );
+
+  // O agente pode ter gravado medicoes, hipoteses ou o resumo do caso.
+  if (wroteToCase) {
+    void queueDiagnosticSemanticSync(diagnosticId);
+    revalidatePath("/");
+  }
 
   // Analise estruturada da imagem (OpenAI), best-effort: enriquece o anexo
   // para reaparecer como contexto em mensagens futuras do chat. Falhas aqui
