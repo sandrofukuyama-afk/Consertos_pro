@@ -1328,15 +1328,114 @@ export async function generateDiagnosticAssistantAction(formData: FormData) {
   }
 }
 
+async function postDiagnosticChatMessage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  diagnosticId: string,
+  message: string,
+  files: File[],
+) {
+  const newAttachments: Array<{
+    id: string;
+    mimeType: string;
+    base64: string;
+    storagePath: string;
+  }> = [];
+
+  for (const file of files) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${diagnosticId}/${Date.now()}-${safeName}`;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const mimeType = file.type || "image/jpeg";
+
+    const { error: uploadError } = await supabase.storage
+      .from("diagnostic-attachments")
+      .upload(storagePath, bytes, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: inserted, error: attachmentError } = await supabase
+      .from("attachments")
+      .insert({
+        diagnostic_id: diagnosticId,
+        attachment_type: "photo",
+        title: file.name || "Foto enviada no chat",
+        storage_path: storagePath,
+        mime_type: mimeType,
+        file_size_bytes: file.size,
+        uploaded_by_user_id: userId,
+      })
+      .select("id")
+      .single();
+
+    if (attachmentError || !inserted) {
+      throw attachmentError ?? new Error("Falha ao registrar o anexo do chat.");
+    }
+
+    newAttachments.push({
+      id: inserted.id as string,
+      mimeType,
+      base64: bytes.toString("base64"),
+      storagePath,
+    });
+  }
+
+  await sendDiagnosticChatMessage(
+    diagnosticId,
+    message,
+    newAttachments.map(({ id, mimeType, base64 }) => ({ id, mimeType, base64 })),
+  );
+
+  // Analise estruturada da imagem (OpenAI), best-effort: enriquece o anexo
+  // para reaparecer como contexto em mensagens futuras do chat. Falhas aqui
+  // nao devem quebrar a resposta do chat, que ja foi entregue acima.
+  await Promise.allSettled(
+    newAttachments
+      .filter((attachment) => attachment.mimeType.startsWith("image/"))
+      .map(async (attachment) => {
+        const { data: signed } = await supabase.storage
+          .from("diagnostic-attachments")
+          .createSignedUrl(attachment.storagePath, 300);
+
+        if (!signed?.signedUrl) {
+          return;
+        }
+
+        const analysis = await analyzeBoardImage(signed.signedUrl);
+
+        if (!analysis) {
+          return;
+        }
+
+        await supabase
+          .from("attachments")
+          .update({
+            ai_image_analysis: analysis,
+            ai_image_analyzed_at: new Date().toISOString(),
+          })
+          .eq("id", attachment.id);
+      }),
+  );
+}
+
+function readChatPhotos(formData: FormData) {
+  return formData
+    .getAll("photos")
+    .filter((item): item is File => item instanceof File && item.size > 0);
+}
+
 export async function sendDiagnosticChatMessageAction(formData: FormData) {
   const user = await requireCurrentUser();
   const supabase = await createClient();
 
   const diagnosticId = String(formData.get("diagnostic_id") ?? "");
   const message = String(formData.get("message") ?? "").trim();
-  const files = formData
-    .getAll("photos")
-    .filter((item): item is File => item instanceof File && item.size > 0);
+  const files = readChatPhotos(formData);
 
   if (!diagnosticId) {
     redirect("/?error=Diagnóstico inválido para o chat.");
@@ -1349,92 +1448,7 @@ export async function sendDiagnosticChatMessageAction(formData: FormData) {
   }
 
   try {
-    const newAttachments: Array<{
-      id: string;
-      mimeType: string;
-      base64: string;
-      storagePath: string;
-    }> = [];
-
-    for (const file of files) {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const storagePath = `${diagnosticId}/${Date.now()}-${safeName}`;
-      const bytes = Buffer.from(await file.arrayBuffer());
-      const mimeType = file.type || "image/jpeg";
-
-      const { error: uploadError } = await supabase.storage
-        .from("diagnostic-attachments")
-        .upload(storagePath, bytes, {
-          contentType: mimeType,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: inserted, error: attachmentError } = await supabase
-        .from("attachments")
-        .insert({
-          diagnostic_id: diagnosticId,
-          attachment_type: "photo",
-          title: file.name || "Foto enviada no chat",
-          storage_path: storagePath,
-          mime_type: mimeType,
-          file_size_bytes: file.size,
-          uploaded_by_user_id: user.id,
-        })
-        .select("id")
-        .single();
-
-      if (attachmentError || !inserted) {
-        throw attachmentError ?? new Error("Falha ao registrar o anexo do chat.");
-      }
-
-      newAttachments.push({
-        id: inserted.id as string,
-        mimeType,
-        base64: bytes.toString("base64"),
-        storagePath,
-      });
-    }
-
-    await sendDiagnosticChatMessage(
-      diagnosticId,
-      message,
-      newAttachments.map(({ id, mimeType, base64 }) => ({ id, mimeType, base64 })),
-    );
-
-    // Analise estruturada da imagem (OpenAI), best-effort: enriquece o anexo
-    // para reaparecer como contexto em mensagens futuras do chat. Falhas aqui
-    // nao devem quebrar a resposta do chat, que ja foi entregue acima.
-    await Promise.allSettled(
-      newAttachments
-        .filter((attachment) => attachment.mimeType.startsWith("image/"))
-        .map(async (attachment) => {
-          const { data: signed } = await supabase.storage
-            .from("diagnostic-attachments")
-            .createSignedUrl(attachment.storagePath, 300);
-
-          if (!signed?.signedUrl) {
-            return;
-          }
-
-          const analysis = await analyzeBoardImage(signed.signedUrl);
-
-          if (!analysis) {
-            return;
-          }
-
-          await supabase
-            .from("attachments")
-            .update({
-              ai_image_analysis: analysis,
-              ai_image_analyzed_at: new Date().toISOString(),
-            })
-            .eq("id", attachment.id);
-        }),
-    );
+    await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files);
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;
@@ -1446,6 +1460,72 @@ export async function sendDiagnosticChatMessageAction(formData: FormData) {
 
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   redirect(`/diagnosticos/${diagnosticId}#chat-bancada`);
+}
+
+// Abre um diagnostico minimo a partir da primeira mensagem do chat, para o
+// tecnico conversar com a IA sem preencher o cadastro completo antes. Os dados
+// do equipamento podem ser completados depois no proprio workspace.
+export async function startDiagnosticChatAction(formData: FormData) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const returnTo = String(formData.get("return_to") ?? "").trim() === "/" ? "/" : "/diagnosticos/novo";
+  const selectedCategoryId = String(formData.get("equipment_category_id") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim();
+  const files = readChatPhotos(formData);
+
+  if (!message && files.length === 0) {
+    redirect(`${returnTo}?error=${encodeURIComponent("Escreva uma mensagem ou anexe uma foto para iniciar o chat.")}`);
+  }
+
+  const category = await resolveCategoryForDiagnostic(
+    selectedCategoryId,
+    selectedCategoryId ? null : "Não classificado",
+    user.id,
+  );
+
+  if (!category?.id) {
+    redirect(`${returnTo}?error=${encodeURIComponent("Não foi possível definir a categoria do caso.")}`);
+  }
+
+  const problemReport = message || "Caso iniciado pelo chat com foto.";
+
+  const { data, error } = await supabase
+    .from("diagnostics")
+    .insert({
+      equipment_category_id: category.id,
+      opened_by_user_id: user.id,
+      status: "active",
+      priority: "normal",
+      initial_problem_report: problemReport,
+      current_summary: problemReport,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    redirect(`${returnTo}?error=${encodeURIComponent(error?.message ?? "Falha ao abrir o caso.")}`);
+  }
+
+  await syncDiagnosticEmbeddingSource(data.id, supabase);
+  revalidatePath("/");
+
+  try {
+    await postDiagnosticChatMessage(supabase, user.id, data.id, message, files);
+  } catch (chatError) {
+    if (isRedirectError(chatError)) {
+      throw chatError;
+    }
+
+    const chatMessage =
+      chatError instanceof Error ? chatError.message : "Falha ao enviar mensagem no chat.";
+    redirect(
+      `/diagnosticos/${data.id}?error=${encodeURIComponent(`Caso aberto, mas o chat falhou: ${chatMessage}`)}#chat-bancada`,
+    );
+  }
+
+  revalidatePath(`/diagnosticos/${data.id}`);
+  redirect(`/diagnosticos/${data.id}#chat-bancada`);
 }
 
 export async function saveAssistantFeedbackAction(formData: FormData) {

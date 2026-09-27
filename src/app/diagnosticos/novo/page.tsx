@@ -1,6 +1,7 @@
 import { createDiagnosticAction } from "@/app/actions";
 import { AppShell } from "@/components/app-shell";
 import { EquipmentIntakeForm } from "@/components/equipment-intake-form";
+import { QuickChatStart } from "@/components/quick-chat-start";
 import { requireCurrentUser } from "@/lib/auth";
 import { getDiagnosticCatalog } from "@/lib/services/catalog";
 
@@ -26,6 +27,8 @@ export default async function NewDiagnosticPage({
       actionHref="/"
     >
       <div className="grid gap-4">
+        <QuickChatStart categories={categories} returnTo="/diagnosticos/novo" />
+
         <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-6">
           <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
             Cadastro de equipamento

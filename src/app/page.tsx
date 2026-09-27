@@ -3,8 +3,10 @@ import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { DashboardEmptyState } from "@/components/dashboard-empty-state";
 import { DeleteDiagnosticButton } from "@/components/delete-diagnostic-button";
+import { QuickChatStart } from "@/components/quick-chat-start";
 import { StatusPill } from "@/components/status-pill";
 import { requireCurrentUser } from "@/lib/auth";
+import { getDiagnosticCatalog } from "@/lib/services/catalog";
 import { getDashboardData } from "@/lib/services/dashboard";
 
 type HomePageProps = {
@@ -17,7 +19,11 @@ type HomePageProps = {
 export default async function Home({ searchParams }: HomePageProps) {
   const userPromise = requireCurrentUser();
   const dashboardPromise = getDashboardData();
-  const [user, dashboard] = await Promise.all([userPromise, dashboardPromise]);
+  const [user, dashboard, catalog] = await Promise.all([
+    userPromise,
+    dashboardPromise,
+    getDiagnosticCatalog(),
+  ]);
 
   const params = await searchParams;
 
@@ -68,6 +74,8 @@ export default async function Home({ searchParams }: HomePageProps) {
             </article>
           ))}
         </section>
+
+        <QuickChatStart categories={catalog.categories} returnTo="/" />
 
         <section className="rounded-[30px] border border-[rgba(45,139,130,0.2)] bg-[linear-gradient(135deg,rgba(45,139,130,0.12),rgba(109,94,242,0.1))] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
