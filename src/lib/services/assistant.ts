@@ -664,7 +664,7 @@ async function getHistoricalTestGroupSuccess(supabase: SupabaseServerClient) {
   return rateMap;
 }
 
-async function getDiagnosticAssistantContext(
+export async function getDiagnosticAssistantContext(
   diagnosticId: string,
   supabase: SupabaseServerClient,
   benchPrompt: string | null,
@@ -919,7 +919,7 @@ async function getDiagnosticAssistantContext(
   };
 }
 
-async function getSimilarCasesAndDocuments(
+export async function getSimilarCasesAndDocuments(
   context: DiagnosticAssistantContext,
   supabase: SupabaseServerClient,
 ) {

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   addDiagnosticTestAction,
   generateDiagnosticAssistantAction,
+  sendDiagnosticChatMessageAction,
 } from "@/app/actions";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
 import { DiagnosticTechnicalAssetAssociation } from "@/components/diagnostic-technical-asset-association";
@@ -454,9 +455,10 @@ export function DiagnosticBenchWorkspace({
       </SectionCard>
 
       <SectionCard
-        eyebrow="Assistente de bancada"
-        title="Fluxo principal de análise por IA"
-        description="Descreva defeito, medições, comportamento e suspeitas. A IA cruza o histórico do caso com medições, casos semelhantes, documentos técnicos, boardview e esquema associados."
+        id="chat-bancada"
+        eyebrow="Chat de bancada"
+        title="Converse com o especialista de IA deste caso"
+        description="Escreva e anexe fotos como numa conversa normal. Tudo fica registrado automaticamente neste diagnóstico, e a IA responde usando todo o histórico do caso (sintomas, medições, boardview, esquema e casos semelhantes)."
       >
         <div className="rounded-[22px] border border-[rgba(45,139,130,0.22)] bg-[rgba(45,139,130,0.08)] p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -471,18 +473,79 @@ export function DiagnosticBenchWorkspace({
             <StatusPill label={formatProviderLabel(detail.assistantSnapshot.provider)} />
           </div>
 
-          <form action={generateDiagnosticAssistantAction} className="mt-4 grid gap-3">
+          {detail.chatMessages.length ? (
+            <div className="mt-4 flex max-h-[520px] flex-col gap-3 overflow-y-auto rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] p-3">
+              {detail.chatMessages.map((entry) => (
+                <div
+                  key={entry.id}
+                  className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                    entry.role === "user"
+                      ? "self-end bg-[var(--accent-copper)] text-white"
+                      : "self-start border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{entry.text}</p>
+                  {entry.photos.length ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {entry.photos.map((photo) =>
+                        photo.signedUrl ? (
+                          <a
+                            key={photo.id}
+                            href={photo.signedUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block h-16 w-16 overflow-hidden rounded-lg border border-white/40"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={photo.signedUrl}
+                              alt={photo.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </a>
+                        ) : null,
+                      )}
+                    </div>
+                  ) : null}
+                  <p
+                    className={`mt-2 text-xs ${entry.role === "user" ? "text-white/80" : "text-[var(--muted)]"}`}
+                  >
+                    {entry.role === "user" ? "Você" : detail.assistantSnapshot.activeAgent.name} •{" "}
+                    {entry.createdAt}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-[var(--muted)]">
+              Ainda não há mensagens neste caso. Escreva o que está observando ou anexe uma foto da
+              placa para começar.
+            </p>
+          )}
+
+          <form
+            action={sendDiagnosticChatMessageAction}
+            encType="multipart/form-data"
+            className="mt-4 grid gap-3"
+          >
             <input type="hidden" name="diagnostic_id" value={detail.id} />
             <textarea
-              name="assistant_prompt"
-              rows={5}
-              defaultValue={latestResponse ? undefined : detail.initialReport}
-              placeholder="Ex.: não liga; entrada com 20V; PP3V3_G3H em 0V; sem consumo ao pressionar power; suspeita em U6990/linha 3V3. Quero direção prática de diagnóstico."
+              name="message"
+              rows={3}
+              defaultValue={detail.chatMessages.length ? undefined : detail.initialReport}
+              placeholder="Ex.: não liga; entrada com 20V; PP3V3_G3H em 0V; sem consumo ao pressionar power; suspeita em U6990/linha 3V3."
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
+            />
+            <input
+              type="file"
+              name="photos"
+              multiple
+              accept="image/*"
+              className="text-sm text-[var(--muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--panel-border)] file:px-4 file:py-2 file:text-sm file:font-semibold"
             />
             <div className="flex flex-wrap gap-3">
               <FormSubmitButton
-                idleLabel={latestResponse ? "Analisar com IA" : "Analisar com IA"}
+                idleLabel="Enviar"
                 pendingLabel="Consultando a IA..."
                 className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
               />
@@ -492,6 +555,16 @@ export function DiagnosticBenchWorkspace({
               <ActionLink href="#registrar-teste" label="Registrar teste feito" />
               <ActionLink href="#encerrar-diagnostico" label="Encerrar diagnóstico" />
             </div>
+          </form>
+
+          <form action={generateDiagnosticAssistantAction} className="mt-3">
+            <input type="hidden" name="diagnostic_id" value={detail.id} />
+            <input type="hidden" name="assistant_prompt" value="" />
+            <FormSubmitButton
+              idleLabel="Gerar parecer técnico estruturado (tensões, testes, boardview)"
+              pendingLabel="Consultando a IA..."
+              className="rounded-full border border-[var(--panel-border)] px-4 py-2 text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--foreground)]"
+            />
           </form>
         </div>
 

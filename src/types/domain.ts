@@ -418,6 +418,7 @@ export type DiagnosticDetail = {
     mimeType: string;
     uploadedAt: string;
     signedUrl: string | null;
+    chatAiResponseId: string | null;
     imageAnalysis: {
       observations: string[];
       suspectedIssues: string[];
@@ -426,6 +427,18 @@ export type DiagnosticDetail = {
       analyzedAt: string;
     } | null;
     annotations: ComponentAnnotation[];
+  }>;
+  chatMessages: Array<{
+    id: string;
+    role: "user" | "assistant";
+    text: string;
+    createdAt: string;
+    modelName: string | null;
+    photos: Array<{
+      id: string;
+      title: string;
+      signedUrl: string | null;
+    }>;
   }>;
   timeline: Array<{
     id: string;

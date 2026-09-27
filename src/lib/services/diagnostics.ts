@@ -43,6 +43,7 @@ type AttachmentRow = {
   ai_image_analysis: AttachmentAnalysis | null;
   ai_image_analyzed_at: string | null;
   annotations: ComponentAnnotation[] | null;
+  chat_ai_response_id: string | null;
 };
 
 type ReferenceMeasurementRow = {
@@ -372,6 +373,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           recommended_next_step,
           raw_response_text,
           structured_response_json,
+          model_name,
           created_at
         ),
         measurements(
@@ -409,7 +411,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           storage_path,
           ai_image_analysis,
           ai_image_analyzed_at,
-          annotations
+          annotations,
+          chat_ai_response_id
         ),
         diagnostic_boards(
           id,
@@ -611,6 +614,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
             mimeType: item.mime_type,
             uploadedAt: formatRelativeTime(item.created_at),
             signedUrl,
+            chatAiResponseId: item.chat_ai_response_id ?? null,
             imageAnalysis:
               analysis && item.ai_image_analyzed_at
                 ? {
@@ -1030,6 +1034,32 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     attachments,
     timeline,
     assistantSnapshot,
+    chatMessages: [...(data.ai_responses ?? [])]
+      .filter((item) => item.response_role === "user" || item.response_role === "assistant")
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .map((item) => {
+        const structured =
+          item.structured_response_json && typeof item.structured_response_json === "object"
+            ? (item.structured_response_json as Record<string, unknown>)
+            : null;
+        const modelName =
+          item.model_name ?? (typeof structured?.modelName === "string" ? structured.modelName : null);
+
+        return {
+          id: item.id,
+          role: item.response_role as "user" | "assistant",
+          text: item.raw_response_text ?? item.reasoning_summary ?? "",
+          createdAt: formatRelativeTime(item.created_at),
+          modelName,
+          photos: attachments
+            .filter((attachment) => attachment.chatAiResponseId === item.id)
+            .map((attachment) => ({
+              id: attachment.id,
+              title: attachment.title,
+              signedUrl: attachment.signedUrl,
+            })),
+        };
+      }),
     boards: diagnosticBoards,
     referenceMeasurements,
     technicalAssets,

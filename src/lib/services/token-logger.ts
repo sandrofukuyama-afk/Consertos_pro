@@ -19,6 +19,15 @@ export async function logTokenUsage(
     } else if (model === "text-embedding-3-small") {
       inputCostPerToken = 0.02 / 1000000;  // $0.02 per 1M tokens
       outputCostPerToken = 0;
+    } else if (model.startsWith("claude-sonnet")) {
+      inputCostPerToken = 3 / 1000000;   // ~$3.00 per 1M tokens (estimativa)
+      outputCostPerToken = 15 / 1000000; // ~$15.00 per 1M tokens (estimativa)
+    } else if (model.startsWith("claude-opus")) {
+      inputCostPerToken = 5 / 1000000;   // ~$5.00 per 1M tokens (estimativa)
+      outputCostPerToken = 25 / 1000000; // ~$25.00 per 1M tokens (estimativa)
+    } else if (model.startsWith("claude-haiku")) {
+      inputCostPerToken = 1 / 1000000;   // ~$1.00 per 1M tokens (estimativa)
+      outputCostPerToken = 5 / 1000000;  // ~$5.00 por 1M tokens (estimativa)
     }
 
     const estimatedCost = (promptTokens * inputCostPerToken) + (completionTokens * outputCostPerToken);
