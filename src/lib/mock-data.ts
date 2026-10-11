@@ -23,6 +23,12 @@ export const navItems: NavItem[] = [
     group: "Bancada",
   },
   {
+    href: "/doadoras",
+    label: "Doadoras",
+    description: "Achar componentes nas placas de sucata",
+    group: "Bancada",
+  },
+  {
     href: "/busca",
     label: "Busca",
     description: "Pesquisar casos, placas, componentes e documentos",

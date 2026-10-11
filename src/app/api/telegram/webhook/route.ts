@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { searchDonorComponents } from "@/lib/services/donor-boards";
 import { searchTechnicalLibrary } from "@/lib/services/technical-library-search";
 import {
   TELEGRAM_MAX_UPLOAD_BYTES,
@@ -35,7 +36,41 @@ const HELP_TEXT = [
   "• toshiba l855 bios",
   "",
   "Toque no arquivo para recebê-lo aqui.",
+  "",
+  "Para achar um componente nas placas doadoras:",
+  "• peça AON7506",
+  "• peça 10U 0603",
 ].join("\n");
+
+const DONOR_PREFIX = /^\/?pe[cç]a\s+/i;
+
+async function handleDonorSearch(chatId: number, query: string) {
+  await sendTelegramChatAction(chatId, "typing");
+  const results = await searchDonorComponents(createSupabaseAdminClient(), query);
+
+  if (!results.length) {
+    await sendTelegramMessage(chatId, `Nenhuma placa doadora com "${query}".\nTente só o código principal (ex.: AON7506).`);
+    return;
+  }
+
+  const blocks = results.slice(0, 8).map((result) => {
+    const positions = result.hits
+      .filter((hit) => hit.refdes)
+      .slice(0, 6)
+      .map((hit) => `${hit.refdes}${hit.page ? ` (pág. ${hit.page})` : ""}`);
+    const extra = result.hits.some((hit) => !hit.refdes)
+      ? result.hits.some((hit) => hit.source === "foto")
+        ? "lido na foto"
+        : "citado no esquema"
+      : null;
+    return `📦 ${result.code} • ${result.title}\n    ${[positions.join(", "), extra].filter(Boolean).join(" • ")}`;
+  });
+
+  await sendTelegramMessage(
+    chatId,
+    `🔎 "${query}" em ${results.length} placa(s) doadora(s):\n\n${blocks.join("\n")}\n\nNo app, em Doadoras, dá para ver no boardview.`,
+  );
+}
 
 function allowedUserIds() {
   return new Set(
@@ -59,6 +94,11 @@ async function handleSearch(chatId: number, text: string) {
 
   if (!query || query === "/start" || query === "/ajuda" || query === "/help") {
     await sendTelegramMessage(chatId, HELP_TEXT);
+    return;
+  }
+
+  if (DONOR_PREFIX.test(query)) {
+    await handleDonorSearch(chatId, query.replace(DONOR_PREFIX, "").trim());
     return;
   }
 
