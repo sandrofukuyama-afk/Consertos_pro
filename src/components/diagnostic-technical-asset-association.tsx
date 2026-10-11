@@ -312,23 +312,23 @@ export function DiagnosticTechnicalAssetAssociation({
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <label className="grid gap-1 text-xs text-[var(--muted)] xl:col-span-2">
+      <div className="grid min-w-0 gap-3">
+        <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
           Buscar por nome, placa, modelo ou fabricante
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Ex.: 820-00239, A1706, Apple"
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            className="w-full min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
           />
         </label>
 
-        <label className="grid gap-1 text-xs text-[var(--muted)]">
+        <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
           Placa
           <select
             value={selectedBoardId}
             onChange={(event) => setSelectedBoardId(event.target.value)}
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            className="w-full min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
           >
             <option value="">Todas</option>
             {boards.map((entry) => (
@@ -351,12 +351,12 @@ export function DiagnosticTechnicalAssetAssociation({
           </button>
         </label>
 
-        <label className="grid gap-1 text-xs text-[var(--muted)]">
+        <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
           Modelo
           <select
             value={selectedModelId}
             onChange={(event) => setSelectedModelId(event.target.value)}
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            className="w-full min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
           >
             <option value="">Todos</option>
             {models.map((entry) => (
@@ -367,12 +367,12 @@ export function DiagnosticTechnicalAssetAssociation({
           </select>
         </label>
 
-        <label className="grid gap-1 text-xs text-[var(--muted)]">
+        <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
           Fabricante
           <select
             value={selectedManufacturerId}
             onChange={(event) => setSelectedManufacturerId(event.target.value)}
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            className="w-full min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
           >
             <option value="">Todos</option>
             {manufacturers.map((entry) => (
@@ -385,8 +385,8 @@ export function DiagnosticTechnicalAssetAssociation({
       </div>
 
       {isCreatingBoard ? (
-        <div className="grid gap-3 rounded-[18px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] p-4 md:grid-cols-2">
-          <label className="grid gap-1 text-xs text-[var(--muted)]">
+        <div className="grid gap-3 rounded-[18px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] p-4">
+          <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
             Codigo da nova placa
             <input
               value={newBoardCode}
@@ -395,7 +395,7 @@ export function DiagnosticTechnicalAssetAssociation({
               className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
             />
           </label>
-          <label className="grid gap-1 text-xs text-[var(--muted)]">
+          <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
             Descricao (opcional)
             <input
               value={newBoardDescription}
@@ -411,13 +411,13 @@ export function DiagnosticTechnicalAssetAssociation({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-xs text-[var(--muted)]">
+      <div className="grid min-w-0 gap-3">
+        <label className="grid min-w-0 gap-1 text-xs text-[var(--muted)]">
           Tipo
           <select
             value={selectedFormat}
             onChange={(event) => setSelectedFormat(event.target.value)}
-            className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
+            className="w-full min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
           >
             {["all", "brd", "bdv", "pdf"].map((entry) => (
               <option key={entry} value={entry}>
@@ -444,7 +444,7 @@ export function DiagnosticTechnicalAssetAssociation({
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-4">
         <div className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
           <p className="text-sm font-semibold text-[var(--foreground)]">Boardview escolhido</p>
           <p className="mt-2 text-sm text-[var(--muted)]">
