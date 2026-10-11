@@ -4,14 +4,15 @@ import type { ReactNode } from "react";
 import {
   addDiagnosticTestAction,
   generateDiagnosticAssistantAction,
-  sendDiagnosticChatMessageAction,
 } from "@/app/actions";
+import { ChatMarkdown } from "@/components/chat-markdown";
+import { ChatScrollArea } from "@/components/chat-scroll-area";
+import { DiagnosticChatComposer } from "@/components/diagnostic-chat-composer";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
 import { DiagnosticTechnicalAssetAssociation } from "@/components/diagnostic-technical-asset-association";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
-import { formatProviderLabel } from "@/lib/utils";
 import type {
   CatalogOption,
   DiagnosticDetail,
@@ -232,64 +233,65 @@ function ActionLink({
   );
 }
 
-function SectionCard({
+
+const hypothesisStatusLabels: Record<string, string> = {
+  open: "Aberta",
+  strengthened: "Fortalecida",
+  weakened: "Enfraquecida",
+  discarded: "Descartada",
+  confirmed: "Confirmada",
+};
+
+const testResultLabels: Record<string, string> = {
+  pending: "aguardando",
+  passed: "passou",
+  failed: "falhou",
+  inconclusive: "inconclusivo",
+};
+
+function PanelSection({
   id,
-  eyebrow,
   title,
-  description,
+  hint,
+  defaultOpen = false,
   children,
 }: {
   id?: string;
-  eyebrow: string;
   title: string;
-  description?: string;
+  hint?: string;
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section
+    <details
       id={id}
-      className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:rounded-[28px] sm:p-6"
+      open={defaultOpen}
+      className="group scroll-mt-24 rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)]"
     >
-      <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-        {eyebrow}
-      </p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-        {title}
-      </h2>
-      {description ? (
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{description}</p>
-      ) : null}
-      <div className="mt-5">{children}</div>
-    </section>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-[var(--foreground)]">{title}</span>
+          {hint ? <span className="mt-0.5 block truncate text-xs text-[var(--muted)]">{hint}</span> : null}
+        </span>
+        <svg
+          className="h-4 w-4 shrink-0 text-[var(--muted)] transition group-open:rotate-180"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      <div className="border-t border-[var(--panel-border)] p-4">{children}</div>
+    </details>
   );
 }
 
-function SummaryItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[18px] border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
-      <p className="mt-1 text-sm font-medium text-[var(--foreground)]">{value}</p>
-    </div>
-  );
-}
-
-function ResponseBlock({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4">
-      <p className="text-sm font-semibold text-[var(--foreground)]">{title}</p>
-      <div className="mt-3">{children}</div>
+    <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
+      <span className="shrink-0 text-[var(--muted)]">{label}</span>
+      <span className="text-right text-[var(--foreground)]">{value}</span>
     </div>
   );
 }
@@ -301,8 +303,6 @@ export function DiagnosticBenchWorkspace({
   prefillMeasurement,
 }: DiagnosticBenchWorkspaceProps) {
   const primaryBoard = detail.boards.find((board) => board.isPrimary) ?? detail.boards[0] ?? null;
-  const latestTest = detail.tests[0] ?? null;
-  const latestMeasurement = detail.measurements[0] ?? null;
   const latestResponse = detail.assistantSnapshot.latestResponse;
   const structured = latestResponse?.structured ?? null;
   const technicalContext = structured?.technicalContext ?? null;
@@ -311,12 +311,8 @@ export function DiagnosticBenchWorkspace({
     null;
   const schematicAsset =
     detail.technicalAssets.find((asset) => asset.fileFormat === "pdf") ?? null;
-  const boardviewHref = boardviewAsset
-    ? buildAssetHref(detail, boardviewAsset.id, "boardview")
-    : null;
-  const schematicHref = schematicAsset
-    ? buildAssetHref(detail, schematicAsset.id, "schematic")
-    : null;
+  const boardviewHref = boardviewAsset ? getAssetAssociationHref(detail, boardviewAsset) : null;
+  const schematicHref = schematicAsset ? getAssetAssociationHref(detail, schematicAsset) : null;
   const intakePower = getEquipmentDetailValue(detail, "Alimentação");
   const intakeBoots = getEquipmentDetailValue(detail, "Liga");
   const intakeScreen = getEquipmentDetailValue(detail, "Condição da tela");
@@ -327,120 +323,230 @@ export function DiagnosticBenchWorkspace({
   const componentsToMeasure = structured?.componentsToMeasure ?? [];
   const recommendedSequence = structured?.recommendedTestSequence ?? [];
   const limitations = structured?.limitations ?? technicalContext?.limitations ?? [];
-  const needsTechnicalAssociation = !primaryBoard?.boardId || detail.technicalAssets.length === 0;
+  const hasTechnicalFiles = Boolean(boardviewAsset || schematicAsset);
   const netRows = buildNetRows(
     relatedLines,
     componentsToMeasure,
     technicalContext?.boardview?.results ?? [],
   );
+  const activeHypotheses = detail.hypotheses.filter(
+    (item) => item.status !== "discarded" && item.status !== "weakened",
+  );
+  const otherHypotheses = detail.hypotheses.filter(
+    (item) => item.status === "discarded" || item.status === "weakened",
+  );
+  const agentName = detail.assistantSnapshot.activeAgent.name;
+  const hasPrefill = Boolean(prefillMeasurement?.pointLabel || prefillMeasurement?.measurementType);
 
   return (
-    <div className="grid gap-4">
-      {detail.preventiveInsight ? (
-        <section className="rounded-2xl border border-[rgba(216,166,84,0.32)] bg-[rgba(216,166,84,0.1)] p-4 sm:rounded-[26px] sm:p-5">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-amber)]">
-            Atenção preventiva
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
-            {detail.preventiveInsight.occurrences} de {detail.preventiveInsight.totalCases} casos anteriores deste modelo tiveram como causa confirmada{" "}
-            <span className="font-semibold">&quot;{detail.preventiveInsight.causeLabel}&quot;</span>
-            {detail.preventiveInsight.componentRef
-              ? `, com maior incidência no componente ${detail.preventiveInsight.componentRef}`
-              : ""}
-            . Vale checar isso cedo na bancada.
-          </p>
-        </section>
-      ) : null}
-
-      <SectionCard
-        eyebrow="Resumo do caso"
-        title={detail.label}
-        description="Leitura compacta do aparelho, do defeito relatado e do estado atual da análise."
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      {/* ── Conversa ─────────────────────────────────────────────── */}
+      <section
+        id="chat-bancada"
+        className="flex scroll-mt-4 flex-col rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] sm:rounded-[28px]"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              <StatusPill label={detail.status} />
-              <StatusPill label={`Prioridade ${detail.priority}`} />
-              <StatusPill label={detail.category} />
-            </div>
-            <p className="text-sm text-[var(--muted)]">
-              {detail.manufacturer} • {detail.model} • Série {detail.serialNumber}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--panel-border)] px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--foreground)]">{agentName}</p>
+            <p className="truncate text-xs text-[var(--muted)]">
+              Converse como num chat: diga o que mediu, mande fotos, pergunte o próximo passo.
             </p>
-            <p className="text-sm leading-6 text-[var(--foreground)]">{detail.summary}</p>
           </div>
-          <div className="grid min-w-[260px] gap-2 text-sm text-[var(--muted)]">
-            <p>Aberto por {detail.openedBy}</p>
-            <p>Criado {detail.createdAt}</p>
-            <p>
-              Placa: {primaryBoard?.name ?? "Não informada"}
-              {primaryBoard?.boardCode ? ` • ${primaryBoard.boardCode}` : ""}
-            </p>
-            {needsTechnicalAssociation ? (
-              <div className="pt-2">
-                <ActionLink
-                  href="#associar-ativos-tecnicos"
-                  label="Associar placa e arquivos técnicos"
-                  tone="primary"
-                />
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryItem label="Defeito relatado" value={detail.initialReport} />
-          <SummaryItem label="Alimentação" value={intakePower} />
-          <SummaryItem label="Liga" value={intakeBoots} />
-          <SummaryItem label="Condição da tela" value={intakeScreen} />
-          <SummaryItem label="Último teste" value={latestTest ? `${latestTest.testName} • ${latestTest.resultStatus}` : "Nenhum teste registrado"} />
-          <SummaryItem label="Última medição" value={latestMeasurement ? `${latestMeasurement.pointLabel} • ${latestMeasurement.measuredValue}` : "Nenhuma medição registrada"} />
-          <SummaryItem label="Estado físico" value={detail.physicalNotes} />
-          <SummaryItem label="Arquivos técnicos" value={`${detail.technicalAssets.length} associado(s)`} />
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        id="associar-ativos-tecnicos"
-        eyebrow="Placa e arquivos tecnicos"
-        title="Associar placa e arquivos técnicos"
-        description="Vincule este diagnóstico a uma placa e escolha o boardview e o esquema certos para a IA e para o laboratório abrirem no contexto correto."
-      >
-        <div className="grid gap-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <SummaryItem label="Placa associada" value={primaryBoard?.name ?? "Não informada"} />
-            <SummaryItem label="Modelo associado" value={detail.model ?? "Não informado"} />
-            <SummaryItem
-              label="Arquivos técnicos"
-              value={`${detail.technicalAssets.length} associado(s)`}
-            />
-            <SummaryItem
-              label="Abrir no laboratório"
-              value={
-                boardviewAsset || schematicAsset
-                  ? "Boardview e esquema prontos"
-                  : "Aguardando associação"
-              }
-            />
-          </div>
-
-          {(boardviewAsset || schematicAsset) ? (
-            <div className="flex flex-wrap gap-3">
-              {boardviewAsset ? (
-                <ActionLink
-                  href={getAssetAssociationHref(detail, boardviewAsset)}
-                  label="Abrir boardview"
-                />
-              ) : null}
-              {schematicAsset ? (
-                <ActionLink
-                  href={getAssetAssociationHref(detail, schematicAsset)}
-                  label="Abrir esquema"
-                />
-              ) : null}
+          {hasTechnicalFiles ? (
+            <div className="flex gap-2">
+              {boardviewHref ? <ActionLink href={boardviewHref} label="Boardview" /> : null}
+              {schematicHref ? <ActionLink href={schematicHref} label="Esquema" /> : null}
             </div>
           ) : null}
+        </div>
 
+        <ChatScrollArea
+          messageCount={detail.chatMessages.length}
+          className="flex max-h-[calc(100dvh-300px)] min-h-[320px] flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-5"
+        >
+          {detail.chatMessages.length ? (
+            detail.chatMessages.map((entry) =>
+              entry.role === "user" ? (
+                <div key={entry.id} className="flex max-w-[88%] flex-col items-end self-end">
+                  <div className="rounded-2xl rounded-br-md bg-[var(--accent-copper)] px-4 py-3 text-sm leading-6 text-white">
+                    {entry.text ? <p className="whitespace-pre-wrap">{entry.text}</p> : null}
+                    {entry.photos.length ? (
+                      <div className={`flex flex-wrap gap-2 ${entry.text ? "mt-2" : ""}`}>
+                        {entry.photos.map((photo) =>
+                          photo.signedUrl ? (
+                            <a
+                              key={photo.id}
+                              href={photo.signedUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block h-24 w-24 overflow-hidden rounded-xl border border-white/30"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={photo.signedUrl} alt={photo.title} className="h-full w-full object-cover" />
+                            </a>
+                          ) : null,
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 px-1 text-[11px] text-[var(--muted)]">{entry.createdAt}</p>
+                </div>
+              ) : (
+                <div key={entry.id} className="flex max-w-[96%] flex-col self-start">
+                  <div className="rounded-2xl rounded-bl-md border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
+                    <ChatMarkdown text={entry.text} />
+                    {entry.agentActions.length || entry.sources.length ? (
+                      <details className="mt-3 text-xs text-[var(--muted)]">
+                        <summary className="cursor-pointer select-none hover:text-[var(--foreground)]">
+                          O que a IA consultou
+                          {entry.agentActions.length ? ` (${entry.agentActions.length})` : ""}
+                        </summary>
+                        {entry.agentActions.length ? (
+                          <ul className="mt-2 list-disc space-y-1 pl-4">
+                            {entry.agentActions.map((action, index) => (
+                              <li key={`${entry.id}-action-${index}`}>{action}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {entry.sources.length ? (
+                          <ul className="mt-2 space-y-1 break-words">
+                            {entry.sources.map((source, index) => (
+                              <li key={`${entry.id}-source-${index}`}>• {source}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </details>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 px-1 text-[11px] text-[var(--muted)]">
+                    {agentName} • {entry.createdAt}
+                  </p>
+                </div>
+              ),
+            )
+          ) : (
+            <div className="m-auto max-w-md py-10 text-center text-sm leading-6 text-[var(--muted)]">
+              <p className="text-base font-semibold text-[var(--foreground)]">Comece a conversa</p>
+              <p className="mt-2">
+                Conte o defeito, o que já mediu e mande uma foto da placa. A IA sugere o próximo
+                teste e vai registrando medições e hipóteses no caso.
+              </p>
+            </div>
+          )}
+        </ChatScrollArea>
+
+        <div className="border-t border-[var(--panel-border)] p-3 sm:p-4">
+          <DiagnosticChatComposer
+            diagnosticId={detail.id}
+            defaultMessage={detail.chatMessages.length ? undefined : detail.initialReport}
+          />
+        </div>
+      </section>
+
+      {/* ── Painel do caso ───────────────────────────────────────── */}
+      <aside className="grid min-w-0 grid-cols-1 gap-3">
+        {detail.preventiveInsight ? (
+          <div className="rounded-2xl border border-[rgba(216,166,84,0.32)] bg-[rgba(216,166,84,0.1)] p-4 text-sm leading-6 text-[var(--foreground)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-amber)]">
+              Atenção
+            </p>
+            <p className="mt-1">
+              {detail.preventiveInsight.occurrences} de {detail.preventiveInsight.totalCases} casos deste
+              modelo tiveram como causa{" "}
+              <span className="font-semibold">&quot;{detail.preventiveInsight.causeLabel}&quot;</span>
+              {detail.preventiveInsight.componentRef
+                ? ` (mais em ${detail.preventiveInsight.componentRef})`
+                : ""}
+              .
+            </p>
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--card-surface)] p-4">
+          <div className="flex flex-wrap gap-2">
+            <StatusPill label={detail.status} />
+            <StatusPill label={detail.category} />
+          </div>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+            Defeito relatado
+          </p>
+          <p className="mt-1 text-sm leading-6 text-[var(--foreground)]">{detail.initialReport}</p>
+        </div>
+
+        {activeHypotheses.length ? (
+          <PanelSection
+            title="Hipóteses"
+            hint={activeHypotheses[0]?.title}
+            defaultOpen
+          >
+            <ul className="grid gap-3">
+              {activeHypotheses.map((item) => (
+                <li key={item.id} className="text-sm leading-6">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-[var(--foreground)]">{item.title}</p>
+                    <StatusPill label={hypothesisStatusLabels[item.status] ?? item.status} />
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{item.createdAt}</p>
+                </li>
+              ))}
+            </ul>
+            {otherHypotheses.length ? (
+              <details className="mt-3 text-xs text-[var(--muted)]">
+                <summary className="cursor-pointer">
+                  {otherHypotheses.length} descartada(s) ou enfraquecida(s)
+                </summary>
+                <ul className="mt-2 grid gap-1.5">
+                  {otherHypotheses.map((item) => (
+                    <li key={item.id} className="line-through">{item.title}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </PanelSection>
+        ) : null}
+
+        {detail.measurements.length ? (
+          <PanelSection
+            title={`Medições (${detail.measurements.length})`}
+            hint={`${detail.measurements[0].pointLabel}: ${detail.measurements[0].measuredValue}`}
+          >
+            <ul className="grid gap-2">
+              {detail.measurements.map((item) => (
+                <li key={item.id} className="text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-[var(--muted)]">{item.pointLabel}</span>
+                    <span
+                      className={`shrink-0 font-mono ${item.isOutOfRange ? "text-[var(--danger)]" : "text-[var(--foreground)]"}`}
+                    >
+                      {item.measuredValue}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </PanelSection>
+        ) : null}
+
+        <PanelSection
+          id="associar-ativos-tecnicos"
+          title="Placa, boardview e esquema"
+          hint={
+            hasTechnicalFiles
+              ? `${primaryBoard?.name ?? detail.model} • ${detail.technicalAssets.length} arquivo(s)`
+              : "Nenhum arquivo associado ainda"
+          }
+        >
+          {hasTechnicalFiles ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {boardviewHref ? <ActionLink href={boardviewHref} label="Abrir boardview" tone="primary" /> : null}
+              {schematicHref ? <ActionLink href={schematicHref} label="Abrir esquema" /> : null}
+            </div>
+          ) : (
+            <p className="mb-4 text-sm leading-6 text-[var(--muted)]">
+              Associe o boardview e o esquema para a IA citar pontos e test points exatos. Sem
+              eles a IA trabalha pelo método e pede a serigrafia da placa.
+            </p>
+          )}
           <DiagnosticTechnicalAssetAssociation
             diagnosticId={detail.id}
             manufacturerId={detail.manufacturerId}
@@ -451,266 +557,27 @@ export function DiagnosticBenchWorkspace({
             models={catalog.models}
             manufacturers={catalog.manufacturers}
           />
-        </div>
-      </SectionCard>
+        </PanelSection>
 
-      <SectionCard
-        id="chat-bancada"
-        eyebrow="Chat de bancada"
-        title="Converse com o especialista de IA deste caso"
-        description="Escreva e anexe fotos como numa conversa normal. Tudo fica registrado automaticamente neste diagnóstico, e a IA responde usando todo o histórico do caso (sintomas, medições, boardview, esquema e casos semelhantes)."
-      >
-        <div className="rounded-[22px] border border-[rgba(45,139,130,0.22)] bg-[rgba(45,139,130,0.08)] p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-[var(--foreground)]">
-                Agente ativo: {detail.assistantSnapshot.activeAgent.name}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
-                {detail.assistantSnapshot.activeAgent.specialty}
-              </p>
-            </div>
-            <StatusPill label={formatProviderLabel(detail.assistantSnapshot.provider)} />
+        <PanelSection title="Dados do aparelho" hint={`${detail.manufacturer} • ${detail.model}`}>
+          <div className="divide-y divide-[var(--panel-border)]">
+            <InfoRow label="Fabricante" value={detail.manufacturer} />
+            <InfoRow label="Modelo" value={detail.model} />
+            <InfoRow label="Série" value={detail.serialNumber} />
+            <InfoRow label="Placa" value={primaryBoard?.name ?? "Não informada"} />
+            <InfoRow label="Alimentação" value={intakePower} />
+            <InfoRow label="Liga" value={intakeBoots} />
+            <InfoRow label="Tela" value={intakeScreen} />
+            <InfoRow label="Estado físico" value={detail.physicalNotes} />
+            <InfoRow label="Aberto por" value={`${detail.openedBy} • ${detail.createdAt}`} />
           </div>
+        </PanelSection>
 
-          {detail.chatMessages.length ? (
-            <div className="mt-4 flex max-h-[520px] flex-col gap-3 overflow-y-auto rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] p-3">
-              {detail.chatMessages.map((entry) => (
-                <div
-                  key={entry.id}
-                  className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6 ${
-                    entry.role === "user"
-                      ? "self-end bg-[var(--accent-copper)] text-white"
-                      : "self-start border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
-                  }`}
-                >
-                  {entry.agentActions.length ? (
-                    <details className="mb-2 rounded-xl bg-[var(--background)] px-3 py-2 text-xs text-[var(--muted)]">
-                      <summary className="cursor-pointer font-semibold">
-                        {entry.agentActions.length} consulta(s) e registro(s) feitos pela IA
-                      </summary>
-                      <ul className="mt-1 list-disc pl-4">
-                        {entry.agentActions.map((action, index) => (
-                          <li key={`${entry.id}-action-${index}`}>{action}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
-                  <p className="whitespace-pre-wrap">{entry.text}</p>
-                  {entry.sources.length ? (
-                    <p className="mt-2 text-xs text-[var(--muted)]">
-                      Fontes: {entry.sources.join(" • ")}
-                    </p>
-                  ) : null}
-                  {entry.photos.length ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {entry.photos.map((photo) =>
-                        photo.signedUrl ? (
-                          <a
-                            key={photo.id}
-                            href={photo.signedUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block h-16 w-16 overflow-hidden rounded-lg border border-white/40"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={photo.signedUrl}
-                              alt={photo.title}
-                              className="h-full w-full object-cover"
-                            />
-                          </a>
-                        ) : null,
-                      )}
-                    </div>
-                  ) : null}
-                  <p
-                    className={`mt-2 text-xs ${entry.role === "user" ? "text-white/80" : "text-[var(--muted)]"}`}
-                  >
-                    {entry.role === "user" ? "Você" : detail.assistantSnapshot.activeAgent.name} •{" "}
-                    {entry.createdAt}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-[var(--muted)]">
-              Ainda não há mensagens neste caso. Escreva o que está observando ou anexe uma foto da
-              placa para começar.
-            </p>
-          )}
-
-          <form
-            action={sendDiagnosticChatMessageAction}
-            encType="multipart/form-data"
-            className="mt-4 grid gap-3"
-          >
-            <input type="hidden" name="diagnostic_id" value={detail.id} />
-            <textarea
-              name="message"
-              rows={3}
-              defaultValue={detail.chatMessages.length ? undefined : detail.initialReport}
-              placeholder="Ex.: não liga; entrada com 20V; PP3V3_G3H em 0V; sem consumo ao pressionar power; suspeita em U6990/linha 3V3."
-              className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm outline-none"
-            />
-            <input
-              type="file"
-              name="photos"
-              multiple
-              accept="image/*"
-              className="text-sm text-[var(--muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--panel-border)] file:px-4 file:py-2 file:text-sm file:font-semibold"
-            />
-            <div className="flex flex-wrap gap-3">
-              <FormSubmitButton
-                idleLabel="Enviar"
-                pendingLabel="Consultando a IA..."
-                className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
-              />
-              {boardviewHref ? <ActionLink href={boardviewHref} label="Abrir boardview" /> : null}
-              {schematicHref ? <ActionLink href={schematicHref} label="Abrir esquema" /> : null}
-              <ActionLink href="#registrar-medicao" label="Registrar medição" />
-              <ActionLink href="#registrar-teste" label="Registrar teste feito" />
-              <ActionLink href="#encerrar-diagnostico" label="Encerrar diagnóstico" />
-            </div>
-          </form>
-
-          <form action={generateDiagnosticAssistantAction} className="mt-3">
-            <input type="hidden" name="diagnostic_id" value={detail.id} />
-            <input type="hidden" name="assistant_prompt" value="" />
-            <FormSubmitButton
-              idleLabel="Gerar parecer técnico estruturado (tensões, testes, boardview)"
-              pendingLabel="Consultando a IA..."
-              className="rounded-full border border-[var(--panel-border)] px-4 py-2 text-xs font-semibold text-[var(--muted)] transition hover:text-[var(--foreground)]"
-            />
-          </form>
-        </div>
-
-        {latestResponse ? (
-          <div className="mt-5 grid gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <StatusPill label={`Confiança ${latestResponse.confidenceScore}`} />
-              <p className="text-sm text-[var(--muted)]">Última resposta {latestResponse.createdAt}</p>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              <ResponseBlock title="Diagnóstico provável">
-                <p className="text-sm font-medium text-[var(--foreground)]">{probableDiagnosis}</p>
-                <p className="mt-2 text-sm text-[var(--muted)]">Setor provável: {probableArea}</p>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                  {structured?.technicalSummary ?? latestResponse.reasoningSummary}
-                </p>
-                {(structured?.evidence ?? []).length ? (
-                  <ul className="mt-3 space-y-1.5">
-                    {(structured?.evidence ?? []).map((item) => (
-                      <li key={item} className="text-sm leading-6 text-[var(--muted)]">
-                        • {item}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </ResponseBlock>
-
-              <ResponseBlock title="Próximos testes">
-                <p className="text-sm font-medium text-[var(--foreground)]">
-                  Próximo passo: {structured?.nextTest ?? latestResponse.recommendedNextStep}
-                </p>
-                {recommendedSequence.length ? (
-                  <ol className="mt-3 space-y-2 text-sm text-[var(--muted)]">
-                    {recommendedSequence.map((item, index) => (
-                      <li key={item} className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2">
-                        <span className="font-semibold text-[var(--foreground)]">{index + 1}.</span>{" "}
-                        {item}
-                      </li>
-                    ))}
-                  </ol>
-                ) : null}
-                {structured?.safetyNote ? (
-                  <p className="mt-3 text-sm text-[var(--danger)]">Segurança: {structured.safetyNote}</p>
-                ) : null}
-              </ResponseBlock>
-            </div>
-
-            <ResponseBlock title="Onde medir">
-              {netRows.length ? (
-                <div className="space-y-2">
-                  {netRows.map((row) => (
-                    <div
-                      key={row.key}
-                      className="flex flex-wrap items-start justify-between gap-3 rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">{row.name}</p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">
-                          {[
-                            row.expectedVoltage ? `Esperado: ${row.expectedVoltage}` : null,
-                            row.measurementPoint
-                              ? `Ponto: ${stripBoardviewCoordinates(row.measurementPoint)}`
-                              : null,
-                          ]
-                            .filter((entry) => Boolean(entry) && !entry?.endsWith(": "))
-                            .join(" • ") || row.note}
-                        </p>
-                      </div>
-                      {row.boardviewHref ? (
-                        <ActionLink href={row.boardviewHref} label={row.boardviewLabel ?? "Abrir no boardview"} />
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-[var(--muted)]">Nenhuma net ou componente consolidado ainda.</p>
-              )}
-
-              {technicalContext?.schematic?.matches.length ? (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">
-                    Esquema: {technicalContext.schematic.assetTitle}
-                  </p>
-                  {technicalContext.schematic.matches.map((match) => (
-                    <div
-                      key={`${match.term}-${match.pageNumber}`}
-                      className="flex flex-wrap items-start justify-between gap-3 rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-3"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">
-                          {match.term} • página {match.pageNumber}
-                        </p>
-                        <p className="mt-1 text-sm text-[var(--muted)]">{match.excerpt}</p>
-                      </div>
-                      <ActionLink
-                        href={appendLabContext(match.openLabHref, { page: String(match.pageNumber) })}
-                        label="Abrir página do esquema"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </ResponseBlock>
-
-            {limitations.length ? (
-              <ResponseBlock title="Limitações">
-                <div className="space-y-2">
-                  {limitations.map((item) => (
-                    <p
-                      key={item}
-                      className="rounded-[16px] border border-[var(--panel-border)] bg-[var(--card-surface)] px-3 py-2 text-sm text-[var(--muted)]"
-                    >
-                      {item}
-                    </p>
-                  ))}
-                </div>
-              </ResponseBlock>
-            ) : null}
-          </div>
-        ) : null}
-      </SectionCard>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <SectionCard
+        <PanelSection
           id="registrar-medicao"
-          eyebrow="Ação útil"
-          title="Registrar medição"
-          description="Guarde tensões, correntes, resistências e contexto para a próxima análise por IA."
+          title="Registrar medição manualmente"
+          hint="A IA já registra o que você diz no chat"
+          defaultOpen={hasPrefill}
         >
           <MeasurementForm
             diagnosticId={detail.id}
@@ -732,13 +599,16 @@ export function DiagnosticBenchWorkspace({
             initialExpectedValueText={prefillMeasurement?.expectedValueText}
             initialMeasurementType={prefillMeasurement?.measurementType}
           />
-        </SectionCard>
+        </PanelSection>
 
-        <SectionCard
+        <PanelSection
           id="registrar-teste"
-          eyebrow="Ação útil"
           title="Registrar teste feito"
-          description="Adicione o teste executado, o resultado observado e o vínculo com a recomendação atual da IA."
+          hint={
+            detail.tests[0]
+              ? `Último: ${detail.tests[0].testName} • ${testResultLabels[detail.tests[0].resultStatus] ?? detail.tests[0].resultStatus}`
+              : undefined
+          }
         >
           <form action={addDiagnosticTestAction} className="grid gap-3">
             <input type="hidden" name="diagnostic_id" value={detail.id} />
@@ -763,16 +633,7 @@ export function DiagnosticBenchWorkspace({
               </select>
             </label>
             <label className="grid gap-1 text-xs text-[var(--muted)]">
-              Procedimento executado (opcional)
-              <textarea
-                name="procedure_notes"
-                rows={3}
-                placeholder="Ex.: removida bateria, medida DC-IN com fonte de bancada em 20V"
-                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
-              />
-            </label>
-            <label className="grid gap-1 text-xs text-[var(--muted)]">
-              Resultado observado
+              O que aconteceu
               <textarea
                 required
                 name="actual_result"
@@ -782,16 +643,7 @@ export function DiagnosticBenchWorkspace({
               />
             </label>
             <label className="grid gap-1 text-xs text-[var(--muted)]">
-              Conclusão prática da bancada (opcional)
-              <textarea
-                name="conclusion"
-                rows={3}
-                placeholder="Ex.: fonte de entrada ok, seguir para o circuito de habilitação"
-                className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none"
-              />
-            </label>
-            <label className="grid gap-1 text-xs text-[var(--muted)]">
-              Resultado do teste
+              Resultado
               <select
                 name="result_status"
                 defaultValue="pending"
@@ -803,63 +655,153 @@ export function DiagnosticBenchWorkspace({
                 <option value="inconclusive">Inconclusivo</option>
               </select>
             </label>
-            <FormSubmitButton idleLabel="Registrar teste feito" pendingLabel="Salvando teste..." />
+            <FormSubmitButton idleLabel="Registrar teste" pendingLabel="Salvando teste..." />
           </form>
-        </SectionCard>
-      </div>
+        </PanelSection>
 
-      <SectionCard
-        id="encerrar-diagnostico"
-        eyebrow="Ação útil"
-        title="Encerrar diagnóstico"
-        description="Use este bloco apenas quando a causa e a solução já estiverem claras."
-      >
-        {detail.resolvedCase ? (
-          <div className="rounded-[22px] border border-[rgba(45,139,130,0.24)] bg-[rgba(45,139,130,0.08)] p-4">
-            <div className="flex flex-wrap gap-2">
-              <StatusPill label={detail.resolvedCase.caseStatus} />
-              <StatusPill label={detail.resolvedCase.repairOutcome} />
-            </div>
-            <p className="mt-3 text-sm font-semibold text-[var(--foreground)]">Resumo da solução</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{detail.resolvedCase.resolutionSummary}</p>
-          </div>
-        ) : (
-          <DiagnosticClosureForm diagnosticId={detail.id} />
-        )}
-      </SectionCard>
-
-      <SectionCard
-        id="historico-bancada"
-        eyebrow="Histórico da bancada"
-        title="Timeline simples"
-        description="Perguntas do técnico, respostas da IA, medições, testes e demais eventos salvos no diagnóstico."
-      >
-        <div className="space-y-3">
-          {detail.timeline.length ? (
-            detail.timeline.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--accent-copper)]">
-                      {item.kind}
-                    </p>
-                    <p className="mt-2 text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
-                  </div>
-                  <p className="shrink-0 text-xs text-[var(--muted)]">{item.happenedAt}</p>
-                </div>
+        <PanelSection
+          id="encerrar-diagnostico"
+          title={detail.resolvedCase ? "Caso encerrado" : "Encerrar diagnóstico"}
+          hint={detail.resolvedCase ? detail.resolvedCase.caseStatus : "Quando a causa e a solução estiverem claras"}
+          defaultOpen={Boolean(detail.resolvedCase)}
+        >
+          {detail.resolvedCase ? (
+            <div>
+              <div className="flex flex-wrap gap-2">
+                <StatusPill label={detail.resolvedCase.caseStatus} />
+                <StatusPill label={detail.resolvedCase.repairOutcome} />
               </div>
-            ))
-          ) : (
-            <div className="rounded-[22px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-8 text-sm text-[var(--muted)]">
-              Ainda não há eventos registrados neste caso.
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                {detail.resolvedCase.resolutionSummary}
+              </p>
             </div>
+          ) : (
+            <DiagnosticClosureForm diagnosticId={detail.id} />
           )}
-        </div>
-      </SectionCard>
+        </PanelSection>
+
+        <PanelSection
+          title="Parecer técnico estruturado"
+          hint={latestResponse ? `Atualizado ${latestResponse.createdAt}` : "Resumo com tensões, testes e pontos de medição"}
+        >
+          <form action={generateDiagnosticAssistantAction} className="mb-4">
+            <input type="hidden" name="diagnostic_id" value={detail.id} />
+            <input type="hidden" name="assistant_prompt" value="" />
+            <FormSubmitButton
+              idleLabel={latestResponse ? "Atualizar parecer" : "Gerar parecer"}
+              pendingLabel="Consultando a IA..."
+              className="rounded-full border border-[var(--panel-border)] px-4 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:border-[rgba(109,94,242,0.4)] disabled:opacity-60"
+            />
+          </form>
+
+          {latestResponse ? (
+            <div className="grid gap-4 text-sm leading-6">
+              <div>
+                <p className="font-semibold text-[var(--foreground)]">{probableDiagnosis}</p>
+                <p className="text-[var(--muted)]">Setor: {probableArea}</p>
+                <p className="mt-2 text-[var(--muted)]">
+                  {structured?.technicalSummary ?? latestResponse.reasoningSummary}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-[var(--foreground)]">
+                  Próximo passo: {structured?.nextTest ?? latestResponse.recommendedNextStep}
+                </p>
+                {recommendedSequence.length ? (
+                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-[var(--muted)]">
+                    {recommendedSequence.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                ) : null}
+                {structured?.safetyNote ? (
+                  <p className="mt-2 text-[var(--danger)]">Segurança: {structured.safetyNote}</p>
+                ) : null}
+              </div>
+
+              {netRows.length ? (
+                <div>
+                  <p className="font-semibold text-[var(--foreground)]">Onde medir</p>
+                  <ul className="mt-2 grid gap-2">
+                    {netRows.map((row) => (
+                      <li key={row.key} className="flex items-start justify-between gap-2">
+                        <span className="min-w-0">
+                          <span className="block break-words font-mono text-xs text-[var(--foreground)]">{row.name}</span>
+                          {row.measurementPoint ? (
+                            <span className="block text-xs text-[var(--muted)]">
+                              {stripBoardviewCoordinates(row.measurementPoint)}
+                            </span>
+                          ) : null}
+                        </span>
+                        {row.boardviewHref ? (
+                          <Link
+                            href={row.boardviewHref}
+                            className="shrink-0 text-xs font-semibold text-[var(--accent-copper)] hover:underline"
+                          >
+                            Ver
+                          </Link>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {technicalContext?.schematic?.matches.length ? (
+                <div>
+                  <p className="font-semibold text-[var(--foreground)]">Esquema</p>
+                  <ul className="mt-2 grid gap-2">
+                    {technicalContext.schematic.matches.map((match) => (
+                      <li key={`${match.term}-${match.pageNumber}`}>
+                        <Link
+                          href={appendLabContext(match.openLabHref, { page: String(match.pageNumber) })}
+                          className="text-xs text-[var(--accent-copper)] hover:underline"
+                        >
+                          {match.term} • página {match.pageNumber}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {limitations.length ? (
+                <details className="text-xs text-[var(--muted)]">
+                  <summary className="cursor-pointer">Limitações ({limitations.length})</summary>
+                  <ul className="mt-2 grid gap-1">
+                    {limitations.map((item) => (
+                      <li key={item}>• {item}</li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </div>
+          ) : null}
+        </PanelSection>
+
+        <PanelSection
+          id="historico-bancada"
+          title="Histórico completo"
+          hint={`${detail.timeline.length} evento(s)`}
+        >
+          {detail.timeline.length ? (
+            <ol className="grid gap-3">
+              {detail.timeline.map((item) => (
+                <li key={item.id} className="border-l-2 border-[var(--panel-border)] pl-3 text-sm">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--accent-copper)]">
+                    {item.kind} • {item.happenedAt}
+                  </p>
+                  <p className="mt-0.5 font-medium text-[var(--foreground)]">{item.title}</p>
+                  <p className="mt-0.5 line-clamp-3 text-xs leading-5 text-[var(--muted)]">{item.description}</p>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Ainda não há eventos registrados.</p>
+          )}
+        </PanelSection>
+      </aside>
     </div>
   );
 }

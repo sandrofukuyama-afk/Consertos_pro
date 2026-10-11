@@ -161,6 +161,22 @@ function prettifyStatus(value: string) {
   return value.replaceAll("_", " ");
 }
 
+const diagnosticStatusLabels: Record<string, string> = {
+  draft: "Rascunho",
+  active: "Ativo",
+  waiting_input: "Aguardando teste",
+  resolved: "Resolvido",
+  unresolved: "Encerrado sem solução",
+  archived: "Arquivado",
+};
+
+const diagnosticPriorityLabels: Record<string, string> = {
+  low: "baixa",
+  normal: "normal",
+  high: "alta",
+  critical: "crítica",
+};
+
 function formatBytesLabel(bytes: number | null | undefined) {
   if (!bytes || !Number.isFinite(bytes) || bytes <= 0) {
     return null;
@@ -938,8 +954,8 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     model: model?.model_name ?? "Nao informado",
     serialNumber: data.equipment_serial_number ?? "Nao informado",
     label,
-    status: prettifyStatus(data.status),
-    priority: prettifyStatus(data.priority),
+    status: diagnosticStatusLabels[data.status] ?? prettifyStatus(data.status),
+    priority: diagnosticPriorityLabels[data.priority] ?? prettifyStatus(data.priority),
     summary: data.current_summary ?? "Resumo ainda nao definido.",
     initialReport: data.initial_problem_report,
     physicalNotes: data.physical_condition_notes ?? "Sem observacoes fisicas.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -54,6 +54,18 @@ const INITIAL_FORM: MeasurementPayload = {
   isOutOfRange: false,
 };
 
+function subscribeOnlineStatus(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+const getOnlineStatus = () => navigator.onLine;
+const getServerOnlineStatus = () => true;
+
 export function MeasurementForm({
   diagnosticId,
   tests = [],
@@ -87,9 +99,8 @@ export function MeasurementForm({
     measurementType: initialMeasurementType ?? "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  // No servidor assume online para o HTML bater com a primeira renderizacao do cliente.
+  const isOnline = useSyncExternalStore(subscribeOnlineStatus, getOnlineStatus, getServerOnlineStatus);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<Array<OfflineQueueRecord<MeasurementPayload>>>([]);
@@ -187,15 +198,12 @@ export function MeasurementForm({
 
   useEffect(() => {
     const onOnline = () => {
-      setIsOnline(true);
       syncPendingItems().catch((error) => {
         setSyncError(error instanceof Error ? error.message : "Falha ao sincronizar fila offline.");
       });
     };
-    const onOffline = () => setIsOnline(false);
 
     window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
 
     if (navigator.onLine) {
       onOnline();
@@ -203,7 +211,6 @@ export function MeasurementForm({
 
     return () => {
       window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
     };
   }, [syncPendingItems]);
 

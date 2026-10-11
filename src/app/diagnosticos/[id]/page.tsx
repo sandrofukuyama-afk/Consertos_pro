@@ -38,10 +38,12 @@ export default async function DiagnosticDetailPage({
 
   return (
     <AppShell
-      title={`Diagnóstico ${detail.label}`}
-      description="Workspace de bancada com IA, histórico técnico e acesso rápido a boardview e esquema."
+      title={detail.label}
+      description={[detail.category, detail.manufacturer, detail.model]
+        .filter((value) => value && !/^n[aã]o (identificado|informado|classificado)$/i.test(value))
+        .join(" • ")}
       user={user}
-      actionLabel="Voltar para dashboard"
+      actionLabel="← Casos"
       actionHref="/"
     >
       <div className="grid gap-4">

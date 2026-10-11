@@ -24,31 +24,48 @@ export default async function NewDiagnosticPage({
 
   return (
     <AppShell
-      title="Cadastro de equipamento"
-      description="Cadastre o equipamento com modelo, fotos e dados de entrada antes de começar o diagnóstico."
+      title="Novo diagnóstico"
+      description="Comece pelo chat. Os dados do aparelho podem ser completados depois."
       user={user}
-      actionLabel="Voltar para dashboard"
+      actionLabel="← Casos"
       actionHref="/"
     >
       <div className="grid gap-4">
         <QuickChatStart categories={categories} returnTo="/diagnosticos/novo" />
 
-        <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 shadow-[0_18px_44px_rgba(20,18,28,0.06)] sm:p-6">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-            Cadastro de equipamento
-          </p>
-          <h3 className="mt-3 font-[family-name:var(--font-heading)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            Registrar os dados de entrada
-          </h3>
+        <details
+          open={Boolean(params.error)}
+          className="group rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)]"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 sm:p-6 [&::-webkit-details-marker]:hidden">
+            <span>
+              <span className="block text-base font-semibold text-[var(--foreground)]">
+                Prefere cadastrar o aparelho completo antes?
+              </span>
+              <span className="mt-1 block text-sm text-[var(--muted)]">
+                Modelo, número de série, acessórios, condição de entrada e fotos.
+              </span>
+            </span>
+            <svg
+              className="h-5 w-5 shrink-0 text-[var(--muted)] transition group-open:rotate-180"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
 
-          <EquipmentIntakeForm
-            action={createDiagnosticAction}
-            categories={categories}
-            manufacturers={manufacturers}
-            models={models}
-            error={params.error}
-          />
-        </section>
+          <div className="border-t border-[var(--panel-border)] p-4 sm:p-6">
+            <EquipmentIntakeForm
+              action={createDiagnosticAction}
+              categories={categories}
+              manufacturers={manufacturers}
+              models={models}
+              error={params.error}
+            />
+          </div>
+        </details>
       </div>
     </AppShell>
   );

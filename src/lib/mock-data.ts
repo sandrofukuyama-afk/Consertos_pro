@@ -12,43 +12,51 @@ import type {
 export const navItems: NavItem[] = [
   {
     href: "/",
-    label: "Diagnósticos",
-    description: "Casos, timeline e próximos testes",
+    label: "Casos",
+    description: "Diagnósticos em andamento e novo caso pelo chat",
+    group: "Bancada",
   },
   {
     href: "/boardview/lab",
     label: "Boardview",
-    description: "Laboratorio tecnico para cruzar boardview e esquema",
-  },
-  {
-    href: "/catalogo-tecnico",
-    label: "Catálogo técnico",
-    description: "Marcas, modelos, placas e componentes",
-  },
-  {
-    href: "/biblioteca",
-    label: "Biblioteca",
-    description: "Documentos, PDFs e firmwares",
-  },
-  {
-    href: "/conhecimento",
-    label: "Conhecimento",
-    description: "Causas confirmadas e soluções",
+    description: "Boardview e esquema lado a lado",
+    group: "Bancada",
   },
   {
     href: "/busca",
     label: "Busca",
-    description: "Pesquisar casos e documentos",
+    description: "Pesquisar casos, placas, componentes e documentos",
+    group: "Consulta",
+  },
+  {
+    href: "/biblioteca",
+    label: "Biblioteca",
+    description: "Esquemas, boardviews, PDFs e firmwares",
+    group: "Consulta",
+  },
+  {
+    href: "/conhecimento",
+    label: "Memória técnica",
+    description: "Causas confirmadas e soluções de casos anteriores",
+    group: "Consulta",
+  },
+  {
+    href: "/catalogo-tecnico",
+    label: "Cadastros",
+    description: "Categorias, fabricantes, modelos, placas, componentes, sintomas e testes",
+    group: "Gestão",
   },
   {
     href: "/estatisticas",
     label: "Estatísticas",
-    description: "Problemas que mais aparecem e tempo médio",
+    description: "Defeitos mais comuns e tempo médio",
+    group: "Gestão",
   },
   {
     href: "/configuracoes",
     label: "Configurações",
     description: "Usuários e permissões",
+    group: "Gestão",
   },
 ];
 

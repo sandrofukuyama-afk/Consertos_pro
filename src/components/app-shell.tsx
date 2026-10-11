@@ -10,6 +10,16 @@ import { LogoutButton } from "@/components/logout-button";
 import { navItems } from "@/lib/mock-data";
 import type { AppUser } from "@/types/domain";
 
+const navGroups = ["Bancada", "Consulta", "Gestão"] as const;
+
+function isNavItemActive(href: string, pathname: string) {
+  if (href === "/") {
+    return pathname === "/" || pathname.startsWith("/diagnosticos");
+  }
+
+  return pathname.startsWith(href);
+}
+
 type AppShellProps = {
   title: string;
   description: string;
@@ -81,45 +91,39 @@ const renderSidebarContent = () => (
         </div>
       </div>
 
-      <nav className="mt-6 flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
-        {navItems.map((item) => {
-          const displayLabel =
-            item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
-          const displayDescription =
-            item.href === "/catalogo-tecnico"
-              ? "Central para categorias, fabricantes, tipos de placa, modelos, placas, componentes, sintomas e testes"
-              : item.description;
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+      <nav className="mt-6 flex flex-1 flex-col gap-5 overflow-y-auto pr-1">
+        {navGroups.map((group) => (
+          <div key={group}>
+            <p className="mb-2 px-4 font-mono text-[10px] uppercase tracking-[0.22em] text-[rgba(230,228,245,0.45)]">
+              {group}
+            </p>
+            <div className="flex flex-col gap-1">
+              {navItems
+                .filter((item) => item.group === group)
+                .map((item) => {
+                  const isActive = isNavItemActive(item.href, pathname);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`rounded-2xl border px-4 py-3 transition ${
-                isActive
-                  ? "border-[rgba(109,94,242,0.55)] bg-[rgba(109,94,242,0.16)] text-white"
-                  : "border-transparent text-white/80 hover:border-white/10 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-semibold tracking-tight">
-                  {displayLabel}
-                </span>
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    isActive ? "bg-[var(--accent-copper)]" : "bg-white/20"
-                  }`}
-                />
-              </div>
-              <p className="mt-1.5 text-xs leading-5 text-[rgba(230,228,245,0.68)]">
-                {displayDescription}
-              </p>
-            </Link>
-          );
-        })}
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={item.description}
+                      className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm font-semibold tracking-tight transition ${
+                        isActive
+                          ? "border-[rgba(109,94,242,0.55)] bg-[rgba(109,94,242,0.16)] text-white"
+                          : "border-transparent text-white/75 hover:border-white/10 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {item.label}
+                      {isActive ? (
+                        <span className="h-2 w-2 rounded-full bg-[var(--accent-copper)]" />
+                      ) : null}
+                    </Link>
+                  );
+                })}
+            </div>
+          </div>
+        ))}
       </nav>
 
 
@@ -139,7 +143,7 @@ const renderSidebarContent = () => (
               ConsertosPro
             </p>
             <h3 className="mt-1 font-[family-name:var(--font-heading)] text-lg font-semibold">
-              Menu adicional
+              Menu
             </h3>
           </div>
           <button
@@ -156,16 +160,12 @@ const renderSidebarContent = () => (
         <div className="mt-6 space-y-6">
           <div>
             <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--muted)]">
-              Páginas de suporte
+              Mais opções
             </p>
             <div className="grid grid-cols-1 gap-2">
               {secondaryItems.map((item) => {
-                const displayLabel =
-                  item.href === "/catalogo-tecnico" ? "Cadastros" : item.label;
-                const displayDescription =
-                  item.href === "/catalogo-tecnico"
-                    ? "Central para categorias, fabricantes, tipos de placa, modelos, placas, componentes, sintomas e testes"
-                    : item.description;
+                const displayLabel = item.label;
+                const displayDescription = item.description;
                 const isActive = pathname.startsWith(item.href);
 
                 return (
@@ -318,28 +318,30 @@ const renderSidebarContent = () => (
             <div className={`flex w-full min-w-0 ${isWorkspaceMode ? "flex-wrap items-center gap-2 lg:w-auto lg:justify-end" : "flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end"}`}>
               <Link
                 href="/busca"
-                className={`flex min-w-0 items-center rounded-full border border-[var(--panel-border)] bg-[var(--card-surface)] text-sm text-[var(--muted)] transition hover:border-[rgba(109,94,242,0.3)] ${isWorkspaceMode ? "w-full px-3 py-2 lg:w-auto lg:min-w-[220px]" : "w-full px-4 py-2.5 sm:w-auto sm:min-w-[240px]"}`}
+                className={`hidden min-w-0 items-center rounded-full sm:flex border border-[var(--panel-border)] bg-[var(--card-surface)] text-sm text-[var(--muted)] transition hover:border-[rgba(109,94,242,0.3)] ${isWorkspaceMode ? "w-full px-3 py-2 lg:w-auto lg:min-w-[220px]" : "w-full px-4 py-2.5 sm:w-auto sm:min-w-[240px]"}`}
               >
                 Buscar por modelo, placa, componente ou sintoma
               </Link>
-              <div className={`grid gap-2 ${isWorkspaceMode ? "grid-cols-2 w-full sm:flex sm:w-auto sm:flex-wrap" : "grid-cols-2 w-full sm:flex sm:w-auto sm:gap-3"}`}>
+              <div className={`flex flex-wrap gap-2 ${isWorkspaceMode ? "sm:w-auto" : "sm:w-auto sm:gap-3"}`}>
                 {showBackButton ? (
                   <BackButton
                     fallbackHref={backFallbackHref}
                     className={`flex items-center justify-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] text-sm font-semibold text-white transition hover:bg-white/5 ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
                   />
                 ) : null}
-                <Link
-                  href={actionHref}
-                  className={`rounded-full bg-[var(--accent-copper)] text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9] ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
-                >
-                  {actionLabel}
-                </Link>
+                {actionLabel ? (
+                  <Link
+                    href={actionHref}
+                    className={`rounded-full bg-[var(--accent-copper)] text-center text-sm font-semibold text-white shadow-[0_14px_30px_rgba(109,94,242,0.28)] transition hover:-translate-y-0.5 hover:bg-[#5b4ed9] ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
+                  >
+                    {actionLabel}
+                  </Link>
+                ) : null}
                 <button
                   onClick={handleAppUpdate}
                   disabled={isUpdating}
                   title="Limpar cache e atualizar"
-                  className={`flex items-center justify-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--card-surface-soft)] text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-50 ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
+                  className={`hidden items-center justify-center gap-2 rounded-full border sm:flex border-[var(--panel-border)] bg-[var(--card-surface-soft)] text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-50 ${isWorkspaceMode ? "px-3 py-2" : "px-4 py-2.5"}`}
                 >
                   <svg className={`h-4 w-4 ${isUpdating ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89" />
@@ -353,10 +355,6 @@ const renderSidebarContent = () => (
               <div className="hidden sm:block">
                 <LogoutButton />
               </div>
-              <div className="mt-1 flex items-center justify-between border-t border-white/5 pt-2 sm:hidden">
-                <span className="text-xs text-[var(--muted)]">{user.fullName}</span>
-                <LogoutButton />
-              </div>
             </div>
           </header>
 
@@ -367,7 +365,7 @@ const renderSidebarContent = () => (
           <Link
             href="/"
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
-              pathname === "/"
+              isNavItemActive("/", pathname)
                 ? "font-semibold text-[var(--accent-copper)]"
                 : "text-[var(--muted)] hover:text-white"
             }`}

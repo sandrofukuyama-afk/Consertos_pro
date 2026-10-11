@@ -2,6 +2,7 @@ export type NavItem = {
   href: string;
   label: string;
   description: string;
+  group: "Bancada" | "Consulta" | "Gestão";
 };
 
 export type AppUser = {
