@@ -1220,21 +1220,81 @@ export async function openDiagnosticTechnicalWorkbench(
       return asset ? summarizeAsset(asset) : null;
     },
     async searchLibrary(query: string) {
-      const pattern = `%${query.replace(/[%_]/g, " ").trim()}%`;
-      const { data, error } = await assetClient
+      // Cada palavra precisa aparecer (em qualquer ordem) no nome do arquivo ou no
+      // nome organizado na importacao (tipo, fabricante, modelo, placa). A descricao
+      // fica de fora porque guarda o caminho de origem ("Esquemas&Bios_...").
+      const tokens = Array.from(
+        new Set(
+          query
+            .toLowerCase()
+            .replace(/[^a-z0-9.\-/ ]+/g, " ")
+            .split(/\s+/)
+            .filter((token) => token.length >= 2),
+        ),
+      ).slice(0, 6);
+
+      if (!tokens.length) {
+        return { readable: [], others: [] };
+      }
+
+      type LibraryRow = TechnicalAssetRow & { metadata: Record<string, unknown> | null };
+      type LibraryQuery = PromiseLike<{ data: LibraryRow[] | null; error: { message: string } | null }> & {
+        or: (filter: string) => LibraryQuery;
+        order: (column: string, options: { ascending: boolean }) => LibraryQuery;
+        limit: (count: number) => LibraryQuery;
+      };
+
+      let request = (
+        assetClient as unknown as { from: (table: string) => { select: (columns: string) => LibraryQuery } }
+      )
         .from("technical_assets")
-        .select(TECHNICAL_ASSET_COLUMNS)
-        .ilike("original_filename", pattern)
-        .order("created_at", { ascending: false })
-        .limit(15);
+        .select(`${TECHNICAL_ASSET_COLUMNS}, metadata`);
+
+      for (const token of tokens) {
+        request = request.or(
+          [
+            `original_filename.ilike.%${token}%`,
+            `metadata->>display_name.ilike.%${token}%`,
+          ].join(","),
+        );
+      }
+
+      const { data, error } = await request.order("created_at", { ascending: false }).limit(40);
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return (data ?? [])
-        .map((row) => summarizeAsset(mapTechnicalAssetRow(row)))
-        .filter((item): item is TechnicalAssetSummary => Boolean(item));
+      const rows = data ?? [];
+      const displayName = (row: LibraryRow) =>
+        typeof row.metadata?.display_name === "string" ? row.metadata.display_name : null;
+
+      const readable = rows
+        .map((row) => {
+          const summary = summarizeAsset(mapTechnicalAssetRow(row));
+          const name = displayName(row);
+          return summary && name ? { ...summary, title: `${name} (${row.original_filename})` } : summary;
+        })
+        .filter((item): item is TechnicalAssetSummary => Boolean(item))
+        .slice(0, 15);
+
+      // BIOS, firmware e boardviews que o laboratorio ainda nao abre: a IA nao le,
+      // mas pode avisar o tecnico que existem para baixar na Biblioteca.
+      const others = rows
+        .filter((row) => !toAssetKind(row.file_format))
+        .slice(0, 10)
+        .map((row) => ({
+          id: row.id,
+          nome: displayName(row) ?? row.original_filename,
+          arquivo: row.original_filename,
+          tipo: row.asset_type,
+          observacao:
+            typeof row.metadata?.description === "string"
+              ? row.metadata.description.split(" • Origem:")[0] || null
+              : null,
+        }));
+
+      return { readable, others };
     },
     async activateAsset(assetId: string) {
       const known = associatedAssets.find((asset) => asset.id === assetId);

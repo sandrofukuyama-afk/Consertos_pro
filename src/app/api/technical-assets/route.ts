@@ -774,7 +774,18 @@ async function searchTechnicalAssets(request: Request) {
     100,
   );
 
-  const { data, error } = await supabase
+  // Com a biblioteca grande, texto e formato sao filtrados no banco: cada palavra
+  // precisa aparecer no nome do arquivo ou no nome organizado, em qualquer ordem.
+  const queryTokens = Array.from(
+    new Set(
+      normalizeSearchText(query)
+        .replace(/[^a-z0-9.\-/ ]+/g, " ")
+        .split(" ")
+        .filter((token) => token.length >= 2),
+    ),
+  ).slice(0, 6);
+
+  let assetsQuery = supabase
     .from("technical_assets")
     .select(`
       id,
@@ -792,9 +803,21 @@ async function searchTechnicalAssets(request: Request) {
         boards(board_code, manufacturer_id),
         equipment_models(model_name, manufacturer_id)
       )
-    `)
+    `);
+
+  if (fileFormat) {
+    assetsQuery = assetsQuery.eq("file_format", fileFormat);
+  }
+
+  for (const token of queryTokens) {
+    assetsQuery = assetsQuery.or(
+      `original_filename.ilike.%${token}%,metadata->>display_name.ilike.%${token}%`,
+    );
+  }
+
+  const { data, error } = await assetsQuery
     .order("created_at", { ascending: false })
-    .limit(limit * 4);
+    .limit(queryTokens.length || fileFormat ? 500 : limit * 4);
 
   if (error) {
     throw new Error(error.message);
@@ -884,7 +907,7 @@ async function searchTechnicalAssets(request: Request) {
           .join(" "),
       );
 
-      return haystack.includes(normalizedQuery);
+      return queryTokens.every((token) => haystack.includes(token));
     })
     .slice(0, limit);
 

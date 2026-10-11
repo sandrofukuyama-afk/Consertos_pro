@@ -48,7 +48,7 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "listar_arquivos_tecnicos",
     description:
-      "Lista os boardviews (.brd/.bdv) e esquemas (PDF) associados a este caso e qual esta ativo para consulta. Se 'busca' for informada, procura tambem na biblioteca tecnica inteira pelo nome do arquivo (ex.: codigo da placa como 820-02016, NM-C881, LA-K371P, ou o modelo).",
+      "Lista os boardviews (.brd/.bdv) e esquemas (PDF) associados a este caso e qual esta ativo para consulta. Se 'busca' for informada, procura tambem na biblioteca tecnica inteira (cerca de mil arquivos: notebooks, desktops, placas de video, celulares). Cada palavra da busca precisa aparecer no nome do arquivo ou no fabricante/modelo/placa cadastrados, em qualquer ordem: prefira poucas palavras distintivas, como o codigo da placa (820-02016, LA-D801P, NM-D521, DA0HK9MB6D0, MS-V388) ou fabricante + modelo (dell 5567, msi 3080). Se nao achar, tente outra combinacao mais curta. Tambem lista BIOS/firmware e boardviews em formatos que voce nao le, para avisar o tecnico.",
     input_schema: {
       type: "object",
       properties: {
@@ -254,13 +254,24 @@ function parseNumericValue(value: string) {
 async function listTechnicalAssets(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
   const query = readString(input, "busca");
   const associated = ctx.workbench.listAssociatedAssets();
-  const library = query ? await ctx.workbench.searchLibrary(query) : [];
+  const library = query ? await ctx.workbench.searchLibrary(query) : null;
+
+  if (query) {
+    ctx.actions.push(`Biblioteca: buscou "${query}"`);
+  }
 
   return {
     boardview_ativo: ctx.workbench.getActiveAsset("boardview"),
     esquema_ativo: ctx.workbench.getActiveAsset("schematic"),
     associados_ao_caso: associated,
-    resultados_da_biblioteca: query ? library : undefined,
+    resultados_da_biblioteca: library?.readable,
+    outros_arquivos_para_download: library?.others.length
+      ? {
+          aviso:
+            "BIOS, firmware ou boardview em formato que a IA nao le. Avise o tecnico que pode baixar na Biblioteca.",
+          arquivos: library.others,
+        }
+      : undefined,
   };
 }
 
