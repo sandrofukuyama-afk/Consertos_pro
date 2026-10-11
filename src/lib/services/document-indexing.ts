@@ -101,17 +101,10 @@ function chunkText(value: string): DocumentIndexPayload["chunks"] {
 
 export async function extractTechnicalDocumentText(file: File) {
   if (file.type === "application/pdf") {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({
-      data: Buffer.from(await file.arrayBuffer()),
-    });
-
-    try {
-      const result = await parser.getText();
-      return normalizeWhitespace(result.text);
-    } finally {
-      await parser.destroy();
-    }
+    // Import dinamico: mantem este modulo carregavel pelos testes em Node puro.
+    const { extractPdfText } = await import("@/lib/pdf-text");
+    const result = await extractPdfText(Buffer.from(await file.arrayBuffer()));
+    return normalizeWhitespace(result.text);
   }
 
   if (isTextLikeFile(file)) {

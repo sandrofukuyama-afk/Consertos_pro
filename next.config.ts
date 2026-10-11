@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     },
     proxyClientMaxBodySize: "25mb",
   },
-  serverExternalPackages: ["pdf-parse"],
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
   async headers() {
     return [
       {

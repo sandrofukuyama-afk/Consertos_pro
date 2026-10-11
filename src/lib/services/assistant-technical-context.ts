@@ -738,22 +738,14 @@ function buildBoardviewSearchContext(
 }
 
 async function extractSchematicPageTexts(bytes: Uint8Array) {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({
-    data: Buffer.from(bytes),
-  });
-
-  try {
-    const result = await parser.getText();
-    return result.pages.map(
-      (page): SchematicPdfPageText => ({
-        pageNumber: page.num,
-        text: normalizeWhitespace(page.text),
-      }),
-    );
-  } finally {
-    await parser.destroy();
-  }
+  const { extractPdfText } = await import("@/lib/pdf-text");
+  const result = await extractPdfText(bytes);
+  return result.pages.map(
+    (page): SchematicPdfPageText => ({
+      pageNumber: page.num,
+      text: normalizeWhitespace(page.text),
+    }),
+  );
 }
 
 async function buildSchematicSearchContext(
