@@ -1,0 +1,20 @@
+{
+  "name": "consertospro-library-watcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vigia uma pasta e envia esquemas, boardviews e BIOS para a biblioteca do ConsertosPro.",
+  "type": "module",
+  "main": "src/watcher.mjs",
+  "scripts": {
+    "start": "node src/watcher.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
+    "@supabase/supabase-js": "2.117.3",
+    "adm-zip": "0.5.16",
+    "node-unrar-js": "2.0.2"
+  }
+}
