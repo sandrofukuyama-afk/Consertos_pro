@@ -16,7 +16,11 @@ type TechnicalLibraryListProps = {
   manufacturers: CatalogOption[];
 };
 
-type LibraryFilter = "all" | "boardview" | "pdf" | "other";
+type LibraryFilter = "all" | "boardview" | "pdf" | "bios" | "other";
+
+// Com a biblioteca inteira carregada, desenhar centenas de cartoes de uma vez
+// trava o celular: mostra em blocos.
+const PAGE_SIZE = 30;
 
 function normalizeSearch(value: string | null | undefined) {
   return String(value ?? "")
@@ -30,6 +34,10 @@ function normalizeSearch(value: string | null | undefined) {
 function matchesQuickFilter(item: TechnicalLibraryItem, filter: LibraryFilter): boolean {
   const normalizedType = normalizeSearch(item.documentType);
   const normalizedFormat = normalizeSearch(item.fileFormat);
+
+  if (filter === "bios") {
+    return normalizedType.includes("bios") || normalizedType.includes("firmware");
+  }
 
   if (filter === "boardview") {
     return (
@@ -48,7 +56,11 @@ function matchesQuickFilter(item: TechnicalLibraryItem, filter: LibraryFilter): 
   }
 
   if (filter === "other") {
-    return !matchesQuickFilter(item, "boardview") && !matchesQuickFilter(item, "pdf");
+    return (
+      !matchesQuickFilter(item, "boardview") &&
+      !matchesQuickFilter(item, "pdf") &&
+      !matchesQuickFilter(item, "bios")
+    );
   }
 
   return true;
@@ -86,6 +98,7 @@ export function TechnicalLibraryList({
 }: TechnicalLibraryListProps) {
   const [query, setQuery] = useState("");
   const [quickFilter, setQuickFilter] = useState<LibraryFilter>("all");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const filteredItems = useMemo(
     () =>
@@ -100,7 +113,10 @@ export function TechnicalLibraryList({
       <div className="grid gap-3">
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setVisibleCount(PAGE_SIZE);
+          }}
           placeholder="Buscar por arquivo, placa, modelo, fabricante ou tipo"
           className="w-full rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
         />
@@ -109,12 +125,16 @@ export function TechnicalLibraryList({
             { value: "all", label: "Todos" },
             { value: "boardview", label: "Boardview" },
             { value: "pdf", label: "Esquema PDF" },
+            { value: "bios", label: "BIOS" },
             { value: "other", label: "Outros" },
           ].map((entry) => (
             <button
               key={entry.value}
               type="button"
-              onClick={() => setQuickFilter(entry.value as LibraryFilter)}
+              onClick={() => {
+                setQuickFilter(entry.value as LibraryFilter);
+                setVisibleCount(PAGE_SIZE);
+              }}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                 quickFilter === entry.value
                   ? "bg-[var(--accent-copper)] text-white"
@@ -128,7 +148,14 @@ export function TechnicalLibraryList({
       </div>
 
       {filteredItems.length ? (
-        filteredItems.map((item) =>
+        <p className="text-xs text-[var(--muted)]">
+          {filteredItems.length} arquivo(s)
+          {filteredItems.length > visibleCount ? ` • mostrando ${visibleCount}` : ""}
+        </p>
+      ) : null}
+
+      {filteredItems.length ? (
+        filteredItems.slice(0, visibleCount).map((item) =>
           item.source === "technical_asset" ? (
             <TechnicalLibraryAssetCard
               key={`${item.source}:${item.id}`}
@@ -195,6 +222,16 @@ export function TechnicalLibraryList({
             : "Nenhum documento tecnico foi enviado ainda."}
         </div>
       )}
+
+      {filteredItems.length > visibleCount ? (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+          className="rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[rgba(109,94,242,0.45)]"
+        >
+          Mostrar mais ({filteredItems.length - visibleCount} restantes)
+        </button>
+      ) : null}
     </div>
   );
 }

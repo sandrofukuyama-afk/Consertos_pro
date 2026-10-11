@@ -189,14 +189,25 @@ function formatBytesLabel(bytes: number | null | undefined) {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 100 * 1024 * 1024 ? 0 : 1)} MB`;
 }
 
-function getTechnicalAssetTypeLabel(format: string, assetType: string) {
+function getTechnicalAssetTypeLabel(format: string, assetType: string, fileName?: string | null) {
+  const extension = String(fileName ?? "").split(".").pop()?.toUpperCase() ?? "";
+
+  switch (assetType) {
+    case "bios":
+      return "BIOS";
+    case "firmware":
+      return "Firmware EC";
+    case "datasheet":
+      return "Datasheet";
+  }
+
   switch (format) {
     case "brd":
       return "Boardview BRD";
     case "bdv":
       return "Boardview BDV";
     case "pdf":
-      return assetType === "schematic_pdf" ? "Esquema PDF" : "PDF";
+      return assetType === "boardview" ? "Boardview PDF" : assetType === "schematic_pdf" ? "Esquema PDF" : "PDF";
     case "bin":
       return "Firmware BIN";
     case "zip":
@@ -206,6 +217,10 @@ function getTechnicalAssetTypeLabel(format: string, assetType: string) {
     case "png":
       return "Foto PNG";
     default:
+      // Boardviews em formatos que o laboratorio ainda nao abre (.fz, .cad, .tvw...).
+      if (assetType === "boardview") {
+        return extension && extension !== fileName?.toUpperCase() ? `Boardview ${extension}` : "Boardview";
+      }
       return prettifyStatus(assetType || format);
   }
 }
@@ -1193,12 +1208,15 @@ export async function getTechnicalDocuments() {
   return items;
 }
 
-export async function getTechnicalLibraryItems() {
-  const supabase = await createClient();
+// O Supabase devolve no maximo 1000 linhas por consulta; a biblioteca le em paginas
+// porque a lista filtra e pagina no navegador.
+const LIBRARY_PAGE_SIZE = 1000;
 
-  const [documents, technicalAssetsResult] = await Promise.all([
-    getTechnicalDocuments(),
-    supabase
+async function fetchAllLibraryAssets(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const rows: TechnicalAssetRow[] = [];
+
+  for (let from = 0; ; from += LIBRARY_PAGE_SIZE) {
+    const { data, error } = await supabase
       .from("technical_assets")
       .select(`
         id,
@@ -1216,10 +1234,30 @@ export async function getTechnicalLibraryItems() {
         )
       `)
       .order("created_at", { ascending: false })
-      .limit(50),
+      .order("id", { ascending: true })
+      .range(from, from + LIBRARY_PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    rows.push(...((data ?? []) as TechnicalAssetRow[]));
+
+    if (!data || data.length < LIBRARY_PAGE_SIZE) {
+      return rows;
+    }
+  }
+}
+
+export async function getTechnicalLibraryItems() {
+  const supabase = await createClient();
+
+  const [documents, technicalAssetRows] = await Promise.all([
+    getTechnicalDocuments(),
+    fetchAllLibraryAssets(supabase),
   ]);
 
-  const assetItems = ((technicalAssetsResult.data ?? []) as TechnicalAssetRow[]).map((row) => {
+  const assetItems = technicalAssetRows.map((row) => {
     const association = buildTechnicalAssetAssociation(row);
     const associationLabel = association.modelName ?? association.boardName ?? "Nao associado";
     const metadata = row.metadata ?? {};
@@ -1253,7 +1291,7 @@ export async function getTechnicalLibraryItems() {
       source: "technical_asset",
       title: displayName,
       originalFileName: row.original_filename,
-      documentType: getTechnicalAssetTypeLabel(row.file_format, row.asset_type),
+      documentType: getTechnicalAssetTypeLabel(row.file_format, row.asset_type, row.original_filename),
       fileFormat: row.file_format,
       manufacturer: manufacturerName,
       manufacturerId,
