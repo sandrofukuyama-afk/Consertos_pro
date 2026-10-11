@@ -385,6 +385,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         ai_responses(
           id,
           response_role,
+          prompt_context_version,
           reasoning_summary,
           recommended_next_step,
           raw_response_text,
@@ -1053,6 +1054,16 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     chatMessages: [...(data.ai_responses ?? [])]
       .filter((item) => item.response_role === "user" || item.response_role === "assistant")
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .filter(
+        // Pareceres gerados pelo botao (sem pergunta do tecnico) nao sao
+        // conversa: ficam no painel "Parecer tecnico". No chat entram as
+        // perguntas, as respostas do chat atual (chat-v1) e as respostas
+        // antigas que respondiam a uma pergunta.
+        (item, index, ordered) =>
+          item.response_role === "user" ||
+          item.prompt_context_version === "chat-v1" ||
+          ordered[index - 1]?.response_role === "user",
+      )
       .map((item) => {
         const structured =
           item.structured_response_json && typeof item.structured_response_json === "object"
