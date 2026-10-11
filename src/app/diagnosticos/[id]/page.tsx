@@ -1,11 +1,13 @@
 import { AppShell } from "@/components/app-shell";
 import { DiagnosticBenchWorkspace } from "@/components/diagnostic-bench-workspace";
 import { requireCurrentUser } from "@/lib/auth";
+import { getDiagnosticBiosData } from "@/lib/services/bios-dumps";
 import { getLibraryCatalog } from "@/lib/services/catalog";
 import {
   getDiagnosticDetail,
   getDiagnosticFormOptions,
 } from "@/lib/services/diagnostics";
+import { createClient } from "@/lib/supabase/server";
 
 // O chat com o agente de IA roda como server action desta pagina e pode levar
 // alguns minutos (varias consultas ao boardview/esquema e raciocinio estendido).
@@ -35,6 +37,10 @@ export default async function DiagnosticDetailPage({
     getLibraryCatalog(),
     searchParams,
   ]);
+  const biosData = await getDiagnosticBiosData(await createClient(), detail.id, {
+    modelId: detail.modelId,
+    boardIds: detail.boards.map((board) => board.boardId).filter((value): value is string => Boolean(value)),
+  });
 
   return (
     <AppShell
@@ -63,6 +69,7 @@ export default async function DiagnosticDetailPage({
           detail={detail}
           options={options}
           catalog={catalog}
+          biosData={biosData}
           prefillMeasurement={{
             pointLabel: query.point_label,
             expectedValueText: query.expected_value_text,

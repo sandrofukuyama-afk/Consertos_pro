@@ -39,6 +39,17 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Arquivo tecnico nao encontrado." }, { status: 404 });
   }
 
+  // Download: redireciona para link temporario do Storage, sem passar o arquivo
+  // (que pode ter dezenas de MB) pela funcao da Vercel.
+  if (shouldDownload) {
+    const { data: signed } = await supabase.storage
+      .from(asset.storage_bucket || TECHNICAL_ASSET_BUCKET)
+      .createSignedUrl(asset.storage_path, 300, { download: asset.original_filename });
+    if (signed?.signedUrl) {
+      return NextResponse.redirect(signed.signedUrl, 302);
+    }
+  }
+
   const candidateBuckets = Array.from(
     new Set(
       [asset.storage_bucket, TECHNICAL_ASSET_BUCKET, "technical-documents"].filter(

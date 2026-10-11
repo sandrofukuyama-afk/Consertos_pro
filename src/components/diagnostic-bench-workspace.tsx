@@ -7,12 +7,14 @@ import {
 } from "@/app/actions";
 import { ChatMarkdown } from "@/components/chat-markdown";
 import { ChatScrollArea } from "@/components/chat-scroll-area";
+import { DiagnosticBiosPanel } from "@/components/diagnostic-bios-panel";
 import { DiagnosticChatComposer } from "@/components/diagnostic-chat-composer";
 import { DiagnosticClosureForm } from "@/components/diagnostic-closure-form";
 import { DiagnosticTechnicalAssetAssociation } from "@/components/diagnostic-technical-asset-association";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
+import type { DiagnosticBiosData } from "@/lib/services/bios-dumps";
 import type {
   CatalogOption,
   DiagnosticDetail,
@@ -23,6 +25,7 @@ import type {
 
 type DiagnosticBenchWorkspaceProps = {
   detail: DiagnosticDetail;
+  biosData: DiagnosticBiosData;
   options: {
     symptoms: SymptomOption[];
     tests: TestOption[];
@@ -298,6 +301,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export function DiagnosticBenchWorkspace({
   detail,
+  biosData,
   options,
   catalog,
   prefillMeasurement,
@@ -557,6 +561,19 @@ export function DiagnosticBenchWorkspace({
             models={catalog.models}
             manufacturers={catalog.manufacturers}
           />
+        </PanelSection>
+
+        <PanelSection
+          id="bios"
+          title="BIOS (gravador)"
+          hint={
+            biosData.dumps.length
+              ? `${biosData.dumps.length} dump(s) • agente ${biosData.agentOnline ? "online" : "offline"}`
+              : `Ler, guardar e gravar a BIOS • agente ${biosData.agentOnline ? "online" : "offline"}`
+          }
+          defaultOpen={biosData.jobs.some((job) => ["pending", "claimed", "running"].includes(job.status))}
+        >
+          <DiagnosticBiosPanel diagnosticId={detail.id} data={biosData} />
         </PanelSection>
 
         <PanelSection title="Dados do aparelho" hint={`${detail.manufacturer} • ${detail.model}`}>
