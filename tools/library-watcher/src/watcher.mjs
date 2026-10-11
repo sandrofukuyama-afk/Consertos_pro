@@ -36,11 +36,16 @@ const MAX_ARCHIVE_DEPTH = 2;
 const MAX_FILE_BYTES = 200 * 1024 * 1024;
 
 function log(...args) {
-  console.log(new Date().toISOString(), ...args);
+  console.log(localTimestamp(), ...args);
 }
 
+// Data e hora locais (fuso definido por TZ no container, ex.: Asia/Tokyo).
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString("sv-SE");
+}
+
+function localTimestamp() {
+  return new Date().toLocaleString("sv-SE");
 }
 
 async function walk(dir) {
@@ -225,7 +230,7 @@ async function runOnce(getImporter, seen) {
     const destination = failed ? config.errors : path.join(config.done, today());
     const moved = await moveTo(itemPath, destination);
     const lines = [
-      `${new Date().toISOString()}  ${entry.name}`,
+      `${localTimestamp()}  ${entry.name}`,
       `  enviados: ${report.imported.length} | ja existiam: ${report.skipped} | ignorados: ${report.ignored}`,
       ...report.imported.map((name) => `  + ${name}`),
       ...report.problems.map((problem) => `  ! ${problem}`),

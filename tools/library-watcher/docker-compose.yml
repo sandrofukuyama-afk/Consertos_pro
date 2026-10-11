@@ -1,6 +1,9 @@
 # Vigia de pasta da biblioteca do ConsertosPro para o ZimaOS.
-# Copie a pasta tools/library-watcher para o servidor e ajuste os caminhos
-# da esquerda em "volumes" para os caminhos reais do ZimaOS.
+#
+# O codigo fica em HDD4/ConsertosPro-watcher (com o arquivo .env) e as pastas
+# de trabalho ficam ao lado. "/media/raid" e o caminho do volume compartilhado
+# como "raid" no ZimaOS: se no seu servidor for outro (veja no app Arquivos do
+# ZimaOS), troque so esse comeco nas 4 linhas de "volumes".
 name: consertospro-watcher
 services:
   watcher:
@@ -10,8 +13,10 @@ services:
     working_dir: /app
     command: sh -c "npm install --omit=dev --no-audit --no-fund && node src/watcher.mjs"
     env_file: .env
+    environment:
+      TZ: Asia/Tokyo
     volumes:
-      - /DATA/AppData/consertospro-watcher:/app
+      - "/media/raid/Servidor/HDD4/ConsertosPro-watcher:/app"
       - "/media/raid/Servidor/HDD4/Enviar para o ConsertosPro:/inbox"
       - "/media/raid/Servidor/HDD4/Enviar para o ConsertosPro - Enviados:/enviados"
       - "/media/raid/Servidor/HDD4/Enviar para o ConsertosPro - Erros:/erros"
