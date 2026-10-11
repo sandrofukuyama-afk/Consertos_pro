@@ -88,7 +88,9 @@ function ComposerFields({
       return;
     }
     element.style.height = "auto";
-    element.style.height = `${Math.min(element.scrollHeight, 220)}px`;
+    // No celular o teclado ja ocupa metade da tela: limita a altura do campo.
+    const maxHeight = window.innerWidth < 1024 ? 140 : 220;
+    element.style.height = `${Math.min(element.scrollHeight, maxHeight)}px`;
   }, [text]);
 
   const canSend = text.trim().length > 0 || fileNames.length > 0;
@@ -148,6 +150,8 @@ function ComposerFields({
           ref={textareaRef}
           name="message"
           rows={1}
+          enterKeyHint="enter"
+          data-voice-assist="off"
           value={text}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={(event) => {

@@ -362,12 +362,12 @@ export function DiagnosticBenchWorkspace({
 
         <ChatScrollArea
           messageCount={detail.chatMessages.length}
-          className="flex max-h-[calc(100dvh-300px)] min-h-[320px] flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-5"
+          className="flex min-h-[240px] flex-col gap-4 px-3 py-4 sm:px-5 lg:max-h-[calc(100dvh-300px)] lg:min-h-[320px] lg:overflow-y-auto"
         >
           {detail.chatMessages.length ? (
             detail.chatMessages.map((entry) =>
               entry.role === "user" ? (
-                <div key={entry.id} className="flex max-w-[88%] flex-col items-end self-end">
+                <div key={entry.id} className="flex max-w-[88%] scroll-mb-56 flex-col items-end self-end lg:scroll-mb-0">
                   <div className="rounded-2xl rounded-br-md bg-[var(--accent-copper)] px-4 py-3 text-sm leading-6 text-white">
                     {entry.text ? <p className="whitespace-pre-wrap">{entry.text}</p> : null}
                     {entry.photos.length ? (
@@ -392,8 +392,8 @@ export function DiagnosticBenchWorkspace({
                   <p className="mt-1 px-1 text-[11px] text-[var(--muted)]">{entry.createdAt}</p>
                 </div>
               ) : (
-                <div key={entry.id} className="flex max-w-[96%] flex-col self-start">
-                  <div className="rounded-2xl rounded-bl-md border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
+                <div key={entry.id} className="flex max-w-[96%] scroll-mb-56 flex-col self-start lg:scroll-mb-0">
+                  <div className="rounded-2xl rounded-bl-md [overflow-wrap:anywhere] border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
                     <ChatMarkdown text={entry.text} />
                     {entry.agentActions.length || entry.sources.length ? (
                       <details className="mt-3 text-xs text-[var(--muted)]">
@@ -435,7 +435,7 @@ export function DiagnosticBenchWorkspace({
           )}
         </ChatScrollArea>
 
-        <div className="border-t border-[var(--panel-border)] p-3 sm:p-4">
+        <div className="chat-composer-sticky sticky z-30 rounded-b-2xl border-t border-[var(--panel-border)] bg-[var(--card-surface)] p-3 sm:rounded-b-[28px] sm:p-4 lg:static">
           <DiagnosticChatComposer
             diagnosticId={detail.id}
             defaultMessage={detail.chatMessages.length ? undefined : detail.initialReport}

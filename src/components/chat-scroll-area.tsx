@@ -14,8 +14,17 @@ export function ChatScrollArea({ messageCount, className, children }: ChatScroll
 
   useEffect(() => {
     const element = ref.current;
-    if (element) {
+    if (!element) {
+      return;
+    }
+
+    if (element.scrollHeight > element.clientHeight + 1) {
+      // Computador: a conversa tem rolagem propria.
       element.scrollTop = element.scrollHeight;
+    } else if (messageCount > 0) {
+      // Celular: a pagina inteira rola; leva a ultima mensagem para a vista,
+      // acima da caixa de mensagem fixa.
+      element.lastElementChild?.scrollIntoView({ block: "end" });
     }
   }, [messageCount]);
 

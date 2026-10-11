@@ -89,6 +89,36 @@ button {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
 }
 
+/* ── Celular / iPhone ───────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  /* Abaixo de 16px o Safari do iOS da zoom na tela ao tocar no campo. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Conteudo fora do notch, da ilha dinamica e das bordas arredondadas. */
+  .app-safe-area {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  /* Com o teclado aberto a barra inferior so ocupa espaco: esconde. */
+  body:has(:is(input, textarea, select):focus) .app-bottom-nav {
+    display: none;
+  }
+
+  .chat-composer-sticky {
+    bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  body:has(:is(input, textarea):focus) .chat-composer-sticky {
+    bottom: 0;
+  }
+}
+
 .form-assist-voice-button {
   width: fit-content;
   border: 1px solid rgba(230,228,245, 0.14);

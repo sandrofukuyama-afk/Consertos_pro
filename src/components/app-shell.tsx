@@ -237,7 +237,7 @@ const renderSidebarContent = () => (
 
   return (
     <div
-      className={`flex min-h-screen w-full flex-col overflow-x-hidden ${
+      className={`app-safe-area flex min-h-screen w-full flex-col overflow-x-clip ${
         isWorkspaceMode ? "px-2 py-2 md:px-3 md:py-3" : "px-3 py-3 md:px-5 md:py-4"
       }`}
     >
@@ -301,7 +301,7 @@ const renderSidebarContent = () => (
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur sm:rounded-[30px]">
+        <main className="min-w-0 flex-1 overflow-clip rounded-2xl border border-[var(--panel-border)] bg-[rgba(18,17,24,0.88)] shadow-[0_24px_64px_rgba(0,0,0,0.35)] backdrop-blur sm:rounded-[30px]">
           <header className={`flex border-b border-[var(--panel-border)] ${isWorkspaceMode ? "flex-col gap-3 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between" : "flex-col gap-4 px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 md:py-5"}`}>
             <div className="min-w-0">
               <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
@@ -361,7 +361,7 @@ const renderSidebarContent = () => (
           <div className={`${isWorkspaceMode ? "px-2 py-2 pb-24 sm:px-3 sm:py-3 lg:px-4 lg:py-4 lg:pb-4" : "px-3 py-3 pb-24 sm:px-4 sm:py-4 md:px-8 md:py-7 lg:pb-7"}`}>{children}</div>
         </main>
 
-        <nav className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-around border-t border-white/10 bg-[var(--panel)]/90 px-2 py-2 pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md lg:hidden">
+        <nav className="app-bottom-nav fixed bottom-0 inset-x-0 z-40 flex items-center justify-around border-t border-white/10 bg-[var(--panel)]/90 px-2 py-2 pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.4)] backdrop-blur-md lg:hidden">
           <Link
             href="/"
             className={`flex flex-col items-center gap-1 px-2.5 py-1.5 transition ${
