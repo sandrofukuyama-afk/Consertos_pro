@@ -10,6 +10,7 @@ import type {
 } from "@/types/domain";
 
 type TechnicalLibraryListProps = {
+  initialQuery?: string;
   items: TechnicalLibraryItem[];
   boards: CatalogOption[];
   models: EquipmentModelCatalogOption[];
@@ -81,22 +82,26 @@ function matchesSearch(item: TechnicalLibraryItem, query: string) {
       item.associationLabel,
       item.documentType,
       item.fileFormat,
-      item.description,
+      // O caminho de origem ("Esquemas&Bios_...") faria "bios" casar com tudo.
+      item.description?.replace(/(^| • )Origem:.*$/, ""),
     ]
       .filter(Boolean)
       .join(" "),
   );
 
-  return haystack.includes(normalizedQuery);
+  // Cada palavra precisa aparecer, em qualquer ordem ("msi 3080" acha
+  // "MSI GeForce RTX 3080").
+  return normalizedQuery.split(" ").every((token) => haystack.includes(token));
 }
 
 export function TechnicalLibraryList({
+  initialQuery,
   items,
   boards,
   models,
   manufacturers,
 }: TechnicalLibraryListProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [quickFilter, setQuickFilter] = useState<LibraryFilter>("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 

@@ -23,7 +23,7 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
   return (
     <AppShell
       title="Busca"
-      description="Pesquise em diagnósticos e documentos usando texto, status e categoria."
+      description="Pesquise em diagnósticos, esquemas, boardviews, BIOS e documentos."
       user={user}
     >
       <div className="grid gap-4">
@@ -75,6 +75,75 @@ export default async function BuscaPage({ searchParams }: BuscaPageProps) {
             </button>
           </form>
         </section>
+
+        {data.filters.q ? (
+          <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-4 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+                  Biblioteca técnica
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                  Esquemas, boardviews e BIOS
+                </h3>
+              </div>
+              <p className="text-sm text-[var(--muted)]">
+                {data.technicalFiles.total} arquivo(s)
+                {data.technicalFiles.total > data.technicalFiles.items.length
+                  ? ` • mostrando ${data.technicalFiles.items.length}`
+                  : ""}
+              </p>
+            </div>
+
+            <div className="mt-5 grid gap-2">
+              {data.technicalFiles.items.length ? (
+                data.technicalFiles.items.map((item) => (
+                  <article
+                    key={item.id}
+                    className="flex flex-col gap-3 rounded-[20px] border border-[var(--panel-border)] bg-[var(--background)] p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
+                      <p className="mt-1 text-xs text-[var(--muted)] [overflow-wrap:anywhere]">
+                        {item.typeLabel} • {item.fileName} • {item.sizeLabel}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      {item.labHref ? (
+                        <Link
+                          href={item.labHref}
+                          className="rounded-full border border-[var(--panel-border)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-[rgba(109,94,242,0.45)]"
+                        >
+                          Abrir
+                        </Link>
+                      ) : null}
+                      <a
+                        href={item.downloadHref}
+                        className="rounded-full bg-[var(--accent-copper)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                      >
+                        Baixar
+                      </a>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-8 text-center text-sm text-[var(--muted)]">
+                  Nenhum arquivo técnico encontrado. Tente menos palavras ou só o código da placa
+                  (ex.: la-d801p, 820-3437).
+                </div>
+              )}
+            </div>
+
+            {data.technicalFiles.total > data.technicalFiles.items.length ? (
+              <Link
+                href={`/biblioteca?q=${encodeURIComponent(data.filters.q)}`}
+                className="mt-4 inline-flex text-sm font-semibold text-[var(--accent-copper)] hover:underline"
+              >
+                Ver todos os {data.technicalFiles.total} na Biblioteca →
+              </Link>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="rounded-[28px] border border-[var(--panel-border)] bg-[var(--card-surface)] p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

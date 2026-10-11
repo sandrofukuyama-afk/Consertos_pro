@@ -136,11 +136,22 @@ export type SearchDocumentResult = {
   signedUrl: string | null;
 };
 
+export type SearchTechnicalFileResult = {
+  id: string;
+  title: string;
+  fileName: string;
+  typeLabel: string;
+  sizeLabel: string;
+  downloadHref: string;
+  labHref: string | null;
+};
+
 export type SearchPageData = {
   filters: SearchFilters;
   categories: CatalogOption[];
   diagnostics: SearchDiagnosticResult[];
   documents: SearchDocumentResult[];
+  technicalFiles: { total: number; items: SearchTechnicalFileResult[] };
   semanticMatches: Array<
     SemanticMatchResult & {
       similarityLabel: string;

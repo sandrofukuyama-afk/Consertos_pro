@@ -12,6 +12,7 @@ type BibliotecaPageProps = {
     manufacturer_id?: string;
     model_id?: string;
     board_id?: string;
+    q?: string;
   }>;
 };
 
@@ -58,6 +59,7 @@ export default async function BibliotecaPage({
             </h3>
 
             <TechnicalLibraryList
+              initialQuery={params.q}
               items={libraryItems}
               boards={catalog.boards}
               models={catalog.models}

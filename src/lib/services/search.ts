@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSemanticSearchResults } from "@/lib/services/semantic";
+import { searchTechnicalLibrary } from "@/lib/services/technical-library-search";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
   CatalogOption,
@@ -7,6 +8,7 @@ import type {
   SearchDocumentResult,
   SearchFilters,
   SearchPageData,
+  SearchTechnicalFileResult,
 } from "@/types/domain";
 
 function pickRelation<T>(value: T | T[] | null | undefined) {
@@ -19,6 +21,31 @@ function pickRelation<T>(value: T | T[] | null | undefined) {
 
 function prettifyStatus(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function technicalFileTypeLabel(assetType: string, fileName: string) {
+  const extension = fileName.includes(".") ? (fileName.split(".").pop() ?? "").toUpperCase() : "";
+
+  switch (assetType) {
+    case "schematic_pdf":
+      return "Esquema PDF";
+    case "boardview":
+      return extension ? `Boardview ${extension}` : "Boardview";
+    case "bios":
+      return "BIOS";
+    case "firmware":
+      return "Firmware EC";
+    case "datasheet":
+      return "Datasheet";
+    default:
+      return extension || "Arquivo";
+  }
+}
+
+function formatFileSize(bytes: number) {
+  return bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
 export async function getSearchPageData(
@@ -45,6 +72,31 @@ export async function getSearchPageData(
 
   let diagnostics: SearchDiagnosticResult[] = [];
   let documents: SearchDocumentResult[] = [];
+  let technicalFiles: SearchPageData["technicalFiles"] = { total: 0, items: [] };
+
+  // Biblioteca tecnica (esquemas, boardviews, BIOS): busca por palavras.
+  if (filters.q && (filters.scope === "all" || filters.scope === "documents")) {
+    const { total, results } = await searchTechnicalLibrary(supabase, filters.q, 20);
+    technicalFiles = {
+      total,
+      items: results.map(
+        (item): SearchTechnicalFileResult => ({
+          id: item.id,
+          title: item.displayName,
+          fileName: item.originalFileName,
+          typeLabel: technicalFileTypeLabel(item.assetType, item.originalFileName),
+          sizeLabel: formatFileSize(item.fileSizeBytes),
+          downloadHref: `/api/technical-assets/${item.id}/content?download=1`,
+          labHref:
+            item.fileFormat === "brd" || item.fileFormat === "bdv"
+              ? `/boardview/lab?boardview_asset_id=${item.id}`
+              : item.fileFormat === "pdf"
+                ? `/boardview/lab?schematic_asset_id=${item.id}`
+                : null,
+        }),
+      ),
+    };
+  }
 
   if (filters.scope === "all" || filters.scope === "diagnostics") {
     let diagnosticsQuery = supabase
@@ -158,6 +210,7 @@ export async function getSearchPageData(
     categories,
     diagnostics,
     documents,
+    technicalFiles,
     semanticMatches: semantic.matches,
     semanticProvider: semantic.provider,
     externalProviderConfigured: semantic.externalProviderConfigured,
