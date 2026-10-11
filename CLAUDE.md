@@ -1,5 +1,10 @@
 # ConsertosPro — contexto para o Claude
 
+> **Regra do dono do projeto:** tudo o que for feito no projeto (funcionalidades, correções, decisões,
+> mudanças de infraestrutura, configurações, pendências resolvidas ou novas) **deve ser registrado neste
+> arquivo** no mesmo trabalho, antes do commit. Atualize as seções abaixo e o "Registro de mudanças" no fim.
+> Nunca grave senhas, tokens ou chaves aqui — só os nomes das variáveis.
+
 App interno de diagnóstico de bancada (notebooks, desktops, placas de vídeo, celulares, TVs)
 de uma oficina no Japão. Usado muito pelo **iPhone**. Interface e textos em **português do Brasil**.
 Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding` / `npm run lint`).
@@ -76,3 +81,18 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    atrás de mais esquemas/BIOS.
 5. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
 6. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
+
+## Registro de mudanças
+
+Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-12** — Regra: todo trabalho no projeto passa a ser registrado neste `CLAUDE.md`.
+- **2026-10-12** — `CLAUDE.md` criado com o contexto do projeto.
+- **2026-10-12** — Painel "Placa, boardview e esquema" do caso: filtros em uma coluna (estavam sobrepostos).
+- **2026-10-12** — Placas doadoras (`/doadoras`) + comando `peça` no Telegram; laboratório carrega arquivos por link do Storage.
+- **2026-10-12** — Seção "BIOS (gravador)" no caso + agente de bancada (`tools/bench-agent`).
+- **2026-10-12** — Vigia de pasta para o ZimaOS (`tools/library-watcher`); `HDD4\Biblioteca Técnica` organizada.
+- **2026-10-11** — Busca por palavras em `/busca`, Biblioteca, IA e painel do caso; bot do Telegram de arquivos.
+- **2026-10-11** — Importação de ~1000 esquemas/boardviews/BIOS para a biblioteca; Biblioteca mostra tudo + filtro BIOS.
+- **2026-10-11** — Login mais rápido (funções em Seul), service worker só com arquivos estáticos, iPhone ajustado.
+- **2026-10-11** — Parecer técnico com Claude; PDF do esquema corrigido (DOMMatrix); diagnóstico pelo chat e menu simplificado.
