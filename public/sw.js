@@ -1,4 +1,5 @@
-const CACHE_NAME = "consertospro-pwa-v1";
+// v2: deixa de guardar paginas e dados (RSC) em cache; so arquivos estaticos.
+const CACHE_NAME = "consertospro-pwa-v2";
 const APP_SHELL_CACHE = [
   "/offline",
   "/manifest.webmanifest",
@@ -52,7 +53,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/api/")) {
+  // Paginas e dados do Next (RSC) sempre vem da rede: servir do cache
+  // mostrava telas antigas (ex.: a tela de login depois de ja ter entrado).
+  const isStaticAsset =
+    url.pathname.startsWith("/_next/static/") ||
+    APP_SHELL_CACHE.includes(url.pathname) ||
+    /\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff2?)$/i.test(url.pathname);
+
+  if (!isStaticAsset || url.searchParams.has("_rsc") || request.headers.get("RSC")) {
     return;
   }
 

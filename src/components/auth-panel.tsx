@@ -1,4 +1,5 @@
 import { requestPasswordResetAction, signInAction } from "@/app/actions";
+import { FormSubmitButton } from "@/components/form-submit-button";
 
 type AuthPanelProps = {
   error?: string;
@@ -54,9 +55,7 @@ export function AuthPanel({ error, message }: AuthPanelProps) {
             />
           </label>
 
-          <button className="rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white">
-            Entrar
-          </button>
+          <FormSubmitButton idleLabel="Entrar" pendingLabel="Entrando..." />
         </form>
 
         <details className="mt-4 text-sm text-[var(--muted)]">
