@@ -1815,7 +1815,7 @@ async function buildStructuredResponse(
         modelName = getAssistantModelName();
       }
     } catch (error) {
-      console.error("[assistant] OpenAI narrative failed", {
+      console.error("[assistant] LLM narrative failed", {
         diagnosticId: context.id,
         model: getAssistantModelName(),
         error: error instanceof Error ? error.message : String(error),

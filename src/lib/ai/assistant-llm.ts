@@ -1,6 +1,16 @@
+import Anthropic from "@anthropic-ai/sdk";
+
+import {
+  getClaudeChatEffort,
+  getClaudeChatModelName,
+  isClaudeChatConfigured,
+} from "@/lib/ai/assistant-llm-claude";
 import { logTokenUsage } from "@/lib/services/token-logger";
 
-const CHAT_MODEL = "gpt-4o-mini";
+// O parecer estruturado usa o mesmo Claude do chat quando ANTHROPIC_API_KEY
+// existe; o OpenAI fica apenas como alternativa para ambientes sem Claude.
+const OPENAI_CHAT_MODEL = "gpt-4o-mini";
+const CLAUDE_NARRATIVE_MAX_TOKENS = 32000;
 
 export type AssistantNarrativeFacts = {
   equipmentLabel: string;
@@ -340,26 +350,140 @@ const SYSTEM_PROMPT = [
 ].join(" ");
 
 export function isLlmConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY);
+  return isClaudeChatConfigured() || Boolean(process.env.OPENAI_API_KEY);
 }
 
 export function getAssistantModelName() {
-  return isLlmConfigured() ? CHAT_MODEL : "heuristic-v1";
+  if (isClaudeChatConfigured()) {
+    return getClaudeChatModelName();
+  }
+
+  return process.env.OPENAI_API_KEY ? OPENAI_CHAT_MODEL : "heuristic-v1";
+}
+
+// Structured outputs do Claude nao aceitam restricoes de tamanho de array nem
+// "type" com lista de tipos; converte o schema compartilhado para a forma aceita.
+function toClaudeJsonSchema(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map(toClaudeJsonSchema);
+  }
+
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "minItems" || key === "maxItems") {
+      continue;
+    }
+    result[key] = toClaudeJsonSchema(value);
+  }
+
+  if (Array.isArray(result.type)) {
+    const types = result.type as string[];
+    delete result.type;
+    return { ...result, anyOf: types.map((type) => ({ type })) };
+  }
+
+  return result;
+}
+
+const CLAUDE_NARRATIVE_SCHEMA = toClaudeJsonSchema(NARRATIVE_SCHEMA) as Record<string, unknown>;
+
+function assertNarrativeShape(parsed: AssistantNarrativeResult, provider: string) {
+  if (
+    typeof parsed.probableDiagnosis !== "string" ||
+    typeof parsed.probableArea !== "string" ||
+    typeof parsed.probableSection !== "string" ||
+    typeof parsed.technicalSummary !== "string" ||
+    typeof parsed.mainHypothesis !== "string" ||
+    !Array.isArray(parsed.evidence) ||
+    !Array.isArray(parsed.evidenceFound) ||
+    !Array.isArray(parsed.relatedLines) ||
+    !Array.isArray(parsed.expectedVoltages) ||
+    !Array.isArray(parsed.componentsToMeasure) ||
+    !Array.isArray(parsed.testPoints) ||
+    !Array.isArray(parsed.recommendedTestSequence) ||
+    !Array.isArray(parsed.whereToOpen) ||
+    !Array.isArray(parsed.sourcesUsed) ||
+    typeof parsed.confidence !== "string" ||
+    typeof parsed.nextTest !== "string" ||
+    typeof parsed.validationGoal !== "string" ||
+    typeof parsed.safetyNote !== "string" ||
+    !Array.isArray(parsed.limitations)
+  ) {
+    throw new Error(`${provider} returned a malformed narrative payload.`);
+  }
+}
+
+async function generateNarrativeWithClaude(
+  facts: AssistantNarrativeFacts,
+  systemPrompt: string,
+): Promise<AssistantNarrativeResult> {
+  const client = new Anthropic();
+  const stream = client.beta.messages.stream({
+    model: getClaudeChatModelName(),
+    max_tokens: CLAUDE_NARRATIVE_MAX_TOKENS,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    thinking: { type: "adaptive" },
+    output_config: {
+      effort: getClaudeChatEffort(),
+      format: { type: "json_schema", schema: CLAUDE_NARRATIVE_SCHEMA },
+    },
+    system: systemPrompt,
+    messages: [{ role: "user", content: JSON.stringify(facts) }],
+  });
+  const message = await stream.finalMessage();
+
+  logTokenUsage(
+    message.model,
+    "narrativa_diagnostico_claude",
+    message.usage.input_tokens,
+    message.usage.output_tokens,
+  );
+
+  if (message.stop_reason === "refusal") {
+    throw new Error("Claude recusou gerar o parecer estruturado.");
+  }
+
+  if (message.stop_reason === "max_tokens") {
+    throw new Error("Claude atingiu o limite de tokens antes de concluir o parecer.");
+  }
+
+  const content = message.content
+    .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("");
+
+  if (!content) {
+    throw new Error("Claude returned an empty narrative.");
+  }
+
+  const parsed = JSON.parse(content) as AssistantNarrativeResult;
+  assertNarrativeShape(parsed, "Claude");
+  return parsed;
 }
 
 export async function generateAssistantNarrative(
   facts: AssistantNarrativeFacts,
   specialistInstructions?: string,
 ): Promise<AssistantNarrativeResult | null> {
+  const systemPrompt = specialistInstructions
+    ? `${SYSTEM_PROMPT} Alem disso, siga as seguintes diretrizes de especialista: ${specialistInstructions}`
+    : SYSTEM_PROMPT;
+
+  if (isClaudeChatConfigured()) {
+    return generateNarrativeWithClaude(facts, systemPrompt);
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return null;
   }
-
-  const systemPrompt = specialistInstructions
-    ? `${SYSTEM_PROMPT} Alem disso, siga as seguintes diretrizes de especialista: ${specialistInstructions}`
-    : SYSTEM_PROMPT;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -368,7 +492,7 @@ export async function generateAssistantNarrative(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: CHAT_MODEL,
+      model: OPENAI_CHAT_MODEL,
       temperature: 0.2,
       messages: [
         { role: "system", content: systemPrompt },
@@ -400,7 +524,7 @@ export async function generateAssistantNarrative(
 
   if (payload.usage) {
     logTokenUsage(
-      CHAT_MODEL,
+      OPENAI_CHAT_MODEL,
       "narrativa_diagnostico",
       payload.usage.prompt_tokens,
       payload.usage.completion_tokens,
@@ -414,30 +538,7 @@ export async function generateAssistantNarrative(
   }
 
   const parsed = JSON.parse(content) as AssistantNarrativeResult;
-
-  if (
-    typeof parsed.probableDiagnosis !== "string" ||
-    typeof parsed.probableArea !== "string" ||
-    typeof parsed.probableSection !== "string" ||
-    typeof parsed.technicalSummary !== "string" ||
-    typeof parsed.mainHypothesis !== "string" ||
-    !Array.isArray(parsed.evidence) ||
-    !Array.isArray(parsed.evidenceFound) ||
-    !Array.isArray(parsed.relatedLines) ||
-    !Array.isArray(parsed.expectedVoltages) ||
-    !Array.isArray(parsed.componentsToMeasure) ||
-    !Array.isArray(parsed.testPoints) ||
-    !Array.isArray(parsed.recommendedTestSequence) ||
-    !Array.isArray(parsed.whereToOpen) ||
-    !Array.isArray(parsed.sourcesUsed) ||
-    typeof parsed.confidence !== "string" ||
-    typeof parsed.nextTest !== "string" ||
-    typeof parsed.validationGoal !== "string" ||
-    typeof parsed.safetyNote !== "string" ||
-    !Array.isArray(parsed.limitations)
-  ) {
-    throw new Error("OpenAI returned a malformed narrative payload.");
-  }
+  assertNarrativeShape(parsed, "OpenAI");
 
   return parsed;
 }

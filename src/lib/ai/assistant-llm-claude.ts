@@ -24,7 +24,7 @@ export function getClaudeChatModelName() {
   return process.env.ANTHROPIC_CHAT_MODEL || DEFAULT_CLAUDE_CHAT_MODEL;
 }
 
-function getClaudeChatEffort(): ClaudeEffort {
+export function getClaudeChatEffort(): ClaudeEffort {
   const configured = process.env.ANTHROPIC_CHAT_EFFORT as ClaudeEffort | undefined;
   return configured && CLAUDE_EFFORT_LEVELS.includes(configured)
     ? configured
