@@ -10,10 +10,14 @@ import { logTokenUsage } from "@/lib/services/token-logger";
 // Opus com raciocinio adaptativo: o agente de bancada precisa seguir nets,
 // cruzar boardview/esquema e medicoes em varios passos antes de responder.
 // Modelo e esforco podem ser trocados por env var sem alterar codigo.
-const DEFAULT_CLAUDE_CHAT_MODEL = "claude-opus-5";
-const DEFAULT_CLAUDE_CHAT_EFFORT = "high";
+// Opus 5.5 com esforco medio: mais novo e mais barato que o Opus 5 em "high".
+const DEFAULT_CLAUDE_CHAT_MODEL = "claude-opus-5-5";
+const DEFAULT_CLAUDE_CHAT_EFFORT = "medium";
 const CLAUDE_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
-const MAX_AGENT_ITERATIONS = 16;
+// Cada volta reenvia a conversa e tudo o que ja foi consultado: limitar as
+// voltas e o tamanho das paginas da web e o que mais segura o custo.
+const MAX_AGENT_ITERATIONS = 10;
+const WEB_FETCH_MAX_CONTENT_TOKENS = 4000;
 const MAX_OUTPUT_TOKENS = 32000;
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
 
@@ -162,8 +166,13 @@ export async function runClaudeDiagnosticAgent(args: {
   const effort = getClaudeChatEffort();
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     ...DIAGNOSTIC_AGENT_TOOLS,
-    { type: "web_search_20260209", name: "web_search", max_uses: 5 },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: 5 },
+    { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+    {
+      type: "web_fetch_20260209",
+      name: "web_fetch",
+      max_uses: 2,
+      max_content_tokens: WEB_FETCH_MAX_CONTENT_TOKENS,
+    },
   ];
   const messages: Anthropic.Beta.BetaMessageParam[] = args.turns.map((turn) => ({
     role: turn.role,
@@ -171,6 +180,8 @@ export async function runClaudeDiagnosticAgent(args: {
   }));
 
   let tokensInput = 0;
+  let tokensCacheRead = 0;
+  let tokensCacheWrite = 0;
   let tokensOutput = 0;
   let servedModel = requestedModel;
   let replyText = "";
@@ -187,7 +198,9 @@ export async function runClaudeDiagnosticAgent(args: {
       output_config: { effort },
       cache_control: { type: "ephemeral" },
       system: [
-        { type: "text", text: args.stableSystemPrompt, cache_control: { type: "ephemeral" } },
+        // Instrucoes fixas em cache de 1 h: o tecnico manda mensagens com
+        // intervalos maiores que os 5 min do cache padrao.
+        { type: "text", text: args.stableSystemPrompt, cache_control: { type: "ephemeral", ttl: "1h" } },
         { type: "text", text: args.caseSystemPrompt },
       ],
       tools,
@@ -197,10 +210,9 @@ export async function runClaudeDiagnosticAgent(args: {
     const message = await stream.finalMessage();
 
     servedModel = message.model;
-    tokensInput +=
-      message.usage.input_tokens +
-      (message.usage.cache_creation_input_tokens ?? 0) +
-      (message.usage.cache_read_input_tokens ?? 0);
+    tokensInput += message.usage.input_tokens;
+    tokensCacheWrite += message.usage.cache_creation_input_tokens ?? 0;
+    tokensCacheRead += message.usage.cache_read_input_tokens ?? 0;
     tokensOutput += message.usage.output_tokens;
     sources.push(...extractSources(message.content));
 
@@ -245,8 +257,11 @@ export async function runClaudeDiagnosticAgent(args: {
     messages.push({ role: "user", content: nextUserContent });
   }
 
-  if (tokensInput > 0 || tokensOutput > 0) {
-    logTokenUsage(servedModel, "chat_diagnostico_claude", tokensInput, tokensOutput);
+  if (tokensInput > 0 || tokensCacheRead > 0 || tokensOutput > 0) {
+    logTokenUsage(servedModel, "chat_diagnostico_claude", tokensInput, tokensOutput, {
+      cacheReadTokens: tokensCacheRead,
+      cacheWriteTokens: tokensCacheWrite,
+    });
   }
 
   return {
@@ -255,7 +270,7 @@ export async function runClaudeDiagnosticAgent(args: {
       "Não foi possível gerar uma resposta agora. Tente reenviar a mensagem em instantes.",
     sourcesUsed: Array.from(new Set(sources)).slice(0, 8),
     modelName: servedModel,
-    tokensInput,
+    tokensInput: tokensInput + tokensCacheRead + tokensCacheWrite,
     tokensOutput,
   };
 }

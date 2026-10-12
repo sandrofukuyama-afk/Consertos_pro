@@ -30,7 +30,11 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   antes do `pdf-parse`; sem isso dá "DOMMatrix is not defined" em produção).
 - **IA**: chat do diagnóstico = agente Claude com ferramentas (`src/lib/ai/assistant-llm-claude.ts`,
   `diagnostic-agent-tools.ts`); modelo/esforço por `ANTHROPIC_CHAT_MODEL` / `ANTHROPIC_CHAT_EFFORT`
-  (padrão `claude-opus-5`, `high`). Parecer estruturado (`assistant-llm.ts`) também usa Claude;
+  (padrão `claude-opus-5-5`, `medium` — escolha do dono para reduzir custo).
+- **Custo da IA**: cada mensagem do chat é um loop de até 10 voltas que reenvia tudo a cada volta.
+  Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
+  `ai_token_logs` separa `cache_read_tokens`/`cache_write_tokens`; `estimated_cost_usd` usa a tabela
+  de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo). Parecer estruturado (`assistant-llm.ts`) também usa Claude;
   OpenAI só como reserva sem chave Anthropic.
 - **Busca da biblioteca é por palavras em qualquer ordem**, no nome do arquivo e em
   `metadata.display_name` (nunca na descrição, que guarda o caminho de origem com "Bios").
@@ -86,6 +90,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-13** — Redução de custo da IA: chat em Opus 5.5 esforço médio (era Opus 5 alto), máx. 10 voltas,
+  web limitada, cache de 1 h; registro de custo separa cache e usa preços corretos.
 - **2026-10-12** — Regra: todo trabalho no projeto passa a ser registrado neste `CLAUDE.md`.
 - **2026-10-12** — `CLAUDE.md` criado com o contexto do projeto.
 - **2026-10-12** — Painel "Placa, boardview e esquema" do caso: filtros em uma coluna (estavam sobrepostos).
