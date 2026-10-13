@@ -68,6 +68,7 @@ type TestRow = {
 
 type ModelBoardRow = {
   id: string;
+  equipment_model_id: string;
   role_label: string;
   is_primary: boolean;
   notes: string | null;
@@ -217,3 +218,50 @@ export async function getCatalogDashboardData() {
   };
 }
 
+
+export type ModelAssetFile = {
+  id: string;
+  filename: string;
+  assetType: string;
+};
+
+/**
+ * Arquivos da biblioteca (esquema, boardview, BIOS...) agrupados por modelo,
+ * para o catalogo mostrar o que cada modelo tem. Pagina de 1000 em 1000.
+ */
+export async function getModelAssetIndex() {
+  const supabase = await createClient();
+  const byModel = new Map<string, ModelAssetFile[]>();
+  const pageSize = 1000;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("technical_assets")
+      .select("id, original_filename, asset_type, equipment_model_id, metadata")
+      .not("equipment_model_id", "is", null)
+      .order("original_filename")
+      .range(from, from + pageSize - 1);
+
+    if (error || !data?.length) {
+      break;
+    }
+
+    for (const row of data) {
+      const modelId = row.equipment_model_id as string;
+      const metadata = (row.metadata ?? {}) as { display_name?: string };
+      const list = byModel.get(modelId) ?? [];
+      list.push({
+        id: row.id as string,
+        filename: metadata.display_name || (row.original_filename as string),
+        assetType: row.asset_type as string,
+      });
+      byModel.set(modelId, list);
+    }
+
+    if (data.length < pageSize) {
+      break;
+    }
+  }
+
+  return byModel;
+}

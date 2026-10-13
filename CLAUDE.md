@@ -60,6 +60,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   Bolha de mensagem compartilhada: `src/components/chat-message-bubble.tsx`.
 - **Biblioteca técnica**: ~1006 arquivos (esquemas, boardviews, BIOS/EC, datasheets; notebooks,
   desktops, placas de vídeo, celular, tablet) importados com catálogo (fabricantes, 194 modelos, 170 placas).
+  Em `/catalogo-tecnico` (aba Modelos) dá para ver o que cada modelo tem e filtrar por esquema/boardview/BIOS.
+  Família/Revisão dos modelos importados ficam vazias (o nome do arquivo não traz isso).
   Script reexecutável `scripts/import-technical-assets.mjs` (usa `tools/library-watcher/src/importer.mjs`).
 - **Bot Telegram** `@consertospro_biblioteca_bot` (`/api/telegram/webhook`, só IDs liberados):
   busca e envia arquivos; `peça XXX` procura componente nas doadoras.
@@ -98,6 +100,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-14** — Catálogo técnico › Modelos: colunas Placa e Arquivos (lista e baixa cada arquivo) e filtros
+  "Com esquema / Com boardview / Com BIOS / Sem arquivo" (`getModelAssetIndex` em `catalog.ts`).
 - **2026-10-14** — Painel do caso: medições com ponto em cima e valor embaixo, quebrando linha (textos longos vazavam do card).
 - **2026-10-14** — Custo: chat em Sonnet 5.5 + botão "🧠 Pensar mais" (Opus 5.5); máx. 6 voltas; ferramentas
   devolvem menos; registro de custo conta o cache de 1 h a 2x. Antes: média US$ 0,27/mensagem (Opus 5.5).

@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/app-shell";
 import { requireCurrentUser } from "@/lib/auth";
-import { getCatalogDashboardData } from "@/lib/services/catalog";
+import { getCatalogDashboardData, getModelAssetIndex, type ModelAssetFile } from "@/lib/services/catalog";
 import {
   createBoardAction,
   createBoardComponentAction,
@@ -22,8 +22,38 @@ type CatalogoPageProps = {
     error?: string;
     success?: string;
     q?: string;
+    tem?: string;
   }>;
 };
+
+// Filtros rapidos da aba Modelos: o que o modelo tem na biblioteca.
+const MODEL_FILE_FILTERS = [
+  { id: "", label: "Todos" },
+  { id: "esquema", label: "Com esquema" },
+  { id: "boardview", label: "Com boardview" },
+  { id: "bios", label: "Com BIOS" },
+  { id: "nada", label: "Sem arquivo" },
+] as const;
+
+const ASSET_GROUPS: Array<{ label: string; plural: string; types: string[] }> = [
+  { label: "esquema", plural: "esquemas", types: ["schematic_pdf"] },
+  { label: "boardview", plural: "boardviews", types: ["boardview"] },
+  { label: "BIOS", plural: "BIOS", types: ["bios", "firmware"] },
+  { label: "outro", plural: "outros", types: ["datasheet", "photo", "other"] },
+];
+
+function summarizeModelFiles(files: ModelAssetFile[]) {
+  return ASSET_GROUPS.map((group) => {
+    const count = files.filter((file) => group.types.includes(file.assetType)).length;
+    return count ? `${count} ${count > 1 ? group.plural : group.label}` : null;
+  })
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function assetTypeLabel(assetType: string) {
+  return ASSET_GROUPS.find((group) => group.types.includes(assetType))?.label ?? "outro";
+}
 
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
@@ -41,8 +71,9 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
   const error = params.error || null;
   const success = params.success || null;
   const q = params.q || "";
+  const fileFilter = params.tem || "";
 
-  const data = await getCatalogDashboardData();
+  const [data, modelFiles] = await Promise.all([getCatalogDashboardData(), getModelAssetIndex()]);
   const {
     categories,
     manufacturers,
@@ -86,13 +117,30 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
     );
   });
 
+  const boardCodesByModel = new Map<string, string[]>();
+  for (const link of modelBoards) {
+    const code = link.boards?.board_code;
+    if (!code) continue;
+    const list = boardCodesByModel.get(link.equipment_model_id) ?? [];
+    if (!list.includes(code)) list.push(code);
+    boardCodesByModel.set(link.equipment_model_id, list);
+  }
+
   const filteredModels = models.filter((item) => {
     const manufacturer = pickRelation(item.manufacturers);
     const category = pickRelation(item.equipment_categories);
+    const files = modelFiles.get(item.id) ?? [];
+    const hasType = (types: string[]) => files.some((file) => types.includes(file.assetType));
+
+    if (fileFilter === "esquema" && !hasType(["schematic_pdf"])) return false;
+    if (fileFilter === "boardview" && !hasType(["boardview"])) return false;
+    if (fileFilter === "bios" && !hasType(["bios", "firmware"])) return false;
+    if (fileFilter === "nada" && files.length) return false;
 
     if (!searchLower) return true;
     return (
       item.model_name.toLowerCase().includes(searchLower) ||
+      (boardCodesByModel.get(item.id) ?? []).some((code) => code.toLowerCase().includes(searchLower)) ||
       (item.family_name?.toLowerCase() || "").includes(searchLower) ||
       (manufacturer?.name?.toLowerCase() || "").includes(searchLower) ||
       (category?.name?.toLowerCase() || "").includes(searchLower)
@@ -263,6 +311,31 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
 
             {/* Tab: Models */}
             {activeTab === "modelos" && (
+              <div className="flex flex-wrap items-center gap-2">
+                {MODEL_FILE_FILTERS.map((filter) => {
+                  const query = new URLSearchParams({ tab: "modelos" });
+                  if (q) query.set("q", q);
+                  if (filter.id) query.set("tem", filter.id);
+                  const active = fileFilter === filter.id;
+                  return (
+                    <Link
+                      key={filter.id || "todos"}
+                      href={`/catalogo-tecnico?${query.toString()}`}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        active
+                          ? "border-[var(--accent-copper)] bg-[var(--accent-copper)] text-white"
+                          : "border-[var(--panel-border)] text-[var(--muted)] hover:text-white"
+                      }`}
+                    >
+                      {filter.label}
+                    </Link>
+                  );
+                })}
+                <span className="text-xs text-[var(--muted)]">{filteredModels.length} modelo(s)</span>
+              </div>
+            )}
+
+            {activeTab === "modelos" && (
               <div className="overflow-x-auto rounded-2xl border border-[var(--panel-border)]">
                 <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
                   <thead>
@@ -270,8 +343,8 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                       <th className="px-4 py-3">Modelo</th>
                       <th className="px-4 py-3">Fabricante</th>
                       <th className="px-4 py-3">Categoria</th>
-                      <th className="px-4 py-3">Família</th>
-                      <th className="px-4 py-3">Revisão</th>
+                      <th className="px-4 py-3">Placa</th>
+                      <th className="px-4 py-3">Arquivos</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -279,14 +352,42 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                       filteredModels.map((item) => {
                         const manufacturer = pickRelation(item.manufacturers);
                         const category = pickRelation(item.equipment_categories);
+                        const files = modelFiles.get(item.id) ?? [];
 
                         return (
-                          <tr key={item.id} className="border-b border-[var(--panel-border)] hover:bg-white/2 transition">
+                          <tr key={item.id} className="border-b border-[var(--panel-border)] align-top hover:bg-white/2 transition">
                             <td className="px-4 py-3 font-semibold text-white">{item.model_name}</td>
                             <td className="px-4 py-3">{manufacturer?.name ?? "N/A"}</td>
                             <td className="px-4 py-3">{category?.name ?? "N/A"}</td>
-                            <td className="px-4 py-3 font-mono text-xs">{item.family_name || "-"}</td>
-                            <td className="px-4 py-3 text-xs">{item.revision_label || "-"}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-[var(--accent-copper)]">
+                              {(boardCodesByModel.get(item.id) ?? []).join(", ") || "-"}
+                            </td>
+                            <td className="min-w-[200px] px-4 py-3 text-xs">
+                              {files.length ? (
+                                <details>
+                                  <summary className="cursor-pointer select-none hover:text-white">
+                                    {summarizeModelFiles(files)}
+                                  </summary>
+                                  <ul className="mt-2 grid gap-1.5">
+                                    {files.map((file) => (
+                                      <li key={file.id} className="[overflow-wrap:anywhere]">
+                                        <a
+                                          href={`/api/technical-assets/${file.id}/content`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="underline decoration-[var(--panel-border)] hover:text-white"
+                                        >
+                                          {file.filename}
+                                        </a>{" "}
+                                        <span className="text-[var(--muted)]">({assetTypeLabel(file.assetType)})</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </details>
+                              ) : (
+                                <span className="text-[var(--muted)]">Nenhum</span>
+                              )}
+                            </td>
                           </tr>
                         );
                       })
