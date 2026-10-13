@@ -22,6 +22,12 @@ export type NewChatAttachment = {
   base64: string;
 };
 
+// Historico enviado a IA: so as ultimas mensagens vao completas. O resto ja esta
+// refletido no resumo, medicoes, testes e hipoteses do caso (bloco de contexto)
+// e o agente pode consultar_registros_do_caso; reenviar tudo a cada mensagem e
+// o que mais encarecia o chat (casos longos passavam de 17 mil tokens so de historico).
+const RECENT_HISTORY_MESSAGES = 8;
+
 const PERSONA_PROMPT = [
   "Voce e o especialista de bancada responsavel por resolver este caso: um tecnico",
   "eletronico senior em reparo de placas de notebook e desktop (placas-mae, fontes,",
@@ -244,7 +250,11 @@ export async function sendDiagnosticChatMessage(
     attachmentsByResponseId.set(row.chat_ai_response_id, list);
   }
 
-  const turns: ClaudeChatTurn[] = (historyRows ?? []).map((row) => {
+  const allHistory = historyRows ?? [];
+  const omittedCount = Math.max(0, allHistory.length - RECENT_HISTORY_MESSAGES);
+  const recentHistory = allHistory.slice(omittedCount);
+
+  const recentTurns: ClaudeChatTurn[] = recentHistory.map((row) => {
     const isCurrentTurn = row.id === userResponseId;
     const photos = attachmentsByResponseId.get(row.id) ?? [];
     let text = row.raw_response_text ?? "";
@@ -280,6 +290,16 @@ export async function sendDiagnosticChatMessage(
         : undefined,
     };
   });
+
+  const turns: ClaudeChatTurn[] = omittedCount
+    ? [
+        {
+          role: "user",
+          text: `(${omittedCount} mensagens anteriores desta conversa foram omitidas para economizar. O resumo do caso, os testes, as medicoes e as hipoteses no contexto ja refletem o que foi apurado nelas; use consultar_registros_do_caso se precisar de detalhes.)`,
+        },
+        ...recentTurns,
+      ]
+    : recentTurns;
 
   const caseBrief = buildCaseBrief(context, workbench, similarCases, relatedDocuments);
   const actions: string[] = [];

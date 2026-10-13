@@ -33,6 +33,9 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   (padrão `claude-opus-5-5`, `medium` — escolha do dono para reduzir custo).
 - **Custo da IA**: cada mensagem do chat é um loop de até 10 voltas que reenvia tudo a cada volta.
   Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
+  Histórico enviado à IA: só as **últimas 8 mensagens** (`RECENT_HISTORY_MESSAGES` em
+  `src/lib/services/diagnostic-chat.ts`); as anteriores viram um aviso, porque resumo/medições/testes/
+  hipóteses do caso já vão no contexto. A tela do chat continua mostrando a conversa inteira.
   `ai_token_logs` separa `cache_read_tokens`/`cache_write_tokens`; `estimated_cost_usd` usa a tabela
   de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo). Parecer estruturado (`assistant-llm.ts`) também usa Claude;
   OpenAI só como reserva sem chave Anthropic.
@@ -90,6 +93,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-14** — Chat envia à IA só as últimas 8 mensagens (caso Fujitsu tinha 57, ~17 mil tokens por envio).
+  Medição com Opus 5.5 antes desta mudança: US$ 0,18–0,39 por mensagem (média 0,26).
 - **2026-10-13** — Redução de custo da IA: chat em Opus 5.5 esforço médio (era Opus 5 alto), máx. 10 voltas,
   web limitada, cache de 1 h; registro de custo separa cache e usa preços corretos.
 - **2026-10-12** — Regra: todo trabalho no projeto passa a ser registrado neste `CLAUDE.md`.
