@@ -98,6 +98,7 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-14** — Painel do caso: medições com ponto em cima e valor embaixo, quebrando linha (textos longos vazavam do card).
 - **2026-10-14** — Custo: chat em Sonnet 5.5 + botão "🧠 Pensar mais" (Opus 5.5); máx. 6 voltas; ferramentas
   devolvem menos; registro de custo conta o cache de 1 h a 2x. Antes: média US$ 0,27/mensagem (Opus 5.5).
 - **2026-10-14** — Chat do caso mostra só a última troca; conversa inteira com busca em `/diagnosticos/[id]/historico`.

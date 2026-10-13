@@ -285,7 +285,7 @@ function PanelSection({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </summary>
-      <div className="border-t border-[var(--panel-border)] p-4">{children}</div>
+      <div className="min-w-0 border-t border-[var(--panel-border)] p-4 [overflow-wrap:anywhere]">{children}</div>
     </details>
   );
 }
@@ -294,7 +294,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-3 py-1.5 text-sm">
       <span className="shrink-0 text-[var(--muted)]">{label}</span>
-      <span className="text-right text-[var(--foreground)]">{value}</span>
+      <span className="min-w-0 text-right text-[var(--foreground)] [overflow-wrap:anywhere]">{value}</span>
     </div>
   );
 }
@@ -473,15 +473,17 @@ export function DiagnosticBenchWorkspace({
           >
             <ul className="grid gap-2">
               {detail.measurements.map((item) => (
-                <li key={item.id} className="text-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-[var(--muted)]">{item.pointLabel}</span>
-                    <span
-                      className={`shrink-0 font-mono ${item.isOutOfRange ? "text-[var(--danger)]" : "text-[var(--foreground)]"}`}
-                    >
-                      {item.measuredValue}
-                    </span>
-                  </div>
+                <li
+                  key={item.id}
+                  className="border-b border-[var(--panel-border)] pb-2 text-sm last:border-b-0 last:pb-0 [overflow-wrap:anywhere]"
+                >
+                  {/* Ponto em cima e valor embaixo: a IA grava textos longos nos dois. */}
+                  <p className="text-xs leading-5 text-[var(--muted)]">{item.pointLabel}</p>
+                  <p
+                    className={`mt-0.5 whitespace-pre-wrap font-mono leading-5 ${item.isOutOfRange ? "text-[var(--danger)]" : "text-[var(--foreground)]"}`}
+                  >
+                    {item.measuredValue}
+                  </p>
                 </li>
               ))}
             </ul>
