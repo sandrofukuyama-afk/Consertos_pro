@@ -35,7 +35,7 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
   Histórico enviado à IA: só as **últimas 8 mensagens** (`RECENT_HISTORY_MESSAGES` em
   `src/lib/services/diagnostic-chat.ts`); as anteriores viram um aviso, porque resumo/medições/testes/
-  hipóteses do caso já vão no contexto. A tela do chat continua mostrando a conversa inteira.
+  hipóteses do caso já vão no contexto. A tela do caso mostra só a última troca; a conversa inteira fica em `/diagnosticos/[id]/historico`.
   `ai_token_logs` separa `cache_read_tokens`/`cache_write_tokens`; `estimated_cost_usd` usa a tabela
   de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo). Parecer estruturado (`assistant-llm.ts`) também usa Claude;
   OpenAI só como reserva sem chave Anthropic.
@@ -52,7 +52,9 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 - **Tela do caso** (`src/components/diagnostic-bench-workspace.tsx`): chat no centro; painel lateral
   recolhível com hipóteses, medições, placa/boardview/esquema, **BIOS (gravador)**, dados, formulários,
-  parecer e histórico. Chat só mostra conversa (pareceres do botão ficam no painel).
+  parecer e histórico. Chat só mostra conversa (pareceres do botão ficam no painel) e só a **última troca**;
+  botão "📜 Ver conversa anterior (N)" abre `/diagnosticos/[id]/historico` (conversa inteira com busca).
+  Bolha de mensagem compartilhada: `src/components/chat-message-bubble.tsx`.
 - **Biblioteca técnica**: ~1006 arquivos (esquemas, boardviews, BIOS/EC, datasheets; notebooks,
   desktops, placas de vídeo, celular, tablet) importados com catálogo (fabricantes, 194 modelos, 170 placas).
   Script reexecutável `scripts/import-technical-assets.mjs` (usa `tools/library-watcher/src/importer.mjs`).
@@ -93,6 +95,7 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-14** — Chat do caso mostra só a última troca; conversa inteira com busca em `/diagnosticos/[id]/historico`.
 - **2026-10-14** — Chat envia à IA só as últimas 8 mensagens (caso Fujitsu tinha 57, ~17 mil tokens por envio).
   Medição com Opus 5.5 antes desta mudança: US$ 0,18–0,39 por mensagem (média 0,26).
 - **2026-10-13** — Redução de custo da IA: chat em Opus 5.5 esforço médio (era Opus 5 alto), máx. 10 voltas,

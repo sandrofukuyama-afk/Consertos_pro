@@ -5,7 +5,7 @@ import {
   addDiagnosticTestAction,
   generateDiagnosticAssistantAction,
 } from "@/app/actions";
-import { ChatMarkdown } from "@/components/chat-markdown";
+import { ChatMessageBubble } from "@/components/chat-message-bubble";
 import { ChatScrollArea } from "@/components/chat-scroll-area";
 import { DiagnosticBiosPanel } from "@/components/diagnostic-bios-panel";
 import { DiagnosticChatComposer } from "@/components/diagnostic-chat-composer";
@@ -340,6 +340,12 @@ export function DiagnosticBenchWorkspace({
     (item) => item.status === "discarded" || item.status === "weakened",
   );
   const agentName = detail.assistantSnapshot.activeAgent.name;
+  // Na tela fica so a ultima troca (ultima mensagem do tecnico + resposta da IA);
+  // a conversa inteira fica em /diagnosticos/[id]/historico.
+  const lastUserIndex = detail.chatMessages.map((entry) => entry.role).lastIndexOf("user");
+  const visibleMessages =
+    lastUserIndex >= 0 ? detail.chatMessages.slice(lastUserIndex) : detail.chatMessages.slice(-1);
+  const hiddenMessageCount = detail.chatMessages.length - visibleMessages.length;
   const hasPrefill = Boolean(prefillMeasurement?.pointLabel || prefillMeasurement?.measurementType);
 
   return (
@@ -364,70 +370,21 @@ export function DiagnosticBenchWorkspace({
           ) : null}
         </div>
 
+        {hiddenMessageCount ? (
+          <Link
+            href={`/diagnosticos/${detail.id}/historico`}
+            className="mx-3 mt-3 flex items-center justify-center gap-2 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[rgba(109,94,242,0.45)] sm:mx-5"
+          >
+            📜 Ver conversa anterior ({hiddenMessageCount})
+          </Link>
+        ) : null}
+
         <ChatScrollArea
           messageCount={detail.chatMessages.length}
           className="flex min-h-[240px] flex-col gap-4 px-3 py-4 sm:px-5 lg:max-h-[calc(100dvh-300px)] lg:min-h-[320px] lg:overflow-y-auto"
         >
-          {detail.chatMessages.length ? (
-            detail.chatMessages.map((entry) =>
-              entry.role === "user" ? (
-                <div key={entry.id} className="flex max-w-[88%] scroll-mb-56 flex-col items-end self-end lg:scroll-mb-0">
-                  <div className="rounded-2xl rounded-br-md bg-[var(--accent-copper)] px-4 py-3 text-sm leading-6 text-white">
-                    {entry.text ? <p className="whitespace-pre-wrap">{entry.text}</p> : null}
-                    {entry.photos.length ? (
-                      <div className={`flex flex-wrap gap-2 ${entry.text ? "mt-2" : ""}`}>
-                        {entry.photos.map((photo) =>
-                          photo.signedUrl ? (
-                            <a
-                              key={photo.id}
-                              href={photo.signedUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block h-24 w-24 overflow-hidden rounded-xl border border-white/30"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={photo.signedUrl} alt={photo.title} className="h-full w-full object-cover" />
-                            </a>
-                          ) : null,
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 px-1 text-[11px] text-[var(--muted)]">{entry.createdAt}</p>
-                </div>
-              ) : (
-                <div key={entry.id} className="flex max-w-[96%] scroll-mb-56 flex-col self-start lg:scroll-mb-0">
-                  <div className="rounded-2xl rounded-bl-md [overflow-wrap:anywhere] border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
-                    <ChatMarkdown text={entry.text} />
-                    {entry.agentActions.length || entry.sources.length ? (
-                      <details className="mt-3 text-xs text-[var(--muted)]">
-                        <summary className="cursor-pointer select-none hover:text-[var(--foreground)]">
-                          O que a IA consultou
-                          {entry.agentActions.length ? ` (${entry.agentActions.length})` : ""}
-                        </summary>
-                        {entry.agentActions.length ? (
-                          <ul className="mt-2 list-disc space-y-1 pl-4">
-                            {entry.agentActions.map((action, index) => (
-                              <li key={`${entry.id}-action-${index}`}>{action}</li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        {entry.sources.length ? (
-                          <ul className="mt-2 space-y-1 break-words">
-                            {entry.sources.map((source, index) => (
-                              <li key={`${entry.id}-source-${index}`}>• {source}</li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </details>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 px-1 text-[11px] text-[var(--muted)]">
-                    {agentName} • {entry.createdAt}
-                  </p>
-                </div>
-              ),
-            )
+          {visibleMessages.length ? (
+            visibleMessages.map((entry) => <ChatMessageBubble key={entry.id} entry={entry} agentName={agentName} />)
           ) : (
             <div className="m-auto max-w-md py-10 text-center text-sm leading-6 text-[var(--muted)]">
               <p className="text-base font-semibold text-[var(--foreground)]">Comece a conversa</p>
