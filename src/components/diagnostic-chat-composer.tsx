@@ -69,6 +69,8 @@ function ComposerFields({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(defaultMessage ?? "");
   const [fileNames, setFileNames] = useState<string[]>([]);
+  // "Pensar mais" vale so para a proxima mensagem (Opus, ~2x o custo).
+  const [deep, setDeep] = useState(false);
 
   // Depois do envio o React limpa o formulario; sincroniza o estado local.
   useEffect(() => {
@@ -79,6 +81,7 @@ function ComposerFields({
     return () => {
       setText("");
       setFileNames([]);
+      setDeep(false);
     };
   }, [pending]);
 
@@ -171,9 +174,25 @@ function ComposerFields({
 
         <SendButton disabled={!canSend} />
       </div>
-      <p className="mt-1.5 hidden px-2 text-[11px] text-[var(--muted)] sm:block">
-        Enter envia • Shift+Enter quebra linha • medições e hipóteses citadas na conversa são registradas pela IA
-      </p>
+      {deep ? <input type="hidden" name="deep" value="1" /> : null}
+      <div className="mt-1.5 flex items-center gap-3 px-1">
+        <button
+          type="button"
+          aria-pressed={deep}
+          onClick={() => setDeep((value) => !value)}
+          title="Usa a IA mais forte nesta mensagem (custa cerca do dobro). Use quando o caso travar."
+          className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+            deep
+              ? "border-[var(--accent-copper)] bg-[var(--accent-copper)] text-white"
+              : "border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          🧠 Pensar mais{deep ? " ✓" : ""}
+        </button>
+        <p className="hidden text-[11px] text-[var(--muted)] sm:block">
+          Enter envia • Shift+Enter quebra linha • medições e hipóteses citadas na conversa são registradas pela IA
+        </p>
+      </div>
     </>
   );
 }

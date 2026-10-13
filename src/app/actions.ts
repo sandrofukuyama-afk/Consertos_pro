@@ -1334,6 +1334,7 @@ async function postDiagnosticChatMessage(
   diagnosticId: string,
   message: string,
   files: File[],
+  options: { deep?: boolean } = {},
 ) {
   const newAttachments: Array<{
     id: string;
@@ -1390,6 +1391,7 @@ async function postDiagnosticChatMessage(
     message,
     newAttachments.map(({ id, mimeType, base64 }) => ({ id, mimeType, base64 })),
     userId,
+    options,
   );
 
   // O agente pode ter gravado medicoes, hipoteses ou o resumo do caso.
@@ -1455,7 +1457,9 @@ export async function sendDiagnosticChatMessageAction(formData: FormData) {
   }
 
   try {
-    await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files);
+    await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files, {
+      deep: formData.get("deep") === "1",
+    });
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;

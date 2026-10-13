@@ -355,7 +355,7 @@ export function isLlmConfigured() {
 
 export function getAssistantModelName() {
   if (isClaudeChatConfigured()) {
-    return getClaudeChatModelName();
+    return getClaudeChatModelName(true);
   }
 
   return process.env.OPENAI_API_KEY ? OPENAI_CHAT_MODEL : "heuristic-v1";
@@ -424,7 +424,7 @@ async function generateNarrativeWithClaude(
 ): Promise<AssistantNarrativeResult> {
   const client = new Anthropic();
   const stream = client.beta.messages.stream({
-    model: getClaudeChatModelName(),
+    model: getClaudeChatModelName(true),
     max_tokens: CLAUDE_NARRATIVE_MAX_TOKENS,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",

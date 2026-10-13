@@ -42,7 +42,13 @@ const HYPOTHESIS_STATUSES = [
   "confirmed",
 ] as const;
 
-const MAX_SCHEMATIC_PAGE_CHARS = 12000;
+// Tudo o que as ferramentas devolvem e relido a cada volta do agente (custo):
+// limites menores; a IA pode refinar a busca se precisar de mais.
+const MAX_SCHEMATIC_PAGE_CHARS = 8000;
+const MAX_NET_COMPONENTS = 30;
+const MAX_NET_TEST_POINTS = 10;
+const MAX_SCHEMATIC_MATCHES = 8;
+const MAX_REFERENCE_VALUES = 60;
 
 export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
@@ -415,7 +421,10 @@ async function describeNet(ctx: DiagnosticAgentToolContext, input: Record<string
     net: netName,
     tensao_esperada: inferNetVoltageHint(netName),
     total_de_componentes: details.components.length,
-    componentes: details.components.slice(0, 80).map((component) => {
+    ...(details.components.length > MAX_NET_COMPONENTS
+      ? { aviso: `Mostrando ${MAX_NET_COMPONENTS} de ${details.components.length} componentes.` }
+      : {}),
+    componentes: details.components.slice(0, MAX_NET_COMPONENTS).map((component) => {
       const pinsOnNet = details.padPins
         .filter((pin) => pin.partIndex === component.partIndex)
         .map((pin) => pin.pinOrdinalWithinPart);
@@ -427,7 +436,7 @@ async function describeNet(ctx: DiagnosticAgentToolContext, input: Record<string
         pinos_nesta_net: pinsOnNet,
       };
     }),
-    test_points: details.testPoints.slice(0, 20).map((testPoint) => ({
+    test_points: details.testPoints.slice(0, MAX_NET_TEST_POINTS).map((testPoint) => ({
       id: testPoint.id,
       lado: testPoint.side,
     })),
@@ -438,13 +447,17 @@ async function describeNet(ctx: DiagnosticAgentToolContext, input: Record<string
 async function searchSchematic(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
   const term = readString(input, "termo", true)!;
   const { asset, pages } = await requireSchematic(ctx);
-  const matches = findSchematicPdfMatches(pages, term).slice(0, 15);
+  const allMatches = findSchematicPdfMatches(pages, term);
+  const matches = allMatches.slice(0, MAX_SCHEMATIC_MATCHES);
 
   ctx.actions.push(`Esquema: buscou "${term}"`);
 
   return {
     arquivo: asset.title,
     total_de_paginas: pages.length,
+    ...(allMatches.length > MAX_SCHEMATIC_MATCHES
+      ? { aviso: `Mostrando ${MAX_SCHEMATIC_MATCHES} de ${allMatches.length} paginas; use um termo mais especifico.` }
+      : {}),
     ocorrencias: matches.map((match) => ({
       pagina: match.pageNumber,
       vezes: match.occurrences,
@@ -497,7 +510,7 @@ async function readReferenceValues(ctx: DiagnosticAgentToolContext, input: Recor
     .select("component_ref, measurement_point, expected_value, condition, notes")
     .in("board_id", boardIds)
     .order("component_ref", { ascending: true })
-    .limit(200);
+    .limit(MAX_REFERENCE_VALUES);
 
   if (component) {
     query = query.ilike("component_ref", `%${component.replace(/[%_]/g, " ").trim()}%`);

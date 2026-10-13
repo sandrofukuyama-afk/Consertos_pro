@@ -170,6 +170,7 @@ export async function sendDiagnosticChatMessage(
   userMessage: string,
   newAttachments: NewChatAttachment[],
   userId: string,
+  options: { deep?: boolean } = {},
 ): Promise<{ replyText: string; wroteToCase: boolean }> {
   if (!isClaudeChatConfigured()) {
     throw new Error(
@@ -310,6 +311,7 @@ export async function sendDiagnosticChatMessage(
     caseSystemPrompt: caseBrief,
     turns,
     toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
+    deep: options.deep,
   });
 
   const { error: insertAssistantError } = await supabase.from("ai_responses").insert({

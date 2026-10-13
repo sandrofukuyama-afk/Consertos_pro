@@ -10,13 +10,15 @@ import { logTokenUsage } from "@/lib/services/token-logger";
 // Opus com raciocinio adaptativo: o agente de bancada precisa seguir nets,
 // cruzar boardview/esquema e medicoes em varios passos antes de responder.
 // Modelo e esforco podem ser trocados por env var sem alterar codigo.
-// Opus 5.5 com esforco medio: mais novo e mais barato que o Opus 5 em "high".
-const DEFAULT_CLAUDE_CHAT_MODEL = "claude-opus-5-5";
+// Custo: Sonnet 5.5 no dia a dia (metade do preco do Opus); o botao
+// "Pensar mais" do chat e o parecer usam o Opus 5.5.
+const DEFAULT_CLAUDE_CHAT_MODEL = "claude-sonnet-5-5";
+const DEFAULT_CLAUDE_DEEP_MODEL = "claude-opus-5-5";
 const DEFAULT_CLAUDE_CHAT_EFFORT = "medium";
 const CLAUDE_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
 // Cada volta reenvia a conversa e tudo o que ja foi consultado: limitar as
 // voltas e o tamanho das paginas da web e o que mais segura o custo.
-const MAX_AGENT_ITERATIONS = 10;
+const MAX_AGENT_ITERATIONS = 6;
 const WEB_FETCH_MAX_CONTENT_TOKENS = 4000;
 const MAX_OUTPUT_TOKENS = 32000;
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -24,7 +26,10 @@ const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/we
 type ClaudeEffort = (typeof CLAUDE_EFFORT_LEVELS)[number];
 type SupportedImageType = (typeof SUPPORTED_IMAGE_TYPES)[number];
 
-export function getClaudeChatModelName() {
+export function getClaudeChatModelName(deep = false) {
+  if (deep) {
+    return process.env.ANTHROPIC_CHAT_DEEP_MODEL || DEFAULT_CLAUDE_DEEP_MODEL;
+  }
   return process.env.ANTHROPIC_CHAT_MODEL || DEFAULT_CLAUDE_CHAT_MODEL;
 }
 
@@ -156,13 +161,15 @@ export async function runClaudeDiagnosticAgent(args: {
   caseSystemPrompt: string;
   turns: ClaudeChatTurn[];
   toolContext: DiagnosticAgentToolContext;
+  /** "Pensar mais": usa o modelo mais forte (e mais caro) nesta mensagem. */
+  deep?: boolean;
 }): Promise<ClaudeChatResult> {
   if (!isClaudeChatConfigured()) {
     throw new Error("ANTHROPIC_API_KEY não configurada.");
   }
 
   const client = new Anthropic();
-  const requestedModel = getClaudeChatModelName();
+  const requestedModel = getClaudeChatModelName(Boolean(args.deep));
   const effort = getClaudeChatEffort();
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     ...DIAGNOSTIC_AGENT_TOOLS,
@@ -182,6 +189,7 @@ export async function runClaudeDiagnosticAgent(args: {
   let tokensInput = 0;
   let tokensCacheRead = 0;
   let tokensCacheWrite = 0;
+  let tokensCacheWrite1h = 0;
   let tokensOutput = 0;
   let servedModel = requestedModel;
   let replyText = "";
@@ -212,6 +220,7 @@ export async function runClaudeDiagnosticAgent(args: {
     servedModel = message.model;
     tokensInput += message.usage.input_tokens;
     tokensCacheWrite += message.usage.cache_creation_input_tokens ?? 0;
+    tokensCacheWrite1h += message.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
     tokensCacheRead += message.usage.cache_read_input_tokens ?? 0;
     tokensOutput += message.usage.output_tokens;
     sources.push(...extractSources(message.content));
@@ -261,6 +270,7 @@ export async function runClaudeDiagnosticAgent(args: {
     logTokenUsage(servedModel, "chat_diagnostico_claude", tokensInput, tokensOutput, {
       cacheReadTokens: tokensCacheRead,
       cacheWriteTokens: tokensCacheWrite,
+      cacheWrite1hTokens: tokensCacheWrite1h,
     });
   }
 

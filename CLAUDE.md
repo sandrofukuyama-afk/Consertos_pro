@@ -29,15 +29,18 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 - **PDF no servidor**: usar `extractPdfText` de `src/lib/pdf-text.ts` (carrega `pdf-parse/worker`
   antes do `pdf-parse`; sem isso dá "DOMMatrix is not defined" em produção).
 - **IA**: chat do diagnóstico = agente Claude com ferramentas (`src/lib/ai/assistant-llm-claude.ts`,
-  `diagnostic-agent-tools.ts`); modelo/esforço por `ANTHROPIC_CHAT_MODEL` / `ANTHROPIC_CHAT_EFFORT`
-  (padrão `claude-opus-5-5`, `medium` — escolha do dono para reduzir custo).
-- **Custo da IA**: cada mensagem do chat é um loop de até 10 voltas que reenvia tudo a cada volta.
+  `diagnostic-agent-tools.ts`). Dia a dia em **Sonnet 5.5** (`ANTHROPIC_CHAT_MODEL`); botão
+  **"🧠 Pensar mais"** do chat (vale para uma mensagem) e o parecer técnico usam **Opus 5.5**
+  (`ANTHROPIC_CHAT_DEEP_MODEL`). Esforço `medium` (`ANTHROPIC_CHAT_EFFORT`). Escolha do dono para reduzir custo.
+- **Custo da IA**: cada mensagem do chat é um loop de até **6 voltas** que reenvia tudo a cada volta.
   Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
+  Ferramentas devolvem pouco: net com até 30 componentes/10 test points, busca no esquema 8 páginas,
+  página do esquema 8000 caracteres, valores de referência 60 (constantes no topo de `diagnostic-agent-tools.ts`).
   Histórico enviado à IA: só as **últimas 8 mensagens** (`RECENT_HISTORY_MESSAGES` em
   `src/lib/services/diagnostic-chat.ts`); as anteriores viram um aviso, porque resumo/medições/testes/
   hipóteses do caso já vão no contexto. A tela do caso mostra só a última troca; a conversa inteira fica em `/diagnosticos/[id]/historico`.
   `ai_token_logs` separa `cache_read_tokens`/`cache_write_tokens`; `estimated_cost_usd` usa a tabela
-  de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo). Parecer estruturado (`assistant-llm.ts`) também usa Claude;
+  de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo); cache de 5 min = 1,25x, de 1 h = 2x. Parecer estruturado (`assistant-llm.ts`) também usa Claude;
   OpenAI só como reserva sem chave Anthropic.
 - **Busca da biblioteca é por palavras em qualquer ordem**, no nome do arquivo e em
   `metadata.display_name` (nunca na descrição, que guarda o caminho de origem com "Bios").
@@ -95,6 +98,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-14** — Custo: chat em Sonnet 5.5 + botão "🧠 Pensar mais" (Opus 5.5); máx. 6 voltas; ferramentas
+  devolvem menos; registro de custo conta o cache de 1 h a 2x. Antes: média US$ 0,27/mensagem (Opus 5.5).
 - **2026-10-14** — Chat do caso mostra só a última troca; conversa inteira com busca em `/diagnosticos/[id]/historico`.
 - **2026-10-14** — Chat envia à IA só as últimas 8 mensagens (caso Fujitsu tinha 57, ~17 mil tokens por envio).
   Medição com Opus 5.5 antes desta mudança: US$ 0,18–0,39 por mensagem (média 0,26).

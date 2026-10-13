@@ -13,27 +13,31 @@ const PRICES: Array<[RegExp, number, number]> = [
   [/^claude-haiku/, 1, 5],
 ];
 
-// Cache do Claude: leitura custa 10% da entrada; gravacao ~125% (5 min) a 200% (1 h).
+// Cache do Claude: leitura custa 10% da entrada; gravacao 125% (5 min) ou 200% (1 h).
 const CACHE_READ_FACTOR = 0.1;
 const CACHE_WRITE_FACTOR = 1.25;
+const CACHE_WRITE_1H_FACTOR = 2;
 
 export async function logTokenUsage(
   model: string,
   purpose: string,
   promptTokens: number,
   completionTokens: number,
-  cache: { cacheReadTokens?: number; cacheWriteTokens?: number } = {},
+  // cacheWriteTokens e o total gravado; cacheWrite1hTokens e a parte de 1 h dele.
+  cache: { cacheReadTokens?: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number } = {},
 ) {
   try {
     const supabase = await createClient();
     const [, inputPerMillion, outputPerMillion] = PRICES.find(([pattern]) => pattern.test(model)) ?? [null, 0, 0];
     const cacheRead = cache.cacheReadTokens ?? 0;
     const cacheWrite = cache.cacheWriteTokens ?? 0;
+    const cacheWrite1h = Math.min(cache.cacheWrite1hTokens ?? 0, cacheWrite);
 
     const estimatedCost =
       (promptTokens * inputPerMillion +
         cacheRead * inputPerMillion * CACHE_READ_FACTOR +
-        cacheWrite * inputPerMillion * CACHE_WRITE_FACTOR +
+        (cacheWrite - cacheWrite1h) * inputPerMillion * CACHE_WRITE_FACTOR +
+        cacheWrite1h * inputPerMillion * CACHE_WRITE_1H_FACTOR +
         completionTokens * outputPerMillion) /
       1_000_000;
 
