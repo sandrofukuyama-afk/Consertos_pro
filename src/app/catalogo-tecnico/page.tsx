@@ -55,6 +55,36 @@ function assetTypeLabel(assetType: string) {
   return ASSET_GROUPS.find((group) => group.types.includes(assetType))?.label ?? "outro";
 }
 
+/** Resumo "2 esquemas · 1 boardview"; toque abre a lista com link de cada arquivo. */
+function ModelFiles({ files }: { files: ModelAssetFile[] }) {
+  if (!files.length) {
+    return <span className="text-[var(--muted)]">Nenhum arquivo</span>;
+  }
+
+  return (
+    <details>
+      <summary className="cursor-pointer select-none py-1 text-[var(--foreground)] hover:text-white">
+        📁 {summarizeModelFiles(files)}
+      </summary>
+      <ul className="mt-2 grid gap-2">
+        {files.map((file) => (
+          <li key={file.id} className="[overflow-wrap:anywhere]">
+            <a
+              href={`/api/technical-assets/${file.id}/content`}
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-[var(--panel-border)] hover:text-white"
+            >
+              {file.filename}
+            </a>{" "}
+            <span className="text-[var(--muted)]">({assetTypeLabel(file.assetType)})</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 function pickRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null;
@@ -335,8 +365,45 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
               </div>
             )}
 
+            {/* No celular: um cartao por modelo (a tabela fica larga demais). */}
             {activeTab === "modelos" && (
-              <div className="overflow-x-auto rounded-2xl border border-[var(--panel-border)]">
+              <ul className="grid gap-2 md:hidden">
+                {filteredModels.length > 0 ? (
+                  filteredModels.map((item) => {
+                    const manufacturer = pickRelation(item.manufacturers);
+                    const category = pickRelation(item.equipment_categories);
+                    const files = modelFiles.get(item.id) ?? [];
+                    const boardCodes = (boardCodesByModel.get(item.id) ?? []).join(", ");
+
+                    return (
+                      <li
+                        key={item.id}
+                        className="rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm [overflow-wrap:anywhere]"
+                      >
+                        <p className="font-semibold text-white">{item.model_name}</p>
+                        <p className="mt-0.5 text-xs text-[var(--muted)]">
+                          {[manufacturer?.name, category?.name].filter(Boolean).join(" · ")}
+                          {boardCodes ? (
+                            <>
+                              {" · "}
+                              <span className="font-mono text-[var(--accent-copper)]">{boardCodes}</span>
+                            </>
+                          ) : null}
+                        </p>
+                        <div className="mt-2 text-xs">
+                          <ModelFiles files={files} />
+                        </div>
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li className="py-8 text-center text-sm text-[var(--muted)]">Nenhum modelo encontrado.</li>
+                )}
+              </ul>
+            )}
+
+            {activeTab === "modelos" && (
+              <div className="hidden overflow-x-auto rounded-2xl border border-[var(--panel-border)] md:block">
                 <table className="w-full text-left text-sm text-[var(--foreground)] border-collapse">
                   <thead>
                     <tr className="bg-[var(--background-strong)] text-xs font-mono uppercase tracking-[0.18em] text-[var(--muted)] border-b border-[var(--panel-border)]">
@@ -363,30 +430,7 @@ export default async function CatalogoTecnicoPage({ searchParams }: CatalogoPage
                               {(boardCodesByModel.get(item.id) ?? []).join(", ") || "-"}
                             </td>
                             <td className="min-w-[200px] px-4 py-3 text-xs">
-                              {files.length ? (
-                                <details>
-                                  <summary className="cursor-pointer select-none hover:text-white">
-                                    {summarizeModelFiles(files)}
-                                  </summary>
-                                  <ul className="mt-2 grid gap-1.5">
-                                    {files.map((file) => (
-                                      <li key={file.id} className="[overflow-wrap:anywhere]">
-                                        <a
-                                          href={`/api/technical-assets/${file.id}/content`}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="underline decoration-[var(--panel-border)] hover:text-white"
-                                        >
-                                          {file.filename}
-                                        </a>{" "}
-                                        <span className="text-[var(--muted)]">({assetTypeLabel(file.assetType)})</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </details>
-                              ) : (
-                                <span className="text-[var(--muted)]">Nenhum</span>
-                              )}
+                              <ModelFiles files={files} />
                             </td>
                           </tr>
                         );
