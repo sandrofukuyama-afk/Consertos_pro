@@ -107,6 +107,9 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-15** — Chat: se o celular desconecta, a IA termina e grava a resposta (`after()` na rota); "Tentar de
+  novo" reaproveita a pergunta já gravada (`client_message_id`) em vez de duplicar; texto depois de `pause_turn`
+  não se perde. Pasta `work/` e logs `.next-start-*` fora do git (tinha sessão Supabase salva, já revogada).
 - **2026-10-15** — Chat mais rápido: resposta aparece enquanto a IA escreve (rota com streaming), análise da foto
   depois da resposta (+~6 s antes), fotos reduzidas no celular, tempo-limite com "Tentar de novo".
   Medido em 15/10: IA (Sonnet 5.5) leva 6–18 s; uma pergunta ficou presa no iPhone e nunca chegou ao servidor.
