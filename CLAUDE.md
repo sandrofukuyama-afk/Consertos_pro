@@ -133,6 +133,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Correção: na tela "Associar placa e arquivos técnicos", o card de um boardview `.cad`
+  aparecia como "OTHER" e só tinha o botão "Excluir" — sem "Usar como boardview". Dava pra achar o arquivo
+  na busca mas nunca associá-lo de fato (o formulário "tinha sucesso" sem enviar nenhum `asset_id`). Causa:
+  `isBoardviewFormat()` e `formatAssetTypeLabel()`, específicas desse componente, só reconheciam
+  `file_format` literal `'cad'` — nunca ganharam o fallback `'other'` + nome terminado em `.cad` que já
+  existia em `toAssetKind()` (IA) e `getTechnicalAssetTypeLabel()` (Biblioteca). Corrigido nas duas funções
+  e num 2º ponto que chamava `getTechnicalAssetTypeLabel()` sem o nome do arquivo.
 - **2026-10-16** — Correção: "Associar placa e arquivos técnicos" buscando só por Placa/Modelo (sem digitar
   nada no campo de texto) não achava arquivos mais antigos daquela placa, mesmo já associados. Causa: sem
   texto/formato, `searchTechnicalAssets()` em `src/app/api/technical-assets/route.ts` só pedia os 240
