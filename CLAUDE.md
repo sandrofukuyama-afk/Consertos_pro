@@ -122,17 +122,26 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
 5. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
 8. Boardview `.cad` (GenCAD) é salvo na biblioteca com `file_format = 'other'` (o enum do banco não tem
-   valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). A IA e o laboratório
-   reconhecem esse caso pelo **nome do arquivo** (`toAssetKind()` em `assistant-technical-context.ts` e
-   `isBoardviewFormat()` na tela de associação), não pelo `file_format` gravado — funciona, mas é um
-   contorno. Se quiser filtrar/reportar arquivos GenCAD separadamente no catálogo, criar uma migration
-   `alter type technical_asset_file_format add value 'cad'`, trocar `toDbFileFormat` para devolver `'cad'`
-   direto, e então simplificar essas duas funções para usar `file_format === 'cad'` como as demais.
+   valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). Todo lugar que
+   decide "isso é um boardview" (tela do caso, tela de associação, ferramenta da IA) reconhece esse caso
+   pelo **nome do arquivo** via `isBoardviewFileFormat()`, uma função única em `technical-assets.mjs` —
+   funciona, mas é um contorno. Se quiser filtrar/reportar arquivos GenCAD separadamente no catálogo, criar
+   uma migration `alter type technical_asset_file_format add value 'cad'`, trocar `toDbFileFormat` para
+   devolver `'cad'` direto, e então simplificar `isBoardviewFileFormat` para usar `file_format === 'cad'`
+   como as demais.
 
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Correção: mesmo com o `.cad` associado com sucesso ao caso, o botão "Abrir boardview" da
+  tela principal do diagnóstico não aparecia — 4º lugar com a mesma checagem `"brd"`/`"bdv"` copiada
+  (`diagnostic-bench-workspace.tsx`), igual aos dois já corrigidos hoje (IA, tela de associação). Em vez de
+  corrigir mais um ponto solto, extraí `isBoardviewFileFormat()` para `technical-assets.mjs` (já
+  compartilhado client/server) e fiz os 3 lugares (tela do caso, `toAssetKind()` na IA,
+  `isBoardviewFormat()` na tela de associação) delegarem pra essa função única, em vez de cada um
+  reimplementar a mesma checagem — essa duplicação foi exatamente o que causou o bug "meio corrigido" duas
+  vezes seguidas no mesmo dia.
 - **2026-10-16** — Correção: na tela "Associar placa e arquivos técnicos", o card de um boardview `.cad`
   aparecia como "OTHER" e só tinha o botão "Excluir" — sem "Usar como boardview". Dava pra achar o arquivo
   na busca mas nunca associá-lo de fato (o formulário "tinha sucesso" sem enviar nenhum `asset_id`). Causa:
