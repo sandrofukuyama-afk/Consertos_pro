@@ -9,8 +9,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  * contato. O agente nunca recebe a chave do banco: so fala com esta API.
  */
 export async function authenticateBenchAgent(request: Request) {
-  const expected = process.env.BENCH_AGENT_TOKEN ?? "";
-  const provided = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  // trim: valor colado na Vercel ou no bench-agent.env costuma vir com espaco/quebra de linha.
+  const expected = (process.env.BENCH_AGENT_TOKEN ?? "").trim();
+  const provided = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   const agentName = (request.headers.get("x-agent-name") ?? "bancada").slice(0, 60);
 
   const valid =
@@ -19,7 +20,14 @@ export async function authenticateBenchAgent(request: Request) {
     timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
 
   if (!valid) {
-    return { error: NextResponse.json({ error: "Agente nao autorizado." }, { status: 401 }) } as const;
+    // Diz so o tipo do problema (nunca o valor) para o tecnico saber onde corrigir.
+    const reason =
+      expected.length < 24
+        ? "BENCH_AGENT_TOKEN nao esta configurado na Vercel (ou tem menos de 24 caracteres). Configure e faca Redeploy."
+        : provided.length === 0
+          ? "O agente nao enviou token: preencha BENCH_AGENT_TOKEN no bench-agent.env."
+          : `Token diferente do configurado na Vercel (agente: ${provided.length} caracteres, app: ${expected.length}).`;
+    return { error: NextResponse.json({ error: `Agente nao autorizado: ${reason}` }, { status: 401 }) } as const;
   }
 
   const supabase = createSupabaseAdminClient();
