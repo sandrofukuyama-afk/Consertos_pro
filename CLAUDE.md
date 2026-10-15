@@ -38,13 +38,19 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   Fotos são reduzidas no celular (`src/lib/client/shrink-photo.ts`, 1600 px JPEG) por causa do limite ~4,5 MB;
   análise da foto (gpt-4o-mini) roda com `after()` depois da resposta. Lógica comum em
   `src/lib/services/diagnostic-chat-post.ts`. Erros da Anthropic em português (`toFriendlyClaudeError`).
-- **Custo da IA**: cada mensagem do chat é um loop de até **6 voltas** que reenvia tudo a cada volta.
+- **Memória do chat**: a conversa completa de cada caso (mensagens, consultas da IA com resultados, raciocínio,
+  blocos de compactação) fica em `diagnostic_chat_threads.messages` e é reenviada inteira a cada mensagem.
+  **Só cresce, nunca editar mensagens antigas** (quebra o cache e o raciocínio salvo; contas novas levam 400).
+  As instruções fixas no `system` nunca mudam; o estado do caso vai como mensagem `role: "system"` depois da
+  pergunta, só quando muda (`case_brief_hash`). Cache de 1 h na última mensagem do técnico; compactação
+  automática da API a partir de 100 mil tokens. Fotos vão pela Files API (file_id). Casos antigos ganham a
+  conversa montada uma vez a partir do texto de `ai_responses`. Se a API recusar o pedido (400) antes de qualquer
+  ação, o chat responde em **modo de segurança** (histórico em texto) e marca `memoryMode: "fallback"` na resposta.
+- **Custo da IA**: cada mensagem do chat é um loop de até **10 voltas**.
   Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
   Ferramentas devolvem pouco: net com até 30 componentes/10 test points, busca no esquema 8 páginas,
   página do esquema 8000 caracteres, valores de referência 60 (constantes no topo de `diagnostic-agent-tools.ts`).
-  Histórico enviado à IA: só as **últimas 8 mensagens** (`RECENT_HISTORY_MESSAGES` em
-  `src/lib/services/diagnostic-chat.ts`); as anteriores viram um aviso, porque resumo/medições/testes/
-  hipóteses do caso já vão no contexto. A tela do caso mostra só a última troca; a conversa inteira fica em `/diagnosticos/[id]/historico`.
+  A tela do caso mostra só a última troca; a conversa inteira fica em `/diagnosticos/[id]/historico`.
   `ai_token_logs` separa `cache_read_tokens`/`cache_write_tokens`; `estimated_cost_usd` usa a tabela
   de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo); cache de 5 min = 1,25x, de 1 h = 2x. Parecer estruturado (`assistant-llm.ts`) também usa Claude;
   OpenAI só como reserva sem chave Anthropic.
@@ -96,8 +102,15 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 1. Agente instalado e online no PC da bancada ("Bancada 1", `DRIVER=ezp2023`). Falta testar ler/gravar com
    placa de sucata antes de usar em cliente (e atualizar o PC para a v1.1.1).
-2. Descobrir o caminho real do volume `raid` no ZimaOS, ajustar `tools/library-watcher/docker-compose.yml`
-   e instalar (App Store → Custom Install).
+2. Vigia de pasta **ainda não roda** (em 15/10 as pastas Enviar/Enviados/Erros estavam vazias e nunca usadas).
+   `.env` em `HDD4\ConsertosPro-watcher` está pronto (DRY_RUN=0). Falta: descobrir o caminho real do volume
+   `raid` no ZimaOS, ajustar `tools/library-watcher/docker-compose.yml` e instalar (App Store → Custom Install).
+   O servidor responde em 172.30.0.1 e em 192.168.0.32 (`W:` no PC). Arquivos vão em
+   `HDD4\Enviar para o ConsertosPro`, **não** em `ConsertosPro-watcher\src` (pasta do código).
+6. Conferir as primeiras conversas com a memória completa: `ai_responses.structured_response_json->>'memoryMode'`
+   deve ser `full`; se aparecer `fallback`, ler `memoryFallbackReason` e corrigir o pedido.
+7. O bot do Telegram busca só na biblioteca do app. Busca automática em grupos/canais do Telegram exigiria
+   um userbot (conta de pessoa, api_id/api_hash) rodando no ZimaOS: não existe ainda; o dono quer.
 3. Varrer o resto do `HDD4` (mac_firmware, Memorias_Dados, HD_Antigo, Manutenção_Cursos_Apostilas…)
    atrás de mais esquemas/BIOS.
 4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
@@ -106,6 +119,12 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-15** — Chat com **memória completa** (tabela `diagnostic_chat_threads`), como no Claude Code: antes só
+  iam as últimas 8 mensagens em texto e a IA repetia perguntas e consultas (técnico reclamou no caso da bateria).
+  Até 10 voltas, compactação a partir de 100 mil tokens, modo de segurança se a API recusar.
+- **2026-10-15** — Biblioteca: esquema Quanta 0P5D (HP 15-dy/15s-fq, placa DA0P5DMB8C0) e BIOS
+  `0p5dBAD.bin` (estrutura íntegra, mas nome original diz BAD: importada com aviso "não grave sem conferir").
 
 - **2026-10-15** — Chat: se o celular desconecta, a IA termina e grava a resposta (`after()` na rota); "Tentar de
   novo" reaproveita a pergunta já gravada (`client_message_id`) em vez de duplicar; texto depois de `pause_turn`
