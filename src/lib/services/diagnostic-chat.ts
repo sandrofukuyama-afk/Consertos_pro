@@ -1,9 +1,13 @@
+import { createHash } from "node:crypto";
+
+import type Anthropic from "@anthropic-ai/sdk";
+
 import { createClient } from "@/lib/supabase/server";
 import {
+  buildChatUserContent,
   isClaudeChatConfigured,
   runClaudeDiagnosticAgent,
   type ClaudeChatProgressEvent,
-  type ClaudeChatTurn,
 } from "@/lib/ai/assistant-llm-claude";
 import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
 import {
@@ -23,11 +27,13 @@ export type NewChatAttachment = {
   base64: string;
 };
 
-// Historico enviado a IA: so as ultimas mensagens vao completas. O resto ja esta
-// refletido no resumo, medicoes, testes e hipoteses do caso (bloco de contexto)
-// e o agente pode consultar_registros_do_caso; reenviar tudo a cada mensagem e
-// o que mais encarecia o chat (casos longos passavam de 17 mil tokens so de historico).
-const RECENT_HISTORY_MESSAGES = 8;
+type ChatMessage = Anthropic.Beta.BetaMessageParam;
+
+// A IA recebe a conversa inteira do caso, como no Claude Code: o que o tecnico
+// disse, o que ela consultou (boardview, esquema, web) e o que concluiu. Antes
+// so iam as ultimas 8 mensagens em texto, e ela repetia perguntas e consultas.
+// O custo fica controlado pelo cache (conversa relida a ~10% do preco) e pela
+// compactacao automatica quando a conversa fica muito longa.
 
 const PERSONA_PROMPT = [
   "Voce e o especialista de bancada responsavel por resolver este caso: um tecnico",
@@ -60,6 +66,14 @@ const PERSONA_PROMPT = [
   "  do modelo/placa quando isso mudar a decisao. Cite a fonte de forma curta.",
   "- Nao invente medicoes, nets, referencias ou tensoes. Se faltar um dado critico,",
   "  peca a medicao especifica que resolve a duvida.",
+  "- Voce tem a conversa inteira deste caso, incluindo as consultas que ja fez e os",
+  "  resultados delas. Use o que ja foi apurado: nao refaca consultas cujo resultado",
+  "  ja esta na conversa, nao peca de novo uma medicao que o tecnico ja informou e",
+  "  respeite a condicao em que cada medicao foi feita (fonte/bateria plugadas, placa",
+  "  ligada ou nao). Se dois dados parecerem conflitar, aponte qual e qual em vez de",
+  "  pedir tudo de novo.",
+  "- Mensagens de sistema com o ESTADO ATUAL DO CASO trazem os registros do sistema",
+  "  naquele momento; a mais recente vale sobre as anteriores.",
   "- Pense na seguranca da placa e do tecnico: avise antes de passos com risco",
   "  (injetar tensao, retirar componente, aplicar calor perto de conectores/BGA).",
   "",
@@ -77,7 +91,7 @@ function buildCaseBrief(
   relatedDocuments: Array<{ title: string; excerpt: string; similarityLabel: string }>,
 ): string {
   const lines: string[] = [
-    "CONTEXTO ATUAL DO CASO (nao repita este bloco ao tecnico, e so para sua orientacao):",
+    "ESTADO ATUAL DO CASO registrado no sistema (nao repita este bloco ao tecnico, e so para sua orientacao):",
     `Equipamento: ${context.label} | Categoria: ${context.category} | Fabricante: ${context.manufacturer} | Modelo: ${context.model}`,
     `Relato inicial: ${context.initialReport}`,
     `Resumo atual do caso: ${context.summary}`,
@@ -241,94 +255,56 @@ export async function sendDiagnosticChatMessage(
       );
   }
 
-  // Historico completo do chat deste caso, em ordem cronologica, incluindo a
-  // mensagem que acabamos de inserir.
-  const { data: historyRows } = await supabase
-    .from("ai_responses")
-    .select("id, response_role, raw_response_text, structured_response_json, created_at")
-    .eq("diagnostic_id", diagnosticId)
-    .in("response_role", ["user", "assistant"])
-    .order("created_at", { ascending: true });
+  const thread = await loadChatThread(supabase, diagnosticId, userResponseId);
+  const caseBrief = buildCaseBrief(context, workbench, similarCases, relatedDocuments);
+  const caseBriefHash = createHash("sha256").update(caseBrief).digest("hex");
 
-  const historyIds = (historyRows ?? []).map((row) => row.id);
-  const { data: historyAttachments } = historyIds.length
-    ? await supabase
-        .from("attachments")
-        .select("chat_ai_response_id, title, ai_image_analysis")
-        .in("chat_ai_response_id", historyIds)
-    : { data: [] as Array<{ chat_ai_response_id: string | null; title: string; ai_image_analysis: Record<string, unknown> | null }> };
-
-  const attachmentsByResponseId = new Map<string, Array<{ title: string; analysis: Record<string, unknown> | null }>>();
-  for (const row of historyAttachments ?? []) {
-    if (!row.chat_ai_response_id) continue;
-    const list = attachmentsByResponseId.get(row.chat_ai_response_id) ?? [];
-    list.push({ title: row.title, analysis: row.ai_image_analysis });
-    attachmentsByResponseId.set(row.chat_ai_response_id, list);
+  const newMessages: ChatMessage[] = [
+    {
+      role: "user",
+      content: await buildChatUserContent(
+        userRawText,
+        newAttachments.map((item) => ({ mimeType: item.mimeType, base64: item.base64 })),
+      ),
+    },
+  ];
+  // O estado do caso vai como mensagem de sistema depois da pergunta, e so
+  // quando mudou: as instrucoes fixas no topo nunca mudam (cache) e a conversa
+  // guardada nunca e editada, so cresce.
+  if (caseBriefHash !== thread.caseBriefHash) {
+    newMessages.push({ role: "system", content: caseBrief });
   }
 
-  const allHistory = historyRows ?? [];
-  const omittedCount = Math.max(0, allHistory.length - RECENT_HISTORY_MESSAGES);
-  const recentHistory = allHistory.slice(omittedCount);
-
-  const recentTurns: ClaudeChatTurn[] = recentHistory.map((row) => {
-    const isCurrentTurn = row.id === userResponseId;
-    const photos = attachmentsByResponseId.get(row.id) ?? [];
-    let text = row.raw_response_text ?? "";
-    const structured = row.structured_response_json as { agentActions?: unknown } | null;
-    const previousActions = Array.isArray(structured?.agentActions)
-      ? (structured.agentActions as unknown[]).map(String)
-      : [];
-
-    if (previousActions.length) {
-      text = `${text}
-(acoes executadas nesta resposta: ${previousActions.join("; ")})`;
-    }
-
-    if (photos.length && !isCurrentTurn) {
-      const photoNotes = photos
-        .map((photo) => {
-          const observations = Array.isArray(photo.analysis?.observations)
-            ? (photo.analysis?.observations as string[]).join("; ")
-            : null;
-          return observations
-            ? `${photo.title}: ${observations}`
-            : `${photo.title}: (sem analise registrada)`;
-        })
-        .join(" | ");
-      text = `${text}\n(fotos anexadas nesta mensagem - ${photoNotes})`;
-    }
-
-    return {
-      role: row.response_role as "user" | "assistant",
-      text,
-      images: isCurrentTurn
-        ? newAttachments.map((item) => ({ mimeType: item.mimeType, base64: item.base64 }))
-        : undefined,
-    };
-  });
-
-  const turns: ClaudeChatTurn[] = omittedCount
-    ? [
-        {
-          role: "user",
-          text: `(${omittedCount} mensagens anteriores desta conversa foram omitidas para economizar. O resumo do caso, os testes, as medicoes e as hipoteses no contexto ja refletem o que foi apurado nelas; use consultar_registros_do_caso se precisar de detalhes.)`,
-        },
-        ...recentTurns,
-      ]
-    : recentTurns;
-
-  const caseBrief = buildCaseBrief(context, workbench, similarCases, relatedDocuments);
   const actions: string[] = [];
   const wroteToCase = { value: false };
 
-  const result = await runClaudeDiagnosticAgent({
-    stableSystemPrompt: [PERSONA_PROMPT, "", specialist.systemInstructions].join("\n"),
-    caseSystemPrompt: caseBrief,
-    turns,
-    toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
-    deep: options.deep,
-    onProgress: options.onProgress,
-  });
+  let result: Awaited<ReturnType<typeof runClaudeDiagnosticAgent>>;
+  try {
+    result = await runClaudeDiagnosticAgent({
+      stableSystemPrompt: [PERSONA_PROMPT, "", specialist.systemInstructions].join("\n"),
+      history: thread.messages,
+      newMessages,
+      toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
+      deep: options.deep,
+      onProgress: options.onProgress,
+    });
+  } catch (error) {
+    // Guarda a pergunta mesmo sem resposta, para a IA saber o que foi dito.
+    await saveChatThread(supabase, diagnosticId, caseBriefHash, [
+      ...thread.messages,
+      ...newMessages,
+      {
+        role: "assistant",
+        content: [{ type: "text", text: "(A resposta a esta mensagem falhou por erro técnico e não chegou ao técnico.)" }],
+      },
+    ]).catch(() => undefined);
+    throw error;
+  }
+
+  await saveChatThread(supabase, diagnosticId, caseBriefHash, [
+    ...thread.messages,
+    ...result.appendedMessages,
+  ]);
 
   const { error: insertAssistantError } = await supabase.from("ai_responses").insert({
     diagnostic_id: diagnosticId,
@@ -351,4 +327,114 @@ export async function sendDiagnosticChatMessage(
   }
 
   return { replyText: result.replyText, wroteToCase: wroteToCase.value };
+}
+
+type ChatSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+async function saveChatThread(
+  supabase: ChatSupabaseClient,
+  diagnosticId: string,
+  caseBriefHash: string,
+  messages: ChatMessage[],
+) {
+  const { error } = await supabase.from("diagnostic_chat_threads").upsert({
+    diagnostic_id: diagnosticId,
+    messages,
+    case_brief_hash: caseBriefHash,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+/**
+ * Conversa guardada do caso. Casos anteriores a memoria completa ainda nao tem
+ * conversa guardada: ela e montada uma vez a partir das mensagens do chat (so
+ * texto) e dai em diante so cresce.
+ */
+async function loadChatThread(
+  supabase: ChatSupabaseClient,
+  diagnosticId: string,
+  currentUserResponseId: string,
+): Promise<{ messages: ChatMessage[]; caseBriefHash: string | null }> {
+  const { data: saved } = await supabase
+    .from("diagnostic_chat_threads")
+    .select("messages, case_brief_hash")
+    .eq("diagnostic_id", diagnosticId)
+    .maybeSingle();
+
+  if (saved) {
+    return {
+      messages: (saved.messages as ChatMessage[] | null) ?? [],
+      caseBriefHash: (saved.case_brief_hash as string | null) ?? null,
+    };
+  }
+
+  const { data: historyRows } = await supabase
+    .from("ai_responses")
+    .select("id, response_role, raw_response_text, structured_response_json, created_at")
+    .eq("diagnostic_id", diagnosticId)
+    .in("response_role", ["user", "assistant"])
+    .neq("id", currentUserResponseId)
+    .order("created_at", { ascending: true });
+
+  const historyIds = (historyRows ?? []).map((row) => row.id);
+  const { data: historyAttachments } = historyIds.length
+    ? await supabase
+        .from("attachments")
+        .select("chat_ai_response_id, title, ai_image_analysis")
+        .in("chat_ai_response_id", historyIds)
+    : { data: [] as Array<{ chat_ai_response_id: string | null; title: string; ai_image_analysis: Record<string, unknown> | null }> };
+
+  const attachmentsByResponseId = new Map<string, Array<{ title: string; analysis: Record<string, unknown> | null }>>();
+  for (const row of historyAttachments ?? []) {
+    if (!row.chat_ai_response_id) continue;
+    const list = attachmentsByResponseId.get(row.chat_ai_response_id) ?? [];
+    list.push({ title: row.title, analysis: row.ai_image_analysis });
+    attachmentsByResponseId.set(row.chat_ai_response_id, list);
+  }
+
+  const seeded: ChatMessage[] = (historyRows ?? []).map((row) => {
+    const photos = attachmentsByResponseId.get(row.id) ?? [];
+    let text = row.raw_response_text ?? "";
+    const structured = row.structured_response_json as { agentActions?: unknown } | null;
+    const previousActions = Array.isArray(structured?.agentActions)
+      ? (structured.agentActions as unknown[]).map(String)
+      : [];
+
+    if (previousActions.length) {
+      text = `${text}\n(acoes executadas nesta resposta: ${previousActions.join("; ")})`;
+    }
+
+    if (photos.length) {
+      const photoNotes = photos
+        .map((photo) => {
+          const observations = Array.isArray(photo.analysis?.observations)
+            ? (photo.analysis?.observations as string[]).join("; ")
+            : null;
+          return observations
+            ? `${photo.title}: ${observations}`
+            : `${photo.title}: (sem analise registrada)`;
+        })
+        .join(" | ");
+      text = `${text}\n(fotos anexadas nesta mensagem - ${photoNotes})`;
+    }
+
+    return {
+      role: row.response_role as "user" | "assistant",
+      content: [{ type: "text", text: text.trim() || "(mensagem vazia)" }],
+    };
+  });
+
+  // A conversa precisa comecar pelo tecnico.
+  if (seeded[0]?.role === "assistant") {
+    seeded.unshift({
+      role: "user",
+      content: [{ type: "text", text: "(inicio da conversa deste caso)" }],
+    });
+  }
+
+  return { messages: seeded, caseBriefHash: null };
 }
