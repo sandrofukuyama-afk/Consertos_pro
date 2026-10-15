@@ -54,7 +54,7 @@ function normalizeText(value: string | null | undefined) {
     .replace(/\s+/g, " ");
 }
 
-function formatAssetTypeLabel(format: string) {
+function formatAssetTypeLabel(format: string, fileName?: string) {
   if (format === "pdf") {
     return "Esquema PDF";
   }
@@ -67,15 +67,22 @@ function formatAssetTypeLabel(format: string) {
     return "Boardview BRD";
   }
 
-  if (format === "cad") {
+  if (format === "cad" || (format === "other" && fileName?.trim().toLowerCase().endsWith(".cad"))) {
     return "Boardview CAD";
   }
 
   return format.toUpperCase();
 }
 
-function isBoardviewFormat(format: string) {
-  return format === "brd" || format === "bdv" || format === "cad";
+function isBoardviewFormat(format: string, fileName?: string) {
+  if (format === "brd" || format === "bdv" || format === "cad") {
+    return true;
+  }
+
+  // GenCAD (.cad) e salvo como file_format "other" porque o enum do banco
+  // ainda nao tem um valor 'cad' dedicado (ver pendencia no CLAUDE.md) --
+  // reconhece pelo nome do arquivo para nao ficar preso ao formato gravado.
+  return format === "other" && Boolean(fileName?.trim().toLowerCase().endsWith(".cad"));
 }
 
 function formatFileFormatFilter(value: string) {
@@ -101,7 +108,7 @@ export function DiagnosticTechnicalAssetAssociation({
   manufacturers,
 }: DiagnosticTechnicalAssetAssociationProps) {
   const currentBoardviewAsset =
-    currentAssets.find((asset) => isBoardviewFormat(asset.fileFormat)) ?? null;
+    currentAssets.find((asset) => isBoardviewFormat(asset.fileFormat, asset.title)) ?? null;
   const currentSchematicAsset =
     currentAssets.find((asset) => asset.fileFormat === "pdf") ?? null;
   const [query, setQuery] = useState("");
@@ -277,7 +284,7 @@ export function DiagnosticTechnicalAssetAssociation({
     return (
       results.find(
         (item) =>
-          isBoardviewFormat(item.fileFormat) &&
+          isBoardviewFormat(item.fileFormat, item.originalFileName) &&
           areTechnicalAssetNamesRelated(item.title, selectedSchematicAsset.title),
       ) ?? null
     );
@@ -514,7 +521,7 @@ export function DiagnosticTechnicalAssetAssociation({
         <div className="grid gap-3">
           {results.length ? (
             results.map((item) => {
-              const isBoardview = isBoardviewFormat(item.fileFormat);
+              const isBoardview = isBoardviewFormat(item.fileFormat, item.originalFileName);
               const isSchematic = item.fileFormat === "pdf";
               const isSelectedBoardview = selectedBoardviewAssetId === item.id;
               const isSelectedSchematic = selectedSchematicAssetId === item.id;
@@ -540,7 +547,7 @@ export function DiagnosticTechnicalAssetAssociation({
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
-                        {formatAssetTypeLabel(item.fileFormat)}
+                        {formatAssetTypeLabel(item.fileFormat, item.originalFileName)}
                       </p>
                       <h4 className="mt-2 break-words text-base font-semibold text-[var(--foreground)]">
                         {item.title}

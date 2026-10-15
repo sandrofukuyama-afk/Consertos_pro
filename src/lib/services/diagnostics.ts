@@ -849,7 +849,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     return {
       id: asset.id,
       title: asset.original_filename,
-      documentType: getTechnicalAssetTypeLabel(asset.file_format, asset.asset_type),
+      documentType: getTechnicalAssetTypeLabel(asset.file_format, asset.asset_type, asset.original_filename),
       fileFormat: asset.file_format,
       fileSizeLabel: formatBytesLabel(asset.file_size_bytes),
       uploadedAt: formatRelativeTime(asset.created_at),
