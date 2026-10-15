@@ -307,7 +307,7 @@ export function MeasurementForm({
             Leitura da bancada
           </p>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <label className="grid gap-1 text-xs text-[var(--muted)]">
               Tipo de medição
               <select
@@ -346,7 +346,7 @@ export function MeasurementForm({
             </label>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <label className="grid gap-1 text-xs text-[var(--muted)]">
               Valor medido
               <input
@@ -392,7 +392,7 @@ export function MeasurementForm({
           ) : null}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3">
           <label className="grid gap-1 text-xs text-[var(--muted)]">
             Valor esperado (opcional)
             <input

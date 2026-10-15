@@ -133,6 +133,12 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Correção visual: no "Registro rápido da bancada" (painel do caso), os campos
+  "Tipo de medição"/"Ponto medido" e "Valor medido"/"Unidade"/"Valor esperado"/"Tolerância" saíam do
+  bloco do card (relato do dono, com foto). Mesma causa das correções visuais anteriores: `md:grid-cols-2`
+  é breakpoint de **viewport**, não do container, e esse formulário roda dentro do painel lateral do caso
+  (~360px) — então num monitor largo ele tentava 2 colunas e os campos vazavam da borda. `measurement-form.tsx`
+  (3 grids) agora sempre em uma coluna, como os outros formulários desse painel.
 - **2026-10-16** — Excluídas as duas contas de técnico de teste ainda ativas (Codex QA, Codex Temp) que o
   dono viu em "Técnicos da oficina" — perfil (`technician_profiles`), linha em `users` e login
   (Supabase Auth) de cada uma. Feito por script avulso com a chave de serviço (não ficou no repositório),
