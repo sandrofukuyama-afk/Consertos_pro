@@ -133,6 +133,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-15** — Correção: `detalhar_componente` (ferramenta da IA) recusava referências exatas como
+  PU1001/PU1101 com "nao encontrado" mesmo quando o componente existia (o fallback de busca aproximada
+  listava o proprio componente como "parecido", o que entregou o bug). Causa: `describeComponent()` em
+  `diagnostic-agent-tools.ts` maiusculizava a referência e buscava em `model.componentsByRef`, que é
+  indexado em minúsculas — maiúsculo nunca batia com minúsculo. Afetava qualquer boardview (.brd ou .cad),
+  não só GenCAD; passou despercebido porque o fallback de busca aproximada escondia o erro. Confirmado ao
+  vivo no caso da placa DA0P5DMB8C0 antes e depois da correção.
 - **2026-10-15** — Correção: a IA do chat ainda recusava o boardview `.cad` (GenCAD) recem-suportado com
   "arquivo tecnico nao encontrado ou nao e boardview/esquema". Causa: `toAssetKind()` em
   `assistant-technical-context.ts` decidia se um arquivo e boardview olhando só o `file_format` gravado no
