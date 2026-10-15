@@ -120,7 +120,6 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 3. Varrer o resto do `HDD4` (mac_firmware, Memorias_Dados, HD_Antigo, Manutenção_Cursos_Apostilas…)
    atrás de mais esquemas/BIOS.
 4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
-5. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
 8. Boardview `.cad` (GenCAD) é salvo na biblioteca com `file_format = 'other'` (o enum do banco não tem
    valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). Todo lugar que
    decide "isso é um boardview" (tela do caso, tela de associação, ferramenta da IA) reconhece esse caso
@@ -134,6 +133,11 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Excluídas as duas contas de técnico de teste ainda ativas (Codex QA, Codex Temp) que o
+  dono viu em "Técnicos da oficina" — perfil (`technician_profiles`), linha em `users` e login
+  (Supabase Auth) de cada uma. Feito por script avulso com a chave de serviço (não ficou no repositório),
+  mesma checagem do botão "Excluir" do app (sem diagnóstico atribuído antes de apagar). Resolve a
+  pendência "bloquear contas de teste ainda ativas".
 - **2026-10-16** — Correção: botão "Abrir no laboratório" não aparecia nos cards de `/biblioteca` para um
   boardview `.cad` (GenCAD) já associado (relato do dono, com foto do card faltando o botão). Mesma causa
   das correções anteriores de hoje: `getTechnicalLibraryItems()` e `buildTechnicalAssetItem()`
