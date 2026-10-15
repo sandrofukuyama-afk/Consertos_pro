@@ -1,8 +1,10 @@
 // Drivers de gravador de BIOS usados pelo agente de bancada.
-// Cada driver implementa: detect() -> { chip, sizeBytes|null }, read(arquivo), write(arquivo).
+// Cada driver implementa: detect(ctx) -> { chip, sizeBytes|null }, read(arquivo, ctx), write(arquivo, ctx).
+// ctx = { label, say(mensagem) }: say mostra a mensagem no caso (app) e no console da bancada.
 
 import { execFile } from "node:child_process";
-import { copyFile, stat } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rename, stat } from "node:fs/promises";
+import path from "node:path";
 
 function run(command, args, timeoutMs = 15 * 60 * 1000) {
   return new Promise((resolve, reject) => {
@@ -90,15 +92,89 @@ function miniproDriver(config) {
   };
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * EZP2023+ (modo assistido): o gravador so funciona pelo programa dele no Windows,
+ * sem linha de comando. O agente diz no app o que fazer e espera o arquivo:
+ * - leitura: o tecnico le no EZP2023 e salva o .bin em "1-Leituras";
+ * - gravacao: o agente coloca o arquivo em "2-Para gravar"; o tecnico grava no EZP2023.
+ * As regras continuam: duas leituras iguais, backup antes, leitura de verificacao depois.
+ */
+function ezpDriver(config) {
+  const base = config.EZP_PASTA || "C:\\ConsertosPro-EZP";
+  const readsDir = path.join(base, "1-Leituras");
+  const writeDir = path.join(base, "2-Para gravar");
+  const doneDir = path.join(base, "3-Processados");
+  const waitMs = Number(config.EZP_ESPERA_MIN || 20) * 60 * 1000;
+  let pendingWrite = null;
+
+  /** Espera aparecer em 1-Leituras um arquivo novo (depois de `since`) com tamanho parado. */
+  async function waitForNewFile(since) {
+    const deadline = Date.now() + waitMs;
+    const sizes = new Map();
+    while (Date.now() < deadline) {
+      const names = await readdir(readsDir).catch(() => []);
+      for (const name of names) {
+        if (/\.(tmp|part)$/i.test(name)) continue;
+        const full = path.join(readsDir, name);
+        const info = await stat(full).catch(() => null);
+        if (!info?.isFile() || info.mtimeMs < since || info.size === 0) continue;
+        if (sizes.get(full) === info.size) return full;
+        sizes.set(full, info.size);
+      }
+      await sleep(1500);
+    }
+    throw new Error(`Nenhum arquivo novo em ${readsDir} em ${Math.round(waitMs / 60000)} min. Peça de novo no app.`);
+  }
+
+  async function archive(file) {
+    const target = path.join(doneDir, `${new Date().toISOString().replace(/[:.]/g, "-")}-${path.basename(file)}`);
+    await rename(file, target).catch(() => {});
+  }
+
+  return {
+    name: "EZP2023+ (assistido)",
+    async detect() {
+      await Promise.all([readsDir, writeDir, doneDir].map((dir) => mkdir(dir, { recursive: true })));
+      // O EZP2023 nao informa o chip ao agente: o tamanho e conferido pela leitura de backup.
+      return { chip: config.EZP_CHIP || "EZP2023+ (chip escolhido no programa do gravador)", sizeBytes: null };
+    },
+    async read(outFile, ctx) {
+      const since = Date.now();
+      const before = pendingWrite
+        ? `No EZP2023, grave o arquivo "${path.basename(pendingWrite)}" (pasta 2-Para gravar) com Auto (apagar + gravar + verificar). Depois `
+        : "No EZP2023, ";
+      ctx?.say(`${ctx?.label ?? "Leitura"}: ${before}clique em Ler (Read) e salve o arquivo em ${readsDir}.`);
+      const file = await waitForNewFile(since);
+      await copyFile(file, outFile);
+      await archive(file);
+      if (pendingWrite) {
+        await archive(pendingWrite);
+        pendingWrite = null;
+      }
+    },
+    async write(inFile) {
+      await mkdir(writeDir, { recursive: true });
+      pendingWrite = path.join(writeDir, `GRAVAR-${new Date().toLocaleDateString("sv-SE")}-${Date.now() % 100000}.bin`);
+      await copyFile(inFile, pendingWrite);
+      // A gravacao em si e feita pelo tecnico; a leitura de verificacao seguinte confirma o resultado.
+    },
+  };
+}
+
 export function createDriver(config) {
   switch ((config.DRIVER || "simulado").toLowerCase()) {
     case "flashrom":
       return flashromDriver(config);
     case "minipro":
       return miniproDriver(config);
+    case "ezp":
+    case "ezp2023":
+      return ezpDriver(config);
     case "simulado":
       return simulatedDriver(config);
     default:
-      throw new Error(`DRIVER desconhecido: ${config.DRIVER}. Use simulado, flashrom ou minipro.`);
+      throw new Error(`DRIVER desconhecido: ${config.DRIVER}. Use ezp2023, simulado, flashrom ou minipro.`);
   }
 }

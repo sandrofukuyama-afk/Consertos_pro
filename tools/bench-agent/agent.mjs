@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { createDriver } from "./drivers.mjs";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.1";
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 async function loadConfig() {
@@ -31,7 +31,7 @@ const log = (...args) => console.log(new Date().toLocaleString("sv-SE"), ...args
 async function main() {
   const config = await loadConfig();
   const appUrl = (config.APP_URL || "https://consertos-pro.vercel.app").replace(/\/$/, "");
-  const token = config.BENCH_AGENT_TOKEN;
+  const token = (config.BENCH_AGENT_TOKEN || "").replace(/[\s"'\uFEFF]/g, "");
   const agentName = config.AGENT_NAME || os.hostname();
   const pollMs = Number(config.POLL_MS || 3000);
   const workDir = config.WORK_DIR || path.join(os.tmpdir(), "consertospro-bench");
@@ -58,15 +58,24 @@ async function main() {
 
   const report = (jobId, fields) => api("POST", `/jobs/${jobId}`, fields).catch((error) => log("aviso:", error.message));
 
+  /** Contexto para o driver falar com o tecnico (gravadores sem linha de comando, ex.: EZP2023+). */
+  const context = (jobId, label) => ({
+    label,
+    say(message) {
+      log(`\x07>>> ${message}`);
+      return report(jobId, { progress: message });
+    },
+  });
+
   /** Le o chip duas vezes e so aceita se as duas leituras forem iguais. */
   async function readStable(jobId, label) {
     const first = path.join(workDir, `${randomUUID()}.bin`);
     const second = path.join(workDir, `${randomUUID()}.bin`);
     try {
       await report(jobId, { progress: `${label}: leitura 1 de 2…` });
-      await driver.read(first);
+      await driver.read(first, context(jobId, `${label} (1 de 2)`));
       await report(jobId, { progress: `${label}: leitura 2 de 2…` });
-      await driver.read(second);
+      await driver.read(second, context(jobId, `${label} (2 de 2)`));
       const [a, b] = await Promise.all([readFile(first), readFile(second)]);
       if (sha256(a) !== sha256(b)) {
         throw new Error("As duas leituras deram diferentes: mau contato na garra/soquete. Reposicione e tente de novo.");
@@ -93,7 +102,7 @@ async function main() {
 
   async function handleRead(job) {
     await report(job.id, { status: "running", progress: "Detectando o chip…" });
-    const { chip } = await driver.detect();
+    const { chip } = await driver.detect(context(job.id, "Detectando"));
     const bytes = await readStable(job.id, "Lendo");
     await report(job.id, { progress: "Enviando o dump…" });
     const saved = await uploadDump(job.id, bytes, "leitura", `leitura-${new Date().toLocaleDateString("sv-SE")}.bin`, chip);
@@ -112,7 +121,7 @@ async function main() {
     if (sha256(image) !== job.source.sha256) throw new Error("O arquivo baixado não confere (hash). Nada foi gravado.");
 
     await report(job.id, { progress: "Detectando o chip…" });
-    const { chip, sizeBytes } = await driver.detect();
+    const { chip, sizeBytes } = await driver.detect(context(job.id, "Detectando"));
     if (sizeBytes && sizeBytes !== image.length) {
       throw new Error(
         `Tamanho não confere: chip ${Math.round(sizeBytes / 1024)} KB, arquivo ${Math.round(image.length / 1024)} KB. Nada foi gravado.`,
@@ -123,12 +132,17 @@ async function main() {
     const backup = await readStable(job.id, "Backup antes de gravar");
     await report(job.id, { progress: "Enviando o backup…" });
     await uploadDump(job.id, backup, "backup", `backup-antes-de-gravar-${new Date().toLocaleDateString("sv-SE")}.bin`, chip);
+    if (backup.length !== image.length) {
+      throw new Error(
+        `Tamanho não confere: chip ${Math.round(backup.length / 1024)} KB, arquivo ${Math.round(image.length / 1024)} KB. Nada foi gravado.`,
+      );
+    }
 
     const imageFile = path.join(workDir, `${randomUUID()}.bin`);
     try {
       await writeFile(imageFile, image);
       await report(job.id, { progress: "Gravando (apagar + gravar)… não desconecte." });
-      await driver.write(imageFile);
+      await driver.write(imageFile, context(job.id, "Gravando"));
     } finally {
       await rm(imageFile, { force: true });
     }
@@ -149,6 +163,7 @@ async function main() {
   }
 
   log(`agente "${agentName}" v${VERSION} • ${driver.name} • ${appUrl}`);
+  log(`token: ${token.length} caracteres, termina em ...${token.slice(-4)} (compare com o da Vercel)`);
 
   do {
     try {

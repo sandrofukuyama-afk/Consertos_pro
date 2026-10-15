@@ -32,6 +32,12 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   `diagnostic-agent-tools.ts`). Dia a dia em **Sonnet 5.5** (`ANTHROPIC_CHAT_MODEL`); botão
   **"🧠 Pensar mais"** do chat (vale para uma mensagem) e o parecer técnico usam **Opus 5.5**
   (`ANTHROPIC_CHAT_DEEP_MODEL`). Esforço `medium` (`ANTHROPIC_CHAT_EFFORT`). Escolha do dono para reduzir custo.
+- **Envio do chat**: o composer (`diagnostic-chat-composer.tsx`) faz `fetch` em `POST /api/diagnosticos/[id]/chat`,
+  que devolve a resposta **aos poucos** (NDJSON: `text`, `tools`, `ping` a cada 10 s, `done`/`error`); no fim a tela
+  faz `router.refresh()`. Sem sinal por 45 s (90 s no primeiro) → aviso "Tentar de novo" sem perder o texto.
+  Fotos são reduzidas no celular (`src/lib/client/shrink-photo.ts`, 1600 px JPEG) por causa do limite ~4,5 MB;
+  análise da foto (gpt-4o-mini) roda com `after()` depois da resposta. Lógica comum em
+  `src/lib/services/diagnostic-chat-post.ts`. Erros da Anthropic em português (`toFriendlyClaudeError`).
 - **Custo da IA**: cada mensagem do chat é um loop de até **6 voltas** que reenvia tudo a cada volta.
   Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
   Ferramentas devolvem pouco: net com até 30 componentes/10 test points, busca no esquema 8 páginas,
@@ -68,8 +74,10 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   Registrar webhook: `node scripts/telegram-set-webhook.mjs`.
 - **Gravador de BIOS**: tabelas `diagnostic_bios_dumps`, `bench_jobs`, `bench_agents`; análise de dump em
   `src/lib/bios/analyze.ts`; API do agente em `/api/bench-agent/*` (token próprio, sem chave do banco);
-  agente Windows em `tools/bench-agent` (drivers flashrom/minipro/simulado; lê 2x, backup antes de gravar,
-  verifica depois). Testado só com chip simulado.
+  agente Windows em `tools/bench-agent` (drivers ezp2023/flashrom/minipro/simulado; lê 2x, backup antes de gravar,
+  verifica depois). Gravador da oficina: **EZP2023+** — sem linha de comando, então o driver `ezp2023` é
+  **assistido** (o app diz o passo; o técnico lê/grava no programa do EZP e salva o .bin em `EZP_PASTA\1-Leituras`).
+  Testado só com chip simulado.
 - **Placas doadoras** (`/doadoras`): foto → etiqueta D-0001…, IA lê código da placa e marcações,
   esquemas da placa indexados por página (`schematic_page_texts`, trigram); busca acha a referência
   (ex.: AON7506 → PQ708) via `src/lib/donors/locate.ts` (bom em Compal/Quanta; MSI/Apple às vezes só a página).
@@ -86,20 +94,26 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 ## Pendências
 
-1. Colocar `BENCH_AGENT_TOKEN` na Vercel (mesmo do `.env.local`) e redeploy.
-2. Confirmar o modelo do gravador (CH341A / XGecu / RT809H), instalar `tools/bench-agent` no PC da bancada
-   e testar com placa de sucata antes de usar em cliente.
-3. Descobrir o caminho real do volume `raid` no ZimaOS, ajustar `tools/library-watcher/docker-compose.yml`
+1. Agente instalado e online no PC da bancada ("Bancada 1", `DRIVER=ezp2023`). Falta testar ler/gravar com
+   placa de sucata antes de usar em cliente (e atualizar o PC para a v1.1.1).
+2. Descobrir o caminho real do volume `raid` no ZimaOS, ajustar `tools/library-watcher/docker-compose.yml`
    e instalar (App Store → Custom Install).
-4. Varrer o resto do `HDD4` (mac_firmware, Memorias_Dados, HD_Antigo, Manutenção_Cursos_Apostilas…)
+3. Varrer o resto do `HDD4` (mac_firmware, Memorias_Dados, HD_Antigo, Manutenção_Cursos_Apostilas…)
    atrás de mais esquemas/BIOS.
-5. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
-6. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
+4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
+5. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
 
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-15** — Chat mais rápido: resposta aparece enquanto a IA escreve (rota com streaming), análise da foto
+  depois da resposta (+~6 s antes), fotos reduzidas no celular, tempo-limite com "Tentar de novo".
+  Medido em 15/10: IA (Sonnet 5.5) leva 6–18 s; uma pergunta ficou presa no iPhone e nunca chegou ao servidor.
+- **2026-10-15** — Erros da Anthropic no chat em português (créditos acabaram / chave recusada / sobrecarga).
+- **2026-10-12** — Agente de bancada v1.1.1: driver `ezp2023` assistido (gravador **EZP2023+** confirmado),
+  checagem de tamanho pelo backup antes de gravar; token com espaço/quebra de linha aceito e 401 com o motivo.
+  Agente instalado e online no PC do EZP2023+; `BENCH_AGENT_TOKEN` configurado na Vercel.
 - **2026-10-14** — Catálogo › Modelos no celular: cartões em vez da tabela (tabela só a partir de `md`).
 - **2026-10-14** — Catálogo técnico › Modelos: colunas Placa e Arquivos (lista e baixa cada arquivo) e filtros
   "Com esquema / Com boardview / Com BIOS / Sem arquivo" (`getModelAssetIndex` em `catalog.ts`).

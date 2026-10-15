@@ -44,6 +44,30 @@ export function isClaudeChatConfigured() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
+/** Traduz erros da API da Anthropic para uma mensagem que o tecnico entenda. */
+export function toFriendlyClaudeError(error: unknown) {
+  const raw = error instanceof Error ? error.message : String(error);
+  const status = error instanceof Anthropic.APIError ? error.status : undefined;
+
+  if (/credit balance|billing|purchase credits/i.test(raw)) {
+    return new Error(
+      "Os créditos da IA (Anthropic) acabaram. Recarregue em console.anthropic.com → Billing e envie de novo. Sua mensagem ficou salva no caso.",
+    );
+  }
+  if (status === 401 || /invalid x-api-key|authentication/i.test(raw)) {
+    return new Error("A chave da IA (ANTHROPIC_API_KEY) foi recusada. Confira a variável na Vercel.");
+  }
+  if (status === 429 || status === 529 || /overloaded|rate limit/i.test(raw)) {
+    return new Error("A IA está sobrecarregada agora. Espere um minuto e envie de novo.");
+  }
+  return error instanceof Error ? error : new Error(raw);
+}
+
+/** Avisos enviados enquanto a IA trabalha, para a tela mostrar o progresso. */
+export type ClaudeChatProgressEvent =
+  | { type: "text"; delta: string }
+  | { type: "tools"; names: string[] };
+
 export type ClaudeChatImage = {
   mimeType: string;
   base64: string;
@@ -163,6 +187,8 @@ export async function runClaudeDiagnosticAgent(args: {
   toolContext: DiagnosticAgentToolContext;
   /** "Pensar mais": usa o modelo mais forte (e mais caro) nesta mensagem. */
   deep?: boolean;
+  /** Recebe o texto conforme a IA escreve e as consultas que ela faz. */
+  onProgress?: (event: ClaudeChatProgressEvent) => void;
 }): Promise<ClaudeChatResult> {
   if (!isClaudeChatConfigured()) {
     throw new Error("ANTHROPIC_API_KEY não configurada.");
@@ -193,6 +219,7 @@ export async function runClaudeDiagnosticAgent(args: {
   let tokensOutput = 0;
   let servedModel = requestedModel;
   let replyText = "";
+  let pausedText = "";
   const sources: string[] = [];
 
   for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration += 1) {
@@ -215,7 +242,13 @@ export async function runClaudeDiagnosticAgent(args: {
       tool_choice: isLastIteration ? { type: "none" } : { type: "auto" },
       messages,
     });
-    const message = await stream.finalMessage();
+    if (args.onProgress) {
+      const onProgress = args.onProgress;
+      stream.on("text", (delta) => onProgress({ type: "text", delta }));
+    }
+    const message = await stream.finalMessage().catch((error: unknown) => {
+      throw toFriendlyClaudeError(error);
+    });
 
     servedModel = message.model;
     tokensInput += message.usage.input_tokens;
@@ -225,7 +258,9 @@ export async function runClaudeDiagnosticAgent(args: {
     tokensOutput += message.usage.output_tokens;
     sources.push(...extractSources(message.content));
 
-    const text = extractText(message.content);
+    // Depois de um pause_turn (busca na web longa) a resposta continua na volta
+    // seguinte: junta os pedacos, como o tecnico viu na tela durante o streaming.
+    const text = pausedText + extractText(message.content);
     if (text) {
       replyText = text;
     }
@@ -238,9 +273,13 @@ export async function runClaudeDiagnosticAgent(args: {
     }
 
     if (message.stop_reason === "pause_turn") {
+      pausedText = text;
       messages.push({ role: "assistant", content: toEchoContent(message.content) });
       continue;
     }
+
+    // O texto antes de uma consulta e so um aviso; a resposta comeca do zero.
+    pausedText = "";
 
     const toolUses = message.content.filter(
       (block): block is Anthropic.Beta.BetaToolUseBlock => block.type === "tool_use",
@@ -251,6 +290,7 @@ export async function runClaudeDiagnosticAgent(args: {
     }
 
     messages.push({ role: "assistant", content: toEchoContent(message.content) });
+    args.onProgress?.({ type: "tools", names: toolUses.map((toolUse) => toolUse.name) });
     const toolResults = await Promise.all(
       toolUses.map((toolUse) => runDiagnosticAgentTool(args.toolContext, toolUse)),
     );
