@@ -1307,6 +1307,17 @@ export async function openDiagnosticTechnicalWorkbench(
               : null,
         }));
 
+      // DEBUG TEMPORARIO: remover depois de confirmar a classificacao real em producao.
+      console.log(
+        "[debug-cad] searchLibrary rows",
+        rows.map((row) => ({
+          id: row.id,
+          file_format: row.file_format,
+          original_filename: row.original_filename,
+          kind: toAssetKind(row.file_format, row.original_filename),
+        })),
+      );
+
       return { readable, others };
     },
     async activateAsset(assetId: string) {
@@ -1328,6 +1339,12 @@ export async function openDiagnosticTechnicalWorkbench(
       }
 
       const kind = asset ? toAssetKind(asset.fileFormat, asset.title) : null;
+      console.log("[debug-cad] activateAsset", {
+        assetId,
+        foundViaAssociated: Boolean(known),
+        asset: asset ? { id: asset.id, fileFormat: asset.fileFormat, title: asset.title } : null,
+        kind,
+      });
 
       if (!asset || !kind) {
         return null;
