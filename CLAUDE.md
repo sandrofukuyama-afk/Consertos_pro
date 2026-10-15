@@ -122,14 +122,26 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
 5. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
 8. Boardview `.cad` (GenCAD) é salvo na biblioteca com `file_format = 'other'` (o enum do banco não tem
-   valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). Se quiser filtrar/
-   reportar arquivos GenCAD separadamente no catálogo, criar uma migration `alter type
-   technical_asset_file_format add value 'cad'` e trocar `toDbFileFormat` para devolver `'cad'` direto.
+   valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). A IA e o laboratório
+   reconhecem esse caso pelo **nome do arquivo** (`toAssetKind()` em `assistant-technical-context.ts` e
+   `isBoardviewFormat()` na tela de associação), não pelo `file_format` gravado — funciona, mas é um
+   contorno. Se quiser filtrar/reportar arquivos GenCAD separadamente no catálogo, criar uma migration
+   `alter type technical_asset_file_format add value 'cad'`, trocar `toDbFileFormat` para devolver `'cad'`
+   direto, e então simplificar essas duas funções para usar `file_format === 'cad'` como as demais.
 
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-15** — Correção: a IA do chat ainda recusava o boardview `.cad` (GenCAD) recem-suportado com
+  "arquivo tecnico nao encontrado ou nao e boardview/esquema". Causa: `toAssetKind()` em
+  `assistant-technical-context.ts` decidia se um arquivo e boardview olhando só o `file_format` gravado no
+  banco (`'brd'`/`'bdv'`), e o `.cad` fica salvo como `'other'` (pendencia 8). Agora reconhece pelo nome do
+  arquivo quando o formato gravado e `'other'` e termina em `.cad`, sem precisar de migration. Corrigido nos
+  3 lugares que chamavam essa funcao (resumo do asset, selecao do boardview preferido do caso, ativacao
+  manual pela ferramenta do agente). Teste novo (`toAssetKindForTest`) cobre o arquivo real da biblioteca e
+  confirma que formatos genuinamente nao suportados (.fz etc., tambem salvos como `'other'`) continuam
+  caindo em "so para download", sem tentar abrir algo que o parser nao entende.
 - **2026-10-15** — Laboratório boardview passa a ler **.cad (GenCAD 1.4)**, não só .brd: arquivo real da
   biblioteca ("Quanta 0P5 DA0P5DMB8C0 Rev C (BDV)(CAD).cad", 1732 componentes/6416 pads/759 testpins/1124
   nets) testado e parseando certo. Novo `src/lib/boardview/gencad.ts` (parser nativo, resolve posição de

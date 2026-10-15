@@ -539,9 +539,7 @@ function selectPreferredAsset(
   kind: "boardview" | "schematic",
 ): AssetSelectionResult {
   const filteredAssets = assets.filter((asset) =>
-    kind === "schematic"
-      ? asset.fileFormat === "pdf"
-      : asset.fileFormat === "brd" || asset.fileFormat === "bdv",
+    kind === "schematic" ? asset.fileFormat === "pdf" : toAssetKind(asset.fileFormat, asset.title) === "boardview",
   );
 
   if (!filteredAssets.length) {
@@ -1116,16 +1114,31 @@ export type TechnicalAssetSummary = {
   modelName: string | null;
 };
 
-function toAssetKind(fileFormat: string): "boardview" | "schematic" | null {
+function toAssetKind(fileFormat: string, fileName?: string): "boardview" | "schematic" | null {
   if (fileFormat === "pdf") {
     return "schematic";
   }
 
-  return fileFormat === "brd" || fileFormat === "bdv" ? "boardview" : null;
+  if (fileFormat === "brd" || fileFormat === "bdv" || fileFormat === "cad") {
+    return "boardview";
+  }
+
+  // GenCAD (.cad) e salvo como file_format "other" porque o enum do banco
+  // ainda nao tem um valor 'cad' dedicado (ver pendencia no CLAUDE.md) --
+  // reconhece pelo nome do arquivo para nao ficar preso ao formato gravado.
+  if (fileFormat === "other" && fileName?.trim().toLowerCase().endsWith(".cad")) {
+    return "boardview";
+  }
+
+  return null;
+}
+
+export function toAssetKindForTest(fileFormat: string, fileName?: string) {
+  return toAssetKind(fileFormat, fileName);
 }
 
 function summarizeAsset(asset: AssociatedTechnicalAsset): TechnicalAssetSummary | null {
-  const kind = toAssetKind(asset.fileFormat);
+  const kind = toAssetKind(asset.fileFormat, asset.title);
 
   return kind
     ? {
@@ -1281,7 +1294,7 @@ export async function openDiagnosticTechnicalWorkbench(
       // BIOS, firmware e boardviews que o laboratorio ainda nao abre: a IA nao le,
       // mas pode avisar o tecnico que existem para baixar na Biblioteca.
       const others = rows
-        .filter((row) => !toAssetKind(row.file_format))
+        .filter((row) => !toAssetKind(row.file_format, row.original_filename))
         .slice(0, 10)
         .map((row) => ({
           id: row.id,
@@ -1314,7 +1327,7 @@ export async function openDiagnosticTechnicalWorkbench(
         asset = data ? mapTechnicalAssetRow(data) : null;
       }
 
-      const kind = asset ? toAssetKind(asset.fileFormat) : null;
+      const kind = asset ? toAssetKind(asset.fileFormat, asset.title) : null;
 
       if (!asset || !kind) {
         return null;

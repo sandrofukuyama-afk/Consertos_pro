@@ -8,6 +8,7 @@ import {
   searchAssistantTechnicalContext,
   selectPreferredAssetForTest,
   summarizeTechnicalContextForAssistant,
+  toAssetKindForTest,
   type AssistantTechnicalContextSupabaseClient,
 } from "@/lib/services/assistant-technical-context";
 
@@ -551,4 +552,18 @@ test("searchAssistantTechnicalContext uses tolerant download fallback buckets", 
   assert.equal(context.selectedAssets?.boardview?.downloadBucketUsed, "technical-assets");
   assert.equal(context.selectedAssets?.boardview?.downloadStatus, "downloaded");
   assert.match(context.selectedAssets?.boardview?.warning ?? "", /bucket alternativo usado/);
+});
+
+test("toAssetKindForTest recognizes .cad (GenCAD) even when stored as file_format 'other'", () => {
+  assert.equal(
+    toAssetKindForTest("other", "Quanta 0P5 DA0P5DMB8C0 Rev C (BDV)(CAD).cad"),
+    "boardview",
+  );
+  assert.equal(toAssetKindForTest("cad", "placa.cad"), "boardview");
+  assert.equal(toAssetKindForTest("brd", "placa.brd"), "boardview");
+  assert.equal(toAssetKindForTest("pdf", "esquema.pdf"), "schematic");
+  // A genuinely unreadable format tagged 'other' (.bdv/.fz/.tvw/.asc) must
+  // stay download-only, not be mistaken for a readable boardview.
+  assert.equal(toAssetKindForTest("other", "placa.fz"), null);
+  assert.equal(toAssetKindForTest("other", undefined), null);
 });
