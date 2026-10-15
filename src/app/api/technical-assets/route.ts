@@ -816,9 +816,16 @@ async function searchTechnicalAssets(request: Request) {
     );
   }
 
+  // boardId/equipmentModelId so filtram depois (client-side, porque o filtro real
+  // mora em technical_asset_links). Sem isso, uma busca por placa/modelo sem texto
+  // ficava presa aos N arquivos mais recentes e nunca achava arquivos mais antigos
+  // dessa placa -- por isso qualquer filtro ativo usa o teto de 1000 linhas que o
+  // Supabase permite por consulta, nao so texto/formato.
+  const hasAnyFilter = Boolean(queryTokens.length || fileFormat || boardId || equipmentModelId);
+
   const { data, error } = await assetsQuery
     .order("created_at", { ascending: false })
-    .limit(queryTokens.length || fileFormat ? 500 : limit * 4);
+    .limit(hasAnyFilter ? 1000 : limit * 4);
 
   if (error) {
     throw new Error(error.message);
