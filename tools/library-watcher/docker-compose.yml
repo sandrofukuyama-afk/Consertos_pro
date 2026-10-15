@@ -1,9 +1,9 @@
 # Vigia de pasta da biblioteca do ConsertosPro para o ZimaOS.
 #
 # O codigo fica em HDD4/ConsertosPro-watcher (com o arquivo .env) e as pastas
-# de trabalho ficam ao lado. "/media/raid" e o caminho do volume compartilhado
-# como "raid" no ZimaOS: se no seu servidor for outro (veja no app Arquivos do
-# ZimaOS), troque so esse comeco nas 4 linhas de "volumes".
+# de trabalho ficam ao lado. "/DATA/raid" e o caminho do volume compartilhado
+# como "raid" no ZimaOS (no app Arquivos aparece como ZimaOS-HD/raid, e
+# ZimaOS-HD = /DATA). Se mudar, troque so esse comeco nas 4 linhas de "volumes".
 name: consertospro-watcher
 services:
   watcher:
@@ -16,7 +16,7 @@ services:
     environment:
       TZ: Asia/Tokyo
     volumes:
-      - "/media/raid/Servidor/HDD4/ConsertosPro-watcher:/app"
-      - "/media/raid/Servidor/HDD4/Enviar para o ConsertosPro:/inbox"
-      - "/media/raid/Servidor/HDD4/Enviar para o ConsertosPro - Enviados:/enviados"
-      - "/media/raid/Servidor/HDD4/Enviar para o ConsertosPro - Erros:/erros"
+      - "/DATA/raid/Servidor/HDD4/ConsertosPro-watcher:/app"
+      - "/DATA/raid/Servidor/HDD4/Enviar para o ConsertosPro:/inbox"
+      - "/DATA/raid/Servidor/HDD4/Enviar para o ConsertosPro - Enviados:/enviados"
+      - "/DATA/raid/Servidor/HDD4/Enviar para o ConsertosPro - Erros:/erros"

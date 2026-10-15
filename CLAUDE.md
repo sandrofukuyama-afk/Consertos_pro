@@ -104,7 +104,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    placa de sucata antes de usar em cliente (e atualizar o PC para a v1.1.1).
 2. Vigia de pasta **ainda não roda** (em 15/10 as pastas Enviar/Enviados/Erros estavam vazias e nunca usadas).
    `.env` em `HDD4\ConsertosPro-watcher` está pronto (DRY_RUN=0). Falta: descobrir o caminho real do volume
-   `raid` no ZimaOS, ajustar `tools/library-watcher/docker-compose.yml` e instalar (App Store → Custom Install).
+   `raid` no ZimaOS: é `/DATA/raid` (app Arquivos mostra ZimaOS-HD/raid; compose já ajustado). Falta instalar
+   (App Store → Custom Install).
    O servidor responde em 172.30.0.1 e em 192.168.0.32 (`W:` no PC). Arquivos vão em
    `HDD4\Enviar para o ConsertosPro`, **não** em `ConsertosPro-watcher\src` (pasta do código).
 6. Conferir as primeiras conversas com a memória completa: `ai_responses.structured_response_json->>'memoryMode'`
