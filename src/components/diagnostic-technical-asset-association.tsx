@@ -537,62 +537,60 @@ export function DiagnosticTechnicalAssetAssociation({
                   className="rounded-[22px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
                   data-search={searchableMeta}
                 >
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
-                        {formatAssetTypeLabel(item.fileFormat, item.originalFileName)}
-                      </p>
-                      <h4 className="mt-2 break-words text-base font-semibold text-[var(--foreground)]">
-                        {item.title}
-                      </h4>
-                      <p className="mt-2 text-sm text-[var(--muted)]">
-                        {(item.boardName || item.equipmentModelName || item.manufacturerName)
-                          ? [item.boardName, item.equipmentModelName, item.manufacturerName]
-                              .filter(Boolean)
-                              .join(" • ")
-                          : "Sem associacao forte ainda"}
-                      </p>
-                      {item.description ? (
-                        <p className="mt-2 text-sm text-[var(--muted)]">{item.description}</p>
-                      ) : null}
-                    </div>
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--accent-teal)]">
+                      {formatAssetTypeLabel(item.fileFormat, item.originalFileName)}
+                    </p>
+                    <h4 className="mt-2 break-words text-base font-semibold text-[var(--foreground)]">
+                      {item.title}
+                    </h4>
+                    <p className="mt-2 text-sm text-[var(--muted)]">
+                      {(item.boardName || item.equipmentModelName || item.manufacturerName)
+                        ? [item.boardName, item.equipmentModelName, item.manufacturerName]
+                            .filter(Boolean)
+                            .join(" • ")
+                        : "Sem associacao forte ainda"}
+                    </p>
+                    {item.description ? (
+                      <p className="mt-2 text-sm text-[var(--muted)]">{item.description}</p>
+                    ) : null}
+                  </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {isBoardview ? (
-                        <button
-                          type="button"
-                          onClick={() => applyAssetSelection(item, "boardview")}
-                          className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                            isSelectedBoardview
-                              ? "bg-[var(--accent-copper)] text-white"
-                              : "border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
-                          }`}
-                        >
-                          {isSelectedBoardview ? "Boardview escolhido" : "Usar como boardview"}
-                        </button>
-                      ) : null}
-                      {isSchematic ? (
-                        <button
-                          type="button"
-                          onClick={() => applyAssetSelection(item, "schematic")}
-                          className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
-                            isSelectedSchematic
-                              ? "bg-[var(--accent-copper)] text-white"
-                              : "border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
-                          }`}
-                        >
-                          {isSelectedSchematic ? "Esquema escolhido" : "Usar como esquema"}
-                        </button>
-                      ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {isBoardview ? (
                       <button
                         type="button"
-                        onClick={() => void handleDeleteAsset(item)}
-                        disabled={deletingAssetId === item.id}
-                        className="rounded-full border border-[rgba(202,106,85,0.32)] bg-[rgba(202,106,85,0.08)] px-3 py-2 text-xs font-semibold text-[var(--danger)] transition hover:bg-[rgba(202,106,85,0.14)] disabled:opacity-50"
+                        onClick={() => applyAssetSelection(item, "boardview")}
+                        className={`flex-1 whitespace-nowrap rounded-full px-3 py-2.5 text-center text-xs font-semibold transition sm:flex-none sm:px-4 ${
+                          isSelectedBoardview
+                            ? "bg-[var(--accent-copper)] text-white"
+                            : "border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
+                        }`}
                       >
-                        {deletingAssetId === item.id ? "Excluindo..." : "Excluir"}
+                        {isSelectedBoardview ? "Boardview escolhido" : "Usar como boardview"}
                       </button>
-                    </div>
+                    ) : null}
+                    {isSchematic ? (
+                      <button
+                        type="button"
+                        onClick={() => applyAssetSelection(item, "schematic")}
+                        className={`flex-1 whitespace-nowrap rounded-full px-3 py-2.5 text-center text-xs font-semibold transition sm:flex-none sm:px-4 ${
+                          isSelectedSchematic
+                            ? "bg-[var(--accent-copper)] text-white"
+                            : "border border-[var(--panel-border)] bg-[var(--card-surface)] text-[var(--foreground)]"
+                        }`}
+                      >
+                        {isSelectedSchematic ? "Esquema escolhido" : "Usar como esquema"}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteAsset(item)}
+                      disabled={deletingAssetId === item.id}
+                      className="whitespace-nowrap rounded-full border border-[rgba(202,106,85,0.32)] bg-[rgba(202,106,85,0.08)] px-3 py-2.5 text-center text-xs font-semibold text-[var(--danger)] transition hover:bg-[rgba(202,106,85,0.14)] disabled:opacity-50 sm:ml-auto sm:flex-none"
+                    >
+                      {deletingAssetId === item.id ? "Excluindo..." : "Excluir"}
+                    </button>
                   </div>
 
                   {isSuggestedByName ? (
