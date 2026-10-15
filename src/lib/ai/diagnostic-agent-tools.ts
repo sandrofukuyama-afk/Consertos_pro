@@ -368,7 +368,7 @@ async function searchBoardview(ctx: DiagnosticAgentToolContext, input: Record<st
 async function describeComponent(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
   const reference = readString(input, "referencia", true)!.toUpperCase();
   const { asset, model } = await requireBoardview(ctx);
-  const component = model.componentsByRef.get(reference);
+  const component = model.componentsByRef.get(reference.toLowerCase());
 
   if (!component) {
     const suggestions = searchBoardviewLabModel(model, reference, "both", 8).map((hit) => hit.title);
