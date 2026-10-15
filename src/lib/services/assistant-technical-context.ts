@@ -4,7 +4,7 @@ import {
   getNetDetails,
   searchBoardviewLabModel,
 } from "@/lib/boardview/lab";
-import { parseLandrexTestlinkBoardview } from "@/lib/boardview/landrex-testlink";
+import { parseBoardviewFile } from "@/lib/boardview/parse";
 import {
   findSchematicPdfMatches,
   type SchematicPdfPageText,
@@ -638,7 +638,7 @@ function buildBoardviewSearchContext(
   bytes: Uint8Array,
   searchTerms: string[],
 ): AssistantTechnicalContext["boardview"] {
-  const parsed = parseLandrexTestlinkBoardview(bytes);
+  const parsed = parseBoardviewFile(bytes);
   const model = buildBoardviewLabModel(parsed);
 
   const results = searchTerms.flatMap((term) => {
@@ -1334,7 +1334,7 @@ export async function openDiagnosticTechnicalWorkbench(
         const download = await downloadAssetBytes(asset, supabase);
         boardviewCache = {
           assetId: asset.id,
-          model: buildBoardviewLabModel(parseLandrexTestlinkBoardview(download.bytes)),
+          model: buildBoardviewLabModel(parseBoardviewFile(download.bytes)),
         };
       }
 

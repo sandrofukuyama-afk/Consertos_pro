@@ -3,6 +3,7 @@ export const TECHNICAL_ASSET_BUCKET = "technical-assets";
 export const TECHNICAL_ASSET_SIZE_LIMITS = {
   brd: 100 * 1024 * 1024,
   bdv: 100 * 1024 * 1024,
+  cad: 100 * 1024 * 1024,
   pdf: 200 * 1024 * 1024,
 };
 
@@ -20,13 +21,23 @@ export function getTechnicalAssetFormat(fileName) {
   }
 
   const extension = normalized.split(".").pop();
-  return extension === "brd" || extension === "bdv" || extension === "pdf"
+  return extension === "brd" || extension === "bdv" || extension === "cad" || extension === "pdf"
     ? extension
     : null;
 }
 
 export function mapTechnicalAssetType(format) {
   return format === "pdf" ? "schematic_pdf" : "boardview";
+}
+
+/**
+ * Maps the internal format token to a value the `technical_asset_file_format`
+ * Postgres enum actually accepts. "cad" (GenCAD) is parsed natively by the
+ * boardview lab, but the enum only knows about brd/bdv/pdf/bin/zip/jpg/png/other
+ * -- add a 'cad' migration before changing this.
+ */
+export function toDbFileFormat(format) {
+  return format === "cad" ? "other" : format;
 }
 
 export function getTechnicalAssetMimeType(format, providedMimeType = "") {
@@ -51,7 +62,7 @@ export function validateTechnicalAssetFile(fileLike) {
 
   if (!format) {
     throw new TechnicalAssetValidationError(
-      "Formato invalido. Use apenas arquivos .brd, .bdv ou .pdf.",
+      "Formato invalido. Use apenas arquivos .brd, .bdv, .cad ou .pdf.",
     );
   }
 
@@ -149,6 +160,8 @@ export function getTechnicalAssetDisplayType(format) {
       return "Boardview BDV";
     case "brd":
       return "Boardview BRD";
+    case "cad":
+      return "Boardview CAD (GenCAD)";
     default:
       return "Arquivo tecnico";
   }

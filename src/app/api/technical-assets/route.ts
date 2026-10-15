@@ -11,6 +11,7 @@ import {
   normalizeTechnicalAssetHash,
   planTechnicalAssetPersistence,
   TECHNICAL_ASSET_BUCKET,
+  toDbFileFormat,
   validateTechnicalAssetFile,
 } from "@/lib/technical-assets.mjs";
 
@@ -1038,7 +1039,7 @@ export async function POST(request: Request) {
         .from("technical_assets")
         .insert({
           asset_type: mapTechnicalAssetType(validation.format),
-          file_format: validation.format,
+          file_format: toDbFileFormat(validation.format),
           original_filename: payload.fileName,
           storage_bucket: TECHNICAL_ASSET_BUCKET,
           storage_path: storagePath,

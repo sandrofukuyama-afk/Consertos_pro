@@ -4,7 +4,8 @@ export type BoardviewPartKind = "smd" | "through_hole";
 
 export type BoardviewVariant =
   | "encoded-landrex-testlink"
-  | "plain-text-or-unknown-variant";
+  | "plain-text-or-unknown-variant"
+  | "gencad-1.4";
 
 export type BoardviewPoint = {
   xMil: number;
@@ -33,7 +34,7 @@ export type BoardviewCounts = {
 };
 
 export type BoardviewMetadata = {
-  format: "landrex-testlink";
+  format: "landrex-testlink" | "gencad";
   variant: BoardviewVariant;
   sourceEncoding: "latin1";
   declaredCounts: BoardviewCounts;

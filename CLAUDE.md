@@ -58,8 +58,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   `metadata.display_name` (nunca na descrição, que guarda o caminho de origem com "Bios").
   Mesma lógica na IA, na Biblioteca, em `/busca`, no painel do caso e no bot (`technical-library-search.ts`).
 - Supabase devolve no máximo 1000 linhas por consulta: paginar com `.range()`.
-- O laboratório (`/boardview/lab`) só lê **.brd (Landrex testlink) e .pdf**; .bdv/.fz/.cad/.tvw/.asc e
-  BIOS ficam só para download. Boardview "view_locked" (com senha) não abre.
+- O laboratório (`/boardview/lab`) lê **.brd (Landrex testlink) e .cad (GenCAD 1.4, texto puro —
+  exportado por ferramentas como CAMCAD/Mentor Graphics)**, além de **.pdf**; `src/lib/boardview/parse.ts`
+  detecta o formato pelo conteúdo (cabeçalho `$HEADER`/`GENCAD`), não pela extensão, então um `.cad` ou
+  `.brd` com qualquer um dos dois conteúdos abre normalmente. GenCAD não traz o contorno da placa pronto
+  (só grava componentes/pads/nets/testpins), então o contorno exibido é a caixa delimitadora dos pads,
+  não o desenho real da borda. `.bdv/.fz/.tvw/.asc` e BIOS continuam só para download (sem parser).
+  Boardview "view_locked" (com senha) não abre.
 - Mobile/iPhone: campos com 16px (evita zoom), `viewport-fit=cover` + safe areas, composer do chat
   fixo acima da barra inferior. Painel lateral do caso tem ~360px: formulários ali em **uma coluna**.
 
@@ -116,11 +121,24 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    atrás de mais esquemas/BIOS.
 4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
 5. Bloquear contas de teste ainda ativas (Codex QA, Codex Temp).
+8. Boardview `.cad` (GenCAD) é salvo na biblioteca com `file_format = 'other'` (o enum do banco não tem
+   valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). Se quiser filtrar/
+   reportar arquivos GenCAD separadamente no catálogo, criar uma migration `alter type
+   technical_asset_file_format add value 'cad'` e trocar `toDbFileFormat` para devolver `'cad'` direto.
 
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-15** — Laboratório boardview passa a ler **.cad (GenCAD 1.4)**, não só .brd: arquivo real da
+  biblioteca ("Quanta 0P5 DA0P5DMB8C0 Rev C (BDV)(CAD).cad", 1732 componentes/6416 pads/759 testpins/1124
+  nets) testado e parseando certo. Novo `src/lib/boardview/gencad.ts` (parser nativo, resolve posição de
+  pino por componente+rotação+espelhamento) e `src/lib/boardview/parse.ts` (detecta o formato pelo
+  conteúdo, não pela extensão — assim um `.cad` com conteúdo Landrex ou um `.brd` com conteúdo GenCAD
+  abrem do jeito certo). GenCAD não grava o contorno da placa pronto, então o contorno vira a caixa
+  delimitadora dos pads (não é a borda real). IA (`assistant-technical-context.ts`) também usa o novo
+  dispatcher, então o chat já consegue ler boardview GenCAD. Upload de `.cad` pela tela (antes só .brd/.bdv/
+  .pdf) grava com `file_format = 'other'` no banco (enum não tem `'cad'` — ver pendência 8).
 - **2026-10-15** — Chat com **memória completa** (tabela `diagnostic_chat_threads`), como no Claude Code: antes só
   iam as últimas 8 mensagens em texto e a IA repetia perguntas e consultas (técnico reclamou no caso da bateria).
   Até 10 voltas, compactação a partir de 100 mil tokens, modo de segurança se a API recusar.

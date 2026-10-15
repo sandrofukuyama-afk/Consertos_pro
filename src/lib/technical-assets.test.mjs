@@ -11,6 +11,7 @@ import {
   mapTechnicalAssetType,
   normalizeTechnicalAssetHash,
   planTechnicalAssetPersistence,
+  toDbFileFormat,
   validateTechnicalAssetFile,
 } from "./technical-assets.mjs";
 
@@ -125,4 +126,15 @@ test("monta o rotulo visivel da associacao tecnica", () => {
     }),
     "Nao associado",
   );
+});
+
+test("mapeia .cad (GenCAD) para boardview e detecta o formato pela extensao", () => {
+  assert.equal(getTechnicalAssetFormat("placa.cad"), "cad");
+  assert.equal(mapTechnicalAssetType("cad"), "boardview");
+});
+
+test("converte o formato interno 'cad' para o valor aceito pelo enum do banco", () => {
+  assert.equal(toDbFileFormat("cad"), "other");
+  assert.equal(toDbFileFormat("brd"), "brd");
+  assert.equal(toDbFileFormat("pdf"), "pdf");
 });

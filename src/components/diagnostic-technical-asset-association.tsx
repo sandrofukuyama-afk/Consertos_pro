@@ -67,7 +67,15 @@ function formatAssetTypeLabel(format: string) {
     return "Boardview BRD";
   }
 
+  if (format === "cad") {
+    return "Boardview CAD";
+  }
+
   return format.toUpperCase();
+}
+
+function isBoardviewFormat(format: string) {
+  return format === "brd" || format === "bdv" || format === "cad";
 }
 
 function formatFileFormatFilter(value: string) {
@@ -93,8 +101,7 @@ export function DiagnosticTechnicalAssetAssociation({
   manufacturers,
 }: DiagnosticTechnicalAssetAssociationProps) {
   const currentBoardviewAsset =
-    currentAssets.find((asset) => asset.fileFormat === "brd" || asset.fileFormat === "bdv") ??
-    null;
+    currentAssets.find((asset) => isBoardviewFormat(asset.fileFormat)) ?? null;
   const currentSchematicAsset =
     currentAssets.find((asset) => asset.fileFormat === "pdf") ?? null;
   const [query, setQuery] = useState("");
@@ -270,7 +277,7 @@ export function DiagnosticTechnicalAssetAssociation({
     return (
       results.find(
         (item) =>
-          (item.fileFormat === "brd" || item.fileFormat === "bdv") &&
+          isBoardviewFormat(item.fileFormat) &&
           areTechnicalAssetNamesRelated(item.title, selectedSchematicAsset.title),
       ) ?? null
     );
@@ -419,7 +426,7 @@ export function DiagnosticTechnicalAssetAssociation({
             onChange={(event) => setSelectedFormat(event.target.value)}
             className="w-full min-w-0 rounded-2xl border border-[var(--panel-border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent-copper)]"
           >
-            {["all", "brd", "bdv", "pdf"].map((entry) => (
+            {["all", "brd", "bdv", "cad", "pdf"].map((entry) => (
               <option key={entry} value={entry}>
                 {formatFileFormatFilter(entry)}
               </option>
@@ -507,7 +514,7 @@ export function DiagnosticTechnicalAssetAssociation({
         <div className="grid gap-3">
           {results.length ? (
             results.map((item) => {
-              const isBoardview = item.fileFormat === "brd" || item.fileFormat === "bdv";
+              const isBoardview = isBoardviewFormat(item.fileFormat);
               const isSchematic = item.fileFormat === "pdf";
               const isSelectedBoardview = selectedBoardviewAssetId === item.id;
               const isSelectedSchematic = selectedSchematicAssetId === item.id;

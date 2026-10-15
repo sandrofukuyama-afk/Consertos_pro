@@ -26,7 +26,7 @@ type InitialTechnicalAsset = {
   slot: "boardview" | "schematic";
   assetId: string;
   fileName: string;
-  format: "brd" | "bdv" | "pdf";
+  format: "brd" | "bdv" | "cad" | "pdf";
   mimeType: string;
   fileSizeBytes: number;
   association: {
@@ -40,7 +40,7 @@ type InitialTechnicalAsset = {
 type TechnicalAssetRecord = {
   id: string;
   original_filename: string;
-  file_format: "brd" | "bdv" | "pdf";
+  file_format: "brd" | "bdv" | "cad" | "pdf";
   mime_type: string;
   file_size_bytes: number;
   technical_asset_links: Array<{
@@ -59,7 +59,7 @@ function pickRelation<T>(value: T | T[] | null | undefined) {
   return value ?? null;
 }
 
-function inferAssetSlot(format: "brd" | "bdv" | "pdf") {
+function inferAssetSlot(format: "brd" | "bdv" | "cad" | "pdf") {
   return format === "pdf" ? "schematic" : "boardview";
 }
 
