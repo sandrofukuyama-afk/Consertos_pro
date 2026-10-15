@@ -30,6 +30,7 @@ const COMPACTION_INSTRUCTIONS = [
   "concluiu deles; hipoteses com status; o que ja foi descartado; o proximo passo combinado.",
 ].join(" ");
 const CHAT_BETAS = ["server-side-fallback-2026-07-01", "compact-2026-01-12"];
+const SAFE_MODE_BETAS = ["server-side-fallback-2026-07-01"];
 const WEB_FETCH_MAX_CONTENT_TOKENS = 4000;
 const MAX_OUTPUT_TOKENS = 32000;
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -123,6 +124,7 @@ async function toImageBlock(
 export async function buildChatUserContent(
   text: string,
   images: ClaudeChatImage[],
+  options: { inline?: boolean } = {},
 ): Promise<Anthropic.Beta.BetaContentBlockParam[]> {
   const client = new Anthropic();
   const supported = images.filter((image) =>
@@ -130,7 +132,14 @@ export async function buildChatUserContent(
   );
   const skippedImages = images.length - supported.length;
   const blocks: Anthropic.Beta.BetaContentBlockParam[] = await Promise.all(
-    supported.map((image, index) => toImageBlock(client, image, index)),
+    supported.map((image, index) =>
+      options.inline
+        ? ({
+            type: "image",
+            source: { type: "base64", media_type: image.mimeType as SupportedImageType, data: image.base64 },
+          } satisfies Anthropic.Beta.BetaImageBlockParam)
+        : toImageBlock(client, image, index),
+    ),
   );
 
   const trimmed = text.trim() || "(mensagem sem texto, apenas anexo)";
@@ -247,6 +256,8 @@ export async function runClaudeDiagnosticAgent(args: {
   deep?: boolean;
   /** Recebe o texto conforme a IA escreve e as consultas que ela faz. */
   onProgress?: (event: ClaudeChatProgressEvent) => void;
+  /** Modo de seguranca: sem compactacao (usado se a API recusar o pedido completo). */
+  safeMode?: boolean;
 }): Promise<ClaudeChatResult> {
   if (!isClaudeChatConfigured()) {
     throw new Error("ANTHROPIC_API_KEY não configurada.");
@@ -282,19 +293,23 @@ export async function runClaudeDiagnosticAgent(args: {
     const stream = client.beta.messages.stream({
       model: requestedModel,
       max_tokens: MAX_OUTPUT_TOKENS,
-      betas: CHAT_BETAS,
+      betas: args.safeMode ? SAFE_MODE_BETAS : CHAT_BETAS,
       fallbacks: "default",
       thinking: { type: "adaptive" },
       output_config: { effort },
-      context_management: {
-        edits: [
-          {
-            type: "compact_20260112",
-            trigger: { type: "input_tokens", value: COMPACTION_TRIGGER_TOKENS },
-            instructions: COMPACTION_INSTRUCTIONS,
-          },
-        ],
-      },
+      ...(args.safeMode
+        ? {}
+        : {
+            context_management: {
+              edits: [
+                {
+                  type: "compact_20260112" as const,
+                  trigger: { type: "input_tokens" as const, value: COMPACTION_TRIGGER_TOKENS },
+                  instructions: COMPACTION_INSTRUCTIONS,
+                },
+              ],
+            },
+          }),
       // Instrucoes fixas e conversa em cache de 1 h: o tecnico manda mensagens
       // com intervalos maiores que os 5 min do cache padrao.
       system: [

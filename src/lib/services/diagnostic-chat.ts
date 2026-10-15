@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type Anthropic from "@anthropic-ai/sdk";
+import Anthropic from "@anthropic-ai/sdk";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -278,16 +278,54 @@ export async function sendDiagnosticChatMessage(
   const actions: string[] = [];
   const wroteToCase = { value: false };
 
+  const agentArgs = {
+    stableSystemPrompt: [PERSONA_PROMPT, "", specialist.systemInstructions].join("\n"),
+    history: thread.messages,
+    newMessages,
+    toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
+    deep: options.deep,
+    onProgress: options.onProgress,
+  };
+
   let result: Awaited<ReturnType<typeof runClaudeDiagnosticAgent>>;
+  let fallbackReason: string | null = null;
   try {
-    result = await runClaudeDiagnosticAgent({
-      stableSystemPrompt: [PERSONA_PROMPT, "", specialist.systemInstructions].join("\n"),
-      history: thread.messages,
-      newMessages,
-      toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
-      deep: options.deep,
-      onProgress: options.onProgress,
-    });
+    try {
+      result = await runClaudeDiagnosticAgent(agentArgs);
+    } catch (error) {
+      // So refaz se nada foi executado ainda (nao registrar medicao duas vezes).
+      if (!(error instanceof Anthropic.BadRequestError) || actions.length || wroteToCase.value) {
+        throw error;
+      }
+      // Rede de protecao: se a API recusar o pedido com a conversa completa,
+      // responde com a conversa em texto simples (como antes) em vez de falhar.
+      fallbackReason = error.message.slice(0, 400);
+      console.error("[chat] conversa completa recusada pela API; usando modo de seguranca:", fallbackReason);
+      const safeResult = await runClaudeDiagnosticAgent({
+        ...agentArgs,
+        history: toPlainTextHistory(thread.messages),
+        newMessages: [
+          {
+            role: "user",
+            content: await buildChatUserContent(
+              `${newMessages.length > 1 ? `${caseBrief}\n\n---\n\n` : ""}${userRawText}`,
+              newAttachments.map((item) => ({ mimeType: item.mimeType, base64: item.base64 })),
+              { inline: true },
+            ),
+          },
+        ],
+        safeMode: true,
+      });
+      // Guarda so a pergunta original e o texto da resposta: a conversa
+      // guardada continua so crescendo, sem os blocos do modo de seguranca.
+      result = {
+        ...safeResult,
+        appendedMessages: [
+          ...newMessages,
+          { role: "assistant", content: [{ type: "text", text: safeResult.replyText }] },
+        ],
+      };
+    }
   } catch (error) {
     // Guarda a pergunta mesmo sem resposta, para a IA saber o que foi dito.
     await saveChatThread(supabase, diagnosticId, caseBriefHash, [
@@ -316,6 +354,8 @@ export async function sendDiagnosticChatMessage(
       sourcesUsed: result.sourcesUsed,
       modelName: result.modelName,
       agentActions: actions,
+      memoryMode: fallbackReason ? "fallback" : "full",
+      ...(fallbackReason ? { memoryFallbackReason: fallbackReason } : {}),
     },
     model_name: result.modelName,
     tokens_input: result.tokensInput || null,
@@ -330,6 +370,39 @@ export async function sendDiagnosticChatMessage(
 }
 
 type ChatSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Conversa guardada reduzida a texto (sem consultas, raciocinio nem mensagens
+ * de sistema), para o modo de seguranca. Fotos viram uma nota.
+ */
+function toPlainTextHistory(messages: ChatMessage[]): ChatMessage[] {
+  const plain: ChatMessage[] = [];
+
+  for (const message of messages) {
+    const blocks = typeof message.content === "string" ? [{ type: "text", text: message.content }] : message.content;
+    const parts: string[] = [];
+    for (const block of blocks) {
+      if (block.type === "text" && "text" in block && block.text.trim()) {
+        parts.push(block.text);
+      } else if (block.type === "image") {
+        parts.push("(foto anexada)");
+      }
+    }
+    if (!parts.length) {
+      continue;
+    }
+
+    const role = message.role === "assistant" ? "assistant" : "user";
+    const text = message.role === "system" ? `[Estado do caso naquele momento]\n${parts.join("\n")}` : parts.join("\n");
+    plain.push({ role, content: [{ type: "text", text }] });
+  }
+
+  if (plain[0]?.role === "assistant") {
+    plain.unshift({ role: "user", content: [{ type: "text", text: "(inicio da conversa deste caso)" }] });
+  }
+
+  return plain;
+}
 
 async function saveChatThread(
   supabase: ChatSupabaseClient,
