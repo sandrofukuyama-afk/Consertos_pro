@@ -8,6 +8,7 @@ import {
   formatTechnicalAssetSize,
   getTechnicalAssetDisplayType,
   getTechnicalAssetFormat,
+  isBoardviewFileFormat,
   mapTechnicalAssetType,
   normalizeTechnicalAssetHash,
   planTechnicalAssetPersistence,
@@ -137,4 +138,17 @@ test("converte o formato interno 'cad' para o valor aceito pelo enum do banco", 
   assert.equal(toDbFileFormat("cad"), "other");
   assert.equal(toDbFileFormat("brd"), "brd");
   assert.equal(toDbFileFormat("pdf"), "pdf");
+});
+
+test("isBoardviewFileFormat reconhece brd/bdv/cad direto e .cad gravado como 'other'", () => {
+  assert.equal(isBoardviewFileFormat("brd", "placa.brd"), true);
+  assert.equal(isBoardviewFileFormat("bdv", "placa.bdv"), true);
+  assert.equal(isBoardviewFileFormat("cad", "placa.cad"), true);
+  assert.equal(
+    isBoardviewFileFormat("other", "Quanta 0P5 DA0P5DMB8C0 Rev C(BDV)(CAD) .cad"),
+    true,
+  );
+  assert.equal(isBoardviewFileFormat("other", "placa.fz"), false);
+  assert.equal(isBoardviewFileFormat("other", undefined), false);
+  assert.equal(isBoardviewFileFormat("pdf", "esquema.pdf"), false);
 });

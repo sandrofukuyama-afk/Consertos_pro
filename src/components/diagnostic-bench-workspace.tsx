@@ -15,6 +15,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
 import type { DiagnosticBiosData } from "@/lib/services/bios-dumps";
+import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 import type {
   CatalogOption,
   DiagnosticDetail,
@@ -311,7 +312,7 @@ export function DiagnosticBenchWorkspace({
   const structured = latestResponse?.structured ?? null;
   const technicalContext = structured?.technicalContext ?? null;
   const boardviewAsset =
-    detail.technicalAssets.find((asset) => asset.fileFormat === "brd" || asset.fileFormat === "bdv") ??
+    detail.technicalAssets.find((asset) => isBoardviewFileFormat(asset.fileFormat, asset.title)) ??
     null;
   const schematicAsset =
     detail.technicalAssets.find((asset) => asset.fileFormat === "pdf") ?? null;

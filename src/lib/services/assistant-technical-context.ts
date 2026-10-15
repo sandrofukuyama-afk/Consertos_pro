@@ -9,7 +9,7 @@ import {
   findSchematicPdfMatches,
   type SchematicPdfPageText,
 } from "@/lib/boardview/schematic-pdf";
-import { TECHNICAL_ASSET_BUCKET } from "@/lib/technical-assets.mjs";
+import { isBoardviewFileFormat, TECHNICAL_ASSET_BUCKET } from "@/lib/technical-assets.mjs";
 import type { AssistantStructuredResponse } from "@/types/domain";
 
 type SupabaseMaybeSingleResult = Promise<{
@@ -1119,18 +1119,7 @@ function toAssetKind(fileFormat: string, fileName?: string): "boardview" | "sche
     return "schematic";
   }
 
-  if (fileFormat === "brd" || fileFormat === "bdv" || fileFormat === "cad") {
-    return "boardview";
-  }
-
-  // GenCAD (.cad) e salvo como file_format "other" porque o enum do banco
-  // ainda nao tem um valor 'cad' dedicado (ver pendencia no CLAUDE.md) --
-  // reconhece pelo nome do arquivo para nao ficar preso ao formato gravado.
-  if (fileFormat === "other" && fileName?.trim().toLowerCase().endsWith(".cad")) {
-    return "boardview";
-  }
-
-  return null;
+  return isBoardviewFileFormat(fileFormat, fileName) ? "boardview" : null;
 }
 
 export function toAssetKindForTest(fileFormat: string, fileName?: string) {

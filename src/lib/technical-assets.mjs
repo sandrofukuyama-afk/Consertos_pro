@@ -40,6 +40,24 @@ export function toDbFileFormat(format) {
   return format === "cad" ? "other" : format;
 }
 
+/**
+ * True when a technical asset is a boardview the lab/IA can actually open.
+ * GenCAD (.cad) is saved with file_format "other" because the DB enum has no
+ * 'cad' value yet (see pendencia 8 no CLAUDE.md), so it's recognized by the
+ * original filename instead. Used by every place that decides "is this
+ * asset a boardview": the diagnostic case screen, the association screen,
+ * and the AI agent's tool layer -- keep them all pointed at this function
+ * instead of re-deriving the brd/bdv/cad check locally (it has drifted out
+ * of sync between those three places before).
+ */
+export function isBoardviewFileFormat(fileFormat, fileName) {
+  if (fileFormat === "brd" || fileFormat === "bdv" || fileFormat === "cad") {
+    return true;
+  }
+
+  return fileFormat === "other" && Boolean(String(fileName ?? "").trim().toLowerCase().endsWith(".cad"));
+}
+
 export function getTechnicalAssetMimeType(format, providedMimeType = "") {
   const normalizedMimeType = String(providedMimeType ?? "").trim();
   if (normalizedMimeType) {

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { associateDiagnosticTechnicalAssetsAction } from "@/app/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
-import { areTechnicalAssetNamesRelated } from "@/lib/technical-assets.mjs";
+import { areTechnicalAssetNamesRelated, isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 import type {
   CatalogOption,
   DiagnosticDetail,
@@ -75,14 +75,7 @@ function formatAssetTypeLabel(format: string, fileName?: string) {
 }
 
 function isBoardviewFormat(format: string, fileName?: string) {
-  if (format === "brd" || format === "bdv" || format === "cad") {
-    return true;
-  }
-
-  // GenCAD (.cad) e salvo como file_format "other" porque o enum do banco
-  // ainda nao tem um valor 'cad' dedicado (ver pendencia no CLAUDE.md) --
-  // reconhece pelo nome do arquivo para nao ficar preso ao formato gravado.
-  return format === "other" && Boolean(fileName?.trim().toLowerCase().endsWith(".cad"));
+  return isBoardviewFileFormat(format, fileName);
 }
 
 function formatFileFormatFilter(value: string) {
