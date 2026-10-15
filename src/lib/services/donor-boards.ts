@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { locateInPage, normalizePartQuery, type ComponentHit } from "@/lib/donors/locate";
 import { extractPdfText } from "@/lib/pdf-text";
+import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 
 export const DONOR_PHOTO_BUCKET = "technical-assets";
 
@@ -139,9 +140,18 @@ export async function searchDonorComponents(supabase: SupabaseClient, query: str
   const { data: assets } = assetFilters.length
     ? await supabase
         .from("technical_assets")
-        .select("id, file_format, asset_type, board_id, equipment_model_id")
+        .select("id, file_format, asset_type, board_id, equipment_model_id, original_filename")
         .or(assetFilters.join(","))
-    : { data: [] as Array<{ id: string; file_format: string; asset_type: string; board_id: string | null; equipment_model_id: string | null }> };
+    : {
+        data: [] as Array<{
+          id: string;
+          file_format: string;
+          asset_type: string;
+          board_id: string | null;
+          equipment_model_id: string | null;
+          original_filename: string;
+        }>,
+      };
 
   const schematicIds = (assets ?? []).filter((asset) => asset.file_format === "pdf").map((asset) => asset.id);
 
@@ -182,7 +192,7 @@ export async function searchDonorComponents(supabase: SupabaseClient, query: str
     for (const donor of owners) {
       const boardview = assets?.find(
         (item) =>
-          (item.file_format === "brd" || item.file_format === "bdv") &&
+          isBoardviewFileFormat(item.file_format, item.original_filename) &&
           ((donor.board_id && item.board_id === donor.board_id) ||
             (donor.equipment_model_id && item.equipment_model_id === donor.equipment_model_id)),
       );

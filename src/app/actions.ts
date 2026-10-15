@@ -22,6 +22,7 @@ import {
 import { queueDiagnosticSemanticSync } from "@/lib/services/semantic-sync";
 import { mapSupabaseAuthErrorMessage } from "@/lib/auth-messages";
 import { createClient } from "@/lib/supabase/server";
+import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 import type { ComponentAnnotation } from "@/types/domain";
 
 function getErrorDigest(error: unknown) {
@@ -773,7 +774,7 @@ function buildDiagnosticTechnicalAssetPreferences(
 ) {
   const currentPreferences = readDiagnosticTechnicalAssetPreferences(details);
   const nextBoardviewAssetId =
-    assets.find((asset) => asset.file_format === "brd" || asset.file_format === "bdv")?.id ??
+    assets.find((asset) => isBoardviewFileFormat(asset.file_format, asset.original_filename))?.id ??
     currentPreferences.preferredBoardviewAssetId;
   const nextSchematicAssetId =
     assets.find((asset) => asset.file_format === "pdf")?.id ??
@@ -795,18 +796,16 @@ function pickAssociationValue(
   field: "board_id" | "equipment_model_id",
 ) {
   const preferredOrder = [...assets].sort((left, right) => {
-    const leftScore =
-      left.file_format === "brd" || left.file_format === "bdv"
-        ? 2
-        : left.file_format === "pdf"
-          ? 1
-          : 0;
-    const rightScore =
-      right.file_format === "brd" || right.file_format === "bdv"
-        ? 2
-        : right.file_format === "pdf"
-          ? 1
-          : 0;
+    const leftScore = isBoardviewFileFormat(left.file_format, left.original_filename)
+      ? 2
+      : left.file_format === "pdf"
+        ? 1
+        : 0;
+    const rightScore = isBoardviewFileFormat(right.file_format, right.original_filename)
+      ? 2
+      : right.file_format === "pdf"
+        ? 1
+        : 0;
 
     return rightScore - leftScore || left.original_filename.localeCompare(right.original_filename);
   });

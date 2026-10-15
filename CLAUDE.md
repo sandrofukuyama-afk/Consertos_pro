@@ -134,6 +134,21 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Correção: botão "Abrir no laboratório" não aparecia nos cards de `/biblioteca` para um
+  boardview `.cad` (GenCAD) já associado (relato do dono, com foto do card faltando o botão). Mesma causa
+  das correções anteriores de hoje: `getTechnicalLibraryItems()` e `buildTechnicalAssetItem()`
+  (`diagnostics.ts`) ainda checavam `file_format === "brd"/"bdv"` direto, sem o fallback `'other'` + `.cad`
+  (pendência 8). Depois de corrigir, varri o resto do código atrás do mesmo padrão em vez de esperar o
+  próximo relato, e achei mais 4 ocorrências: preferência de boardview do caso e ordenação da tela de
+  associação (`actions.ts`, 3 pontos), parecer técnico estruturado (`assistant.ts`), busca de peça nas
+  doadoras (`donor-boards.ts`, precisou trazer `original_filename` na consulta) e busca geral em `/busca`
+  (`search.ts`). Todos agora usam a função compartilhada `isBoardviewFileFormat()` (ver pendência 8).
+- **2026-10-16** — Correção visual: nos cards de busca de arquivo técnico (tela "Associar placa e arquivos
+  técnicos"), o texto de botões como "Excluir" quebrava letra por letra numa coluna fina. Causa: o card usava
+  `lg:flex-row` para pôr texto e botões lado a lado — um breakpoint de **viewport**, não do container; esse
+  componente roda dentro do painel lateral do caso (~360px), então num monitor largo o layout tentava ficar
+  horizontal mesmo espremido no painel estreito. Texto e botões agora sempre empilhados, com
+  `whitespace-nowrap` nos botões. Não testado visualmente no navegador (só lint/build).
 - **2026-10-16** — Correção: mesmo com o `.cad` associado com sucesso ao caso, o botão "Abrir boardview" da
   tela principal do diagnóstico não aparecia — 4º lugar com a mesma checagem `"brd"`/`"bdv"` copiada
   (`diagnostic-bench-workspace.tsx`), igual aos dois já corrigidos hoje (IA, tela de associação). Em vez de

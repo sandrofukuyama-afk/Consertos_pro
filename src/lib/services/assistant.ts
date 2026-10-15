@@ -18,6 +18,7 @@ import {
   summarizeTechnicalContextForAssistant,
 } from "@/lib/services/assistant-technical-context";
 import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
+import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
   AiFeedbackRating,
@@ -1438,9 +1439,7 @@ async function buildStructuredResponse(
   const strongestHypothesis = [...context.hypotheses]
     .sort((a, b) => (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0))[0] ?? null;
   const availableBoardviewAsset =
-    context.technicalAssets.find(
-      (item) => item.fileFormat === "brd" || item.fileFormat === "bdv",
-    ) ?? null;
+    context.technicalAssets.find((item) => isBoardviewFileFormat(item.fileFormat, item.title)) ?? null;
   const availableSchematicAsset =
     context.technicalAssets.find((item) => item.fileFormat === "pdf") ?? null;
   const recommendedTest = pickUnperformedTest(

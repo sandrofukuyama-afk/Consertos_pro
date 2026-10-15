@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSemanticSearchResults } from "@/lib/services/semantic";
 import { searchTechnicalLibrary } from "@/lib/services/technical-library-search";
 import { formatRelativeTime } from "@/lib/utils";
+import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 import type {
   CatalogOption,
   SearchDiagnosticResult,
@@ -87,12 +88,11 @@ export async function getSearchPageData(
           typeLabel: technicalFileTypeLabel(item.assetType, item.originalFileName),
           sizeLabel: formatFileSize(item.fileSizeBytes),
           downloadHref: `/api/technical-assets/${item.id}/content?download=1`,
-          labHref:
-            item.fileFormat === "brd" || item.fileFormat === "bdv"
-              ? `/boardview/lab?boardview_asset_id=${item.id}`
-              : item.fileFormat === "pdf"
-                ? `/boardview/lab?schematic_asset_id=${item.id}`
-                : null,
+          labHref: isBoardviewFileFormat(item.fileFormat, item.originalFileName)
+            ? `/boardview/lab?boardview_asset_id=${item.id}`
+            : item.fileFormat === "pdf"
+              ? `/boardview/lab?schematic_asset_id=${item.id}`
+              : null,
         }),
       ),
     };

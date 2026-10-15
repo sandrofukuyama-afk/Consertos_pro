@@ -4,6 +4,7 @@ import { getGuidedTreeForCategory, type GuidedTreeNode } from "@/lib/domain/guid
 import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
+import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
 import { formatRelativeTime } from "@/lib/utils";
 import type {
   ComponentAnnotation,
@@ -839,12 +840,11 @@ export async function getDiagnosticDetail(diagnosticId: string) {
       modelName: string | null;
     },
   ) => {
-    const boardviewLabHref =
-      asset.file_format === "brd" || asset.file_format === "bdv"
-        ? `/boardview/lab?diagnostic_id=${data.id}&boardview_asset_id=${asset.id}`
-        : asset.file_format === "pdf"
-          ? `/boardview/lab?diagnostic_id=${data.id}&schematic_asset_id=${asset.id}`
-          : null;
+    const boardviewLabHref = isBoardviewFileFormat(asset.file_format, asset.original_filename)
+      ? `/boardview/lab?diagnostic_id=${data.id}&boardview_asset_id=${asset.id}`
+      : asset.file_format === "pdf"
+        ? `/boardview/lab?diagnostic_id=${data.id}&schematic_asset_id=${asset.id}`
+        : null;
 
     return {
       id: asset.id,
@@ -1279,12 +1279,11 @@ export async function getTechnicalLibraryItems() {
         : null;
     const boardId = row.technical_asset_links?.[0]?.board_id ?? null;
     const equipmentModelId = row.technical_asset_links?.[0]?.equipment_model_id ?? null;
-    const boardviewLabHref =
-      row.file_format === "brd" || row.file_format === "bdv"
-        ? `/boardview/lab?boardview_asset_id=${row.id}`
-        : row.file_format === "pdf"
-          ? `/boardview/lab?schematic_asset_id=${row.id}`
-          : null;
+    const boardviewLabHref = isBoardviewFileFormat(row.file_format, row.original_filename)
+      ? `/boardview/lab?boardview_asset_id=${row.id}`
+      : row.file_format === "pdf"
+        ? `/boardview/lab?schematic_asset_id=${row.id}`
+        : null;
 
     return {
       id: row.id,
