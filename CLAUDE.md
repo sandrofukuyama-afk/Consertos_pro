@@ -133,6 +133,12 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Correção: "Associar placa e arquivos técnicos" buscando só por Placa/Modelo (sem digitar
+  nada no campo de texto) não achava arquivos mais antigos daquela placa, mesmo já associados. Causa: sem
+  texto/formato, `searchTechnicalAssets()` em `src/app/api/technical-assets/route.ts` só pedia os 240
+  arquivos mais recentes da biblioteca antes do filtro de placa/modelo rodar no cliente. Agora qualquer
+  filtro ativo (texto, formato, placa ou modelo) usa o teto de 1000 linhas que o Supabase permite por
+  consulta. Reproduzido ao vivo: busca por placa DA0P5DMB8C0 sem texto não achava o boardview `.cad` dela.
 - **2026-10-15** — Correção: `detalhar_componente` (ferramenta da IA) recusava referências exatas como
   PU1001/PU1101 com "nao encontrado" mesmo quando o componente existia (o fallback de busca aproximada
   listava o proprio componente como "parecido", o que entregou o bug). Causa: `describeComponent()` em
