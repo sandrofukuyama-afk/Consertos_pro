@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   isClaudeChatConfigured,
   runClaudeDiagnosticAgent,
+  type ClaudeChatProgressEvent,
   type ClaudeChatTurn,
 } from "@/lib/ai/assistant-llm-claude";
 import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
@@ -170,7 +171,7 @@ export async function sendDiagnosticChatMessage(
   userMessage: string,
   newAttachments: NewChatAttachment[],
   userId: string,
-  options: { deep?: boolean } = {},
+  options: { deep?: boolean; onProgress?: (event: ClaudeChatProgressEvent) => void } = {},
 ): Promise<{ replyText: string; wroteToCase: boolean }> {
   if (!isClaudeChatConfigured()) {
     throw new Error(
@@ -312,6 +313,7 @@ export async function sendDiagnosticChatMessage(
     turns,
     toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
     deep: options.deep,
+    onProgress: options.onProgress,
   });
 
   const { error: insertAssistantError } = await supabase.from("ai_responses").insert({
