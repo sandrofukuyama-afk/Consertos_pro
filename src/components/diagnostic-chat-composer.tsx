@@ -43,6 +43,14 @@ const TOOL_LABELS: Record<string, string> = {
   atualizar_resumo_do_caso: "atualizando resumo",
 };
 
+function newClientMessageId() {
+  // randomUUID so existe em https/localhost; no celular pela rede local (http)
+  // usa um id aleatorio simples.
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 function describeTools(names: string[]) {
   const labels = Array.from(new Set(names.map((name) => TOOL_LABELS[name] ?? name)));
   return `Consultando: ${labels.join(", ")}…`;
@@ -58,6 +66,10 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
   // "Pensar mais" vale so para a proxima mensagem (Opus, ~2x o custo).
   const [deep, setDeep] = useState(false);
   const [state, setState] = useState<SendState>({ phase: "idle" });
+  // Mesmo id em todas as tentativas da mesma mensagem: se a primeira chegou ao
+  // servidor, "Tentar de novo" nao grava a pergunta duas vezes. Muda quando o
+  // tecnico edita o texto ou as fotos.
+  const clientMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const element = textareaRef.current;
@@ -85,8 +97,10 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
     };
 
     try {
+      clientMessageIdRef.current ??= newClientMessageId();
       const formData = new FormData();
       formData.set("message", sentText);
+      formData.set("client_message_id", clientMessageIdRef.current);
       if (deep) {
         formData.set("deep", "1");
       }
@@ -155,6 +169,7 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
         throw new Error("A conexão caiu antes do fim da resposta.");
       }
 
+      clientMessageIdRef.current = null;
       setText("");
       setPhotos([]);
       setDeep(false);
@@ -238,6 +253,7 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
               if (fileInputRef.current) {
                 fileInputRef.current.value = "";
               }
+              clientMessageIdRef.current = null;
               setPhotos([]);
             }}
             className="underline hover:text-[var(--foreground)]"
@@ -263,7 +279,10 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
             accept="image/*"
             className="sr-only"
             disabled={busy}
-            onChange={(event) => setPhotos(Array.from(event.target.files ?? []))}
+            onChange={(event) => {
+              clientMessageIdRef.current = null;
+              setPhotos(Array.from(event.target.files ?? []));
+            }}
           />
         </label>
 
@@ -274,7 +293,10 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
           enterKeyHint="enter"
           data-voice-assist="off"
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            clientMessageIdRef.current = null;
+            setText(event.target.value);
+          }}
           onKeyDown={(event) => {
             // No computador, Enter envia e Shift+Enter quebra linha.
             // No celular (tela de toque), Enter continua quebrando linha.

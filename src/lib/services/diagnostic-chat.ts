@@ -171,7 +171,14 @@ export async function sendDiagnosticChatMessage(
   userMessage: string,
   newAttachments: NewChatAttachment[],
   userId: string,
-  options: { deep?: boolean; onProgress?: (event: ClaudeChatProgressEvent) => void } = {},
+  options: {
+    deep?: boolean;
+    /** Identifica a pergunta entre tentativas, para o reenvio nao duplicar. */
+    clientMessageId?: string;
+    /** Reenvio: a pergunta ja foi gravada; so falta a resposta. */
+    existingUserResponseId?: string;
+    onProgress?: (event: ClaudeChatProgressEvent) => void;
+  } = {},
 ): Promise<{ replyText: string; wroteToCase: boolean }> {
   if (!isClaudeChatConfigured()) {
     throw new Error(
@@ -198,26 +205,33 @@ export async function sendDiagnosticChatMessage(
   const trimmedMessage = userMessage.trim();
   const userRawText = trimmedMessage || "(enviou anexo sem mensagem de texto)";
 
-  const { data: insertedUserResponse, error: insertUserError } = await supabase
-    .from("ai_responses")
-    .insert({
-      diagnostic_id: diagnosticId,
-      prompt_context_version: "chat-v1",
-      response_role: "user",
-      raw_response_text: userRawText,
-      structured_response_json: { attachmentCount: newAttachments.length },
-      model_name: "technician-input",
-    })
-    .select("id")
-    .single();
+  let userResponseId = options.existingUserResponseId;
 
-  if (insertUserError || !insertedUserResponse) {
-    throw insertUserError ?? new Error("Falha ao registrar a mensagem no caso.");
+  if (!userResponseId) {
+    const { data: insertedUserResponse, error: insertUserError } = await supabase
+      .from("ai_responses")
+      .insert({
+        diagnostic_id: diagnosticId,
+        prompt_context_version: "chat-v1",
+        response_role: "user",
+        raw_response_text: userRawText,
+        structured_response_json: {
+          attachmentCount: newAttachments.length,
+          ...(options.clientMessageId ? { clientMessageId: options.clientMessageId } : {}),
+        },
+        model_name: "technician-input",
+      })
+      .select("id")
+      .single();
+
+    if (insertUserError || !insertedUserResponse) {
+      throw insertUserError ?? new Error("Falha ao registrar a mensagem no caso.");
+    }
+
+    userResponseId = insertedUserResponse.id as string;
   }
 
-  const userResponseId = insertedUserResponse.id as string;
-
-  if (newAttachments.length) {
+  if (newAttachments.length && !options.existingUserResponseId) {
     await supabase
       .from("attachments")
       .update({ chat_ai_response_id: userResponseId })

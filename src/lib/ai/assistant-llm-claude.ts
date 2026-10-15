@@ -219,6 +219,7 @@ export async function runClaudeDiagnosticAgent(args: {
   let tokensOutput = 0;
   let servedModel = requestedModel;
   let replyText = "";
+  let pausedText = "";
   const sources: string[] = [];
 
   for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration += 1) {
@@ -257,7 +258,9 @@ export async function runClaudeDiagnosticAgent(args: {
     tokensOutput += message.usage.output_tokens;
     sources.push(...extractSources(message.content));
 
-    const text = extractText(message.content);
+    // Depois de um pause_turn (busca na web longa) a resposta continua na volta
+    // seguinte: junta os pedacos, como o tecnico viu na tela durante o streaming.
+    const text = pausedText + extractText(message.content);
     if (text) {
       replyText = text;
     }
@@ -270,9 +273,13 @@ export async function runClaudeDiagnosticAgent(args: {
     }
 
     if (message.stop_reason === "pause_turn") {
+      pausedText = text;
       messages.push({ role: "assistant", content: toEchoContent(message.content) });
       continue;
     }
+
+    // O texto antes de uma consulta e so um aviso; a resposta comeca do zero.
+    pausedText = "";
 
     const toolUses = message.content.filter(
       (block): block is Anthropic.Beta.BetaToolUseBlock => block.type === "tool_use",

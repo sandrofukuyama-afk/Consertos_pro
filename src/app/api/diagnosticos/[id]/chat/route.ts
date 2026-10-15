@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { postDiagnosticChatMessage } from "@/lib/services/diagnostic-chat-post";
@@ -20,9 +20,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id: diagnosticId } = await params;
-  const formData = await request.formData();
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return NextResponse.json({ error: "Envio inválido. Tente de novo." }, { status: 400 });
+  }
   const message = String(formData.get("message") ?? "").trim();
   const deep = formData.get("deep") === "1";
+  const clientMessageId = String(formData.get("client_message_id") ?? "").trim() || undefined;
   const files = formData
     .getAll("photos")
     .filter((item): item is File => item instanceof File && item.size > 0);
@@ -34,39 +38,66 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const supabase = await createClient();
   const encoder = new TextEncoder();
 
-  const body = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      let closed = false;
-      const send = (event: Record<string, unknown>) => {
-        if (!closed) {
-          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
-        }
-      };
-      const ping = setInterval(() => send({ type: "ping" }), PING_INTERVAL_MS);
+  // Se o celular desconectar (tela bloqueada, internet caiu), a IA continua
+  // trabalhando e grava a resposta no caso; so paramos de escrever na conexao.
+  // Atribuido no start() do stream; o "as" evita o TS estreitar para null.
+  let controller = null as ReadableStreamDefaultController<Uint8Array> | null;
+  let closed = false;
+  const send = (event: Record<string, unknown>) => {
+    if (closed || !controller) {
+      return;
+    }
+    try {
+      controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+    } catch {
+      closed = true;
+    }
+  };
 
-      try {
-        await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files, {
-          deep,
-          onProgress: (event) => send(event),
-        });
-        try {
-          revalidatePath(`/diagnosticos/${diagnosticId}`);
-        } catch {
-          // A tela chama router.refresh() de qualquer forma.
-        }
-        send({ type: "done" });
-      } catch (error) {
-        send({
-          type: "error",
-          message: error instanceof Error ? error.message : "Falha ao enviar mensagem no chat.",
-        });
-      } finally {
-        clearInterval(ping);
-        closed = true;
-        controller.close();
-      }
+  const body = new ReadableStream<Uint8Array>({
+    start(streamController) {
+      controller = streamController;
+    },
+    cancel() {
+      closed = true;
     },
   });
+
+  const job = (async () => {
+    const ping = setInterval(() => send({ type: "ping" }), PING_INTERVAL_MS);
+
+    try {
+      await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files, {
+        deep,
+        clientMessageId,
+        onProgress: (event) => send(event),
+      });
+      try {
+        revalidatePath(`/diagnosticos/${diagnosticId}`);
+      } catch {
+        // A tela chama router.refresh() de qualquer forma.
+      }
+      send({ type: "done" });
+    } catch (error) {
+      send({
+        type: "error",
+        message: error instanceof Error ? error.message : "Falha ao enviar mensagem no chat.",
+      });
+    } finally {
+      clearInterval(ping);
+      if (!closed) {
+        closed = true;
+        try {
+          controller?.close();
+        } catch {
+          // Conexao ja encerrada pelo cliente.
+        }
+      }
+    }
+  })();
+
+  // Mantem a funcao viva ate a resposta ser gravada, mesmo sem ninguem lendo.
+  after(() => job);
 
   return new Response(body, {
     headers: {
