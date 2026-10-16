@@ -267,3 +267,25 @@ test("getSelectionConnections draws lines to the other points on the same net", 
   assert.equal(fromGnd.lines.length, 0);
   assert.deepEqual(fromGnd.skippedNets, ["GND"]);
 });
+
+test("findNearestBoardviewSelection prefers a pin over the center of a small part", () => {
+  // Peca de 2 pinos (tipo 0402): o centro fica entre os pinos.
+  const twoPin: ParsedBoardview = {
+    ...parsedFixture,
+    components: [
+      ...parsedFixture.components,
+      { ...parsedFixture.components[1]!, ref: "C9", partIndex: 9, pinCount: 2 },
+    ],
+    padPins: [
+      ...parsedFixture.padPins,
+      { ...parsedFixture.padPins[2]!, id: "C9:1", partIndex: 9, partRef: "C9", pinOrdinalWithinPart: 1, xMil: 600, yMil: 300 },
+      { ...parsedFixture.padPins[2]!, id: "C9:2", partIndex: 9, partRef: "C9", pinOrdinalWithinPart: 2, xMil: 620, yMil: 300 },
+    ],
+  };
+  const model = buildBoardviewLabModel(twoPin);
+
+  // 4 mil do centro (610) rumo ao pino 2: mais perto do centro que do pino.
+  const selection = findNearestBoardviewSelection(model, { xMil: 614, yMil: 300 }, "both", 10);
+  assert.equal(selection?.kind, "padPin");
+  assert.equal(selection?.kind === "padPin" && selection.padPin.id, "C9:2");
+});

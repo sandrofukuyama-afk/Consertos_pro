@@ -133,6 +133,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Boardview: **toque mais preciso nos pinos** (relato do dono: no C4706 não conseguia escolher o
+  outro pino). `findNearestBoardviewSelection()` comparava só distância, e o centro de peça pequena (entre os
+  2 pinos) ganhava; agora a prioridade é pino > test point > componente (toque dentro da caixa, a menor
+  vence). Área de toque em pixels de tela (12 px mouse, 20 px dedo; antes mínimo fixo de 45 mil, maior que o
+  passo de um 0402). Pinos desenhados crescem com o zoom (até 14 px). Conferido na 0P5D (C4706, pinos a
+  17,7 mil). Teste novo em `lab.test.mts`.
+
 - **2026-10-16** — Boardview: **linhas de ligação** (pedido do dono). Tocou num pino/test point → linhas retas
   dele até cada ponto da mesma net; tocou num componente → linhas de cada pino dele. Os arquivos não trazem as
   trilhas de cobre (o `.cad` da 0P5D tem só vias em `$ROUTES`, nenhum segmento), então é "para onde vai", não o

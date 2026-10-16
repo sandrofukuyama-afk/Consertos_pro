@@ -642,12 +642,13 @@ export const BoardviewCanvas = forwardRef<
       const isPadOnSelectedComponent =
         selectedItem?.kind === "component" &&
         selectedItem.component.ref === padPin.partRef;
+      // Pino cresce com o zoom (alvo maior para o toque), com limites para nao
+      // sumir de longe nem virar um bloco de perto.
+      const baseSize = Math.min(14, Math.max(viewport.scale > 0.45 ? 2.7 : 1.5, viewport.scale * 9));
       const size =
         padPin.netName === highlightNetName || selectedComponents.has(padPin.partRef)
-          ? 4.4
-          : viewport.scale > 0.45
-            ? 2.7
-            : 1.5;
+          ? Math.max(4.4, baseSize + 1.5)
+          : baseSize;
       context.fillStyle =
         padPin.netName === highlightNetName
           ? "rgba(216,166,84,0.95)"
@@ -917,7 +918,11 @@ export const BoardviewCanvas = forwardRef<
       model.parsed.metadata.bounds,
       mirrorX,
     );
-    const radiusMil = Math.max(18 / viewport.scale, 45);
+    // Area de toque medida na tela: com zoom ela encolhe junto e da para
+    // escolher entre pinos colados (antes tinha minimo fixo de 45 mil, maior
+    // que a distancia entre os pinos de um 0402). Dedo precisa de mais folga.
+    const radiusPx = event.pointerType === "touch" ? 20 : 12;
+    const radiusMil = radiusPx / viewport.scale;
     const nearest = findNearestBoardviewSelection(model, boardPoint, side, radiusMil);
 
     if (nearest) {

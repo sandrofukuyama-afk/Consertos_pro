@@ -542,10 +542,14 @@ export function findNearestBoardviewSelection(
   sideFilter: BoardviewLabSideFilter,
   radiusMil: number,
 ): BoardviewLabSelection | null {
-  let closestDistance = radiusMil * radiusMil;
-  let selected: BoardviewLabSelection | null = null;
-
+  // Prioridade: pino > test point > componente. Antes valia so a distancia, e o
+  // centro de uma peca pequena (ex.: capacitor 0402, centro entre os 2 pinos)
+  // ganhava do pino que o tecnico queria tocar.
+  const maxSquared = radiusMil * radiusMil;
   const candidates = collectSpatialCandidates(model.spatialIndex, point, radiusMil);
+
+  let closestPad: { padPin: BoardviewPadPin; squared: number } | null = null;
+  let closestTestPoint: { testPoint: BoardviewTestPoint; squared: number } | null = null;
 
   for (const candidate of candidates) {
     if (candidate.kind === "padPin") {
@@ -553,64 +557,61 @@ export function findNearestBoardviewSelection(
       if (!padPin || !matchesSide(padPin.side, sideFilter)) {
         continue;
       }
-
       const squared = distanceSquared(point, padPin);
-      if (squared > closestDistance) {
-        continue;
+      if (squared <= maxSquared && (!closestPad || squared < closestPad.squared)) {
+        closestPad = { padPin, squared };
       }
-
-      closestDistance = squared;
-      const component = model.componentsByIndex.get(padPin.partIndex) ?? null;
-      selected = {
-        kind: "padPin",
-        padPin,
-        component,
-        net: model.netsByName.get(padPin.netName) ?? null,
-      };
-      continue;
-    }
-
-    if (candidate.kind === "testPoint") {
+    } else if (candidate.kind === "testPoint") {
       const testPoint = model.testPointsById.get(candidate.id);
       if (!testPoint || !matchesSide(testPoint.side, sideFilter)) {
         continue;
       }
-
       const squared = distanceSquared(point, testPoint);
-      if (squared > closestDistance) {
-        continue;
+      if (squared <= maxSquared && (!closestTestPoint || squared < closestTestPoint.squared)) {
+        closestTestPoint = { testPoint, squared };
       }
-
-      closestDistance = squared;
-      selected = {
-        kind: "testPoint",
-        testPoint,
-        net: model.netsByName.get(testPoint.netName) ?? null,
-      };
-      continue;
     }
+  }
 
-    const component = model.componentsByRef.get(candidate.id.toLowerCase());
-    if (!component || !matchesSide(component.mountingSide, sideFilter)) {
-      continue;
-    }
-
-    const squared = distanceSquared(point, {
-      xMil: component.centerXMil,
-      yMil: component.centerYMil,
-    });
-    if (squared > closestDistance) {
-      continue;
-    }
-
-    closestDistance = squared;
-    selected = {
-      kind: "component",
-      component,
+  if (closestPad) {
+    const { padPin } = closestPad;
+    return {
+      kind: "padPin",
+      padPin,
+      component: model.componentsByIndex.get(padPin.partIndex) ?? null,
+      net: model.netsByName.get(padPin.netName) ?? null,
     };
   }
 
-  return selected;
+  if (closestTestPoint) {
+    const { testPoint } = closestTestPoint;
+    return {
+      kind: "testPoint",
+      testPoint,
+      net: model.netsByName.get(testPoint.netName) ?? null,
+    };
+  }
+
+  // Componente: o toque dentro da caixa dele (com a folga do raio); se cair em
+  // mais de uma caixa, a menor (a peca de cima de um conector, por exemplo).
+  let bestComponent: { component: BoardviewLabComponent; area: number } | null = null;
+  for (const component of model.components) {
+    if (
+      !matchesSide(component.mountingSide, sideFilter) ||
+      point.xMil < component.minXMil - radiusMil ||
+      point.xMil > component.maxXMil + radiusMil ||
+      point.yMil < component.minYMil - radiusMil ||
+      point.yMil > component.maxYMil + radiusMil
+    ) {
+      continue;
+    }
+    const area = (component.maxXMil - component.minXMil) * (component.maxYMil - component.minYMil);
+    if (!bestComponent || area < bestComponent.area) {
+      bestComponent = { component, area };
+    }
+  }
+
+  return bestComponent ? { kind: "component", component: bestComponent.component } : null;
 }
 
 export function getSelectionHighlightNetName(
