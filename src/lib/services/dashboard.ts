@@ -30,17 +30,6 @@ function mapStatus(status: string): DiagnosticCase["status"] {
   return "Ativo";
 }
 
-function isComputerQueueCategory(categoryName: string | null | undefined) {
-  const normalized = (categoryName ?? "")
-    .toLocaleLowerCase("pt-BR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  return ["computador", "desktop", "notebook"].some((term) =>
-    normalized.includes(term),
-  );
-}
-
 const REPORT_TITLE_MAX_CHARS = 48;
 
 function summarizeReportAsTitle(report: string | null | undefined) {
@@ -159,12 +148,12 @@ export async function getDashboardData(): Promise<DashboardData> {
     } satisfies DiagnosticCase;
   });
 
-  const queueDiagnostics = diagnostics.filter((item) => {
-    const isOpenStatus =
-      item.status === "Ativo" || item.status === "Aguardando teste";
-
-    return isOpenStatus && isComputerQueueCategory(item.category);
-  });
+  // Todos os casos em andamento, de qualquer tipo de aparelho. Antes so entravam
+  // categorias com "computador/desktop/notebook": casos abertos pelo chat rapido
+  // ("Nao classificado") e TVs/celulares sumiam da lista em todos os aparelhos.
+  const queueDiagnostics = diagnostics.filter(
+    (item) => item.status === "Ativo" || item.status === "Aguardando teste",
+  );
 
   const activeCount = queueDiagnostics.filter((item) => item.status === "Ativo").length;
   const waitingCount = queueDiagnostics.filter(

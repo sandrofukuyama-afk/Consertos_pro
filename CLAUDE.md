@@ -134,13 +134,21 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — **Causa real** dos casos que "não apareciam" em nenhum aparelho: a lista da tela inicial
+  (`getDashboardData` em `dashboard.ts`) só mostrava categorias com "computador/desktop/notebook". Casos abertos
+  pelo chat rápido ficam "Não classificado" e sumiam; a TV Maxzen J32SK03 ("Televisão") também. Eram 4 de 6
+  ativos escondidos (2 MSI, HP "abra o boaderview", TV). Filtro de categoria removido: entram todos os casos
+  ativos/aguardando teste. O contador "Ativos" passa a contar todos. (Antes disso tentei: título dos casos sem
+  modelo, atualização ao voltar para o app, linha de versão no menu, barrar conta bloqueada — tudo útil, mas
+  não era a causa.)
+
 - **2026-10-16** — Login com **conta bloqueada** agora é barrado com aviso (antes entrava e via tudo vazio). Relato:
   casos abertos num PC não apareciam no celular nem em outros PCs. Banco e site conferidos (mesmo banco: as
   respostas da IA desses casos foram gravadas pela Vercel; versão do celular = atual). Só 1 conta ativa
   (Sandro, gmail); 6 bloqueadas (ex.: "Usuario Teste" tec…@consertospro.com.br e san…@hotmail.com). Com RLS
   `is_active_authenticated_user()`, conta bloqueada não vê perfil nem casos, mas `getCurrentUser()` montava um
   usuário com o e-mail e deixava entrar. Agora `requireCurrentUser()` manda para `/login?error=A conta X está
-  bloqueada…`. **Hipótese a confirmar**: os outros aparelhos estão logados numa conta bloqueada.
+  bloqueada…`. Essa hipótese **não era a causa** (a correção fica, é o comportamento certo) — ver entrada acima.
 
 - **2026-10-16** — Título do caso na lista: `equipment_label` agora vem **antes** do nome do catálogo (o caso MSI
   ficava "MS 1563", nome curto do catálogo, em vez de "MSI Stealth 15M A11UEK (MS-1563)"). Primeiro uso da
