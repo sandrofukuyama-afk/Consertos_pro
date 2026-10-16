@@ -134,6 +134,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Chat: **resposta pronta se perdia** ao gravar a conversa (relato "erro de resposta pela IA").
+  Caso MSI `bbf8736b`, pergunta das tensões do PU28 (BQ24780S) às 06:06 UTC: a IA respondeu (log às 06:07:25,
+  2.722 tokens), mas `saveChatThread` falhou e nada foi gravado. Causa mais provável: caractere nulo `\u0000`
+  (o Postgres recusa em texto/jsonb) vindo de PDF baixado pela IA (datasheet via web_fetch). Agora a conversa é
+  gravada sem `\u0000` (`stripNulDeep`) e, se a gravação completa falhar por qualquer motivo, grava só pergunta
+  + texto da resposta e entrega a resposta mesmo assim (`threadSaveIssue` no `structured_response_json`).
+
 - **2026-10-16** — **Causa real** dos casos que "não apareciam" em nenhum aparelho: a lista da tela inicial
   (`getDashboardData` em `dashboard.ts`) só mostrava categorias com "computador/desktop/notebook". Casos abertos
   pelo chat rápido ficam "Não classificado" e sumiam; a TV Maxzen J32SK03 ("Televisão") também. Eram 4 de 6

@@ -342,19 +342,36 @@ export async function sendDiagnosticChatMessage(
     throw error;
   }
 
-  await saveChatThread(supabase, diagnosticId, caseBriefHash, [
-    ...thread.messages,
-    ...result.appendedMessages,
-  ]);
+  const replyText = stripNulChars(result.replyText);
+  let threadSaveIssue: string | null = null;
+
+  try {
+    await saveChatThread(supabase, diagnosticId, caseBriefHash, [
+      ...thread.messages,
+      ...result.appendedMessages,
+    ]);
+  } catch (error) {
+    // A resposta ja existe: nunca perde-la por falha ao guardar a conversa
+    // completa. Guarda so a pergunta e o texto da resposta (continua so
+    // crescendo) e segue. Em 16/10 uma resposta pronta se perdeu aqui.
+    threadSaveIssue = error instanceof Error ? error.message.slice(0, 300) : String(error);
+    console.error("[chat] falha ao guardar a conversa completa; guardando so o texto:", threadSaveIssue);
+    await saveChatThread(supabase, diagnosticId, caseBriefHash, [
+      ...thread.messages,
+      ...newMessages,
+      { role: "assistant", content: [{ type: "text", text: replyText }] },
+    ]).catch((fallbackError) => console.error("[chat] falha tambem ao guardar so o texto:", fallbackError));
+  }
 
   const { error: insertAssistantError } = await supabase.from("ai_responses").insert({
     diagnostic_id: diagnosticId,
     prompt_context_version: "chat-v1",
     response_role: "assistant",
-    raw_response_text: result.replyText,
+    raw_response_text: replyText,
     structured_response_json: {
       provider: "claude",
-      sourcesUsed: result.sourcesUsed,
+      ...(threadSaveIssue ? { threadSaveIssue } : {}),
+      sourcesUsed: result.sourcesUsed.map(stripNulChars),
       modelName: result.modelName,
       agentActions: actions,
       memoryMode: fallbackReason ? "fallback" : "full",
@@ -369,7 +386,30 @@ export async function sendDiagnosticChatMessage(
     throw insertAssistantError;
   }
 
-  return { replyText: result.replyText, wroteToCase: wroteToCase.value };
+  return { replyText, wroteToCase: wroteToCase.value };
+}
+
+/**
+ * O Postgres recusa o caractere nulo (\u0000) em texto e jsonb. Ele aparece em
+ * PDFs baixados pela IA (datasheets via web_fetch) e em textos extraidos.
+ */
+function stripNulChars(value: string) {
+  return value.replace(/\u0000/g, "");
+}
+
+function stripNulDeep<T>(value: T): T {
+  if (typeof value === "string") {
+    return stripNulChars(value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map(stripNulDeep) as T;
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, stripNulDeep(item)]),
+    ) as T;
+  }
+  return value;
 }
 
 type ChatSupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -415,7 +455,7 @@ async function saveChatThread(
 ) {
   const { error } = await supabase.from("diagnostic_chat_threads").upsert({
     diagnostic_id: diagnosticId,
-    messages,
+    messages: stripNulDeep(messages),
     case_brief_hash: caseBriefHash,
     updated_at: new Date().toISOString(),
   });
