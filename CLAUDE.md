@@ -133,6 +133,12 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Cores iguais no boardview e no esquema (pedido do dono): **magenta = selecionado**, **dourado =
+  relacionado**. No esquema (`schematic-pdf-viewer.tsx`) o selecionado era azul-claro e as outras ocorrências
+  rosa — parecido demais com o magenta do boardview. Agora: selecionado magenta com etiqueta "Selecionado",
+  outras ocorrências dourado, página atual na lista de ocorrências magenta. Seleção no boardview → esquema abre
+  a 1ª página com o nome e rola até ele (componente/pino → ref do componente; test point/net → nome da net).
+
 - **2026-10-16** — Boardview: **toque mais preciso nos pinos** (relato do dono: no C4706 não conseguia escolher o
   outro pino). `findNearestBoardviewSelection()` comparava só distância, e o centro de peça pequena (entre os
   2 pinos) ganhava; agora a prioridade é pino > test point > componente (toque dentro da caixa, a menor

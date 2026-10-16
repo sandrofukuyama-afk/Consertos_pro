@@ -881,7 +881,7 @@ export function SchematicPdfViewer({
                         return (
                           <Fragment key={item.id}>
                             <span
-                              className="absolute whitespace-pre rounded border-2 border-[rgba(66,226,255,0.98)] bg-[rgba(66,226,255,0.34)] px-1.5 py-0.5 text-[#f4fdff] shadow-[0_0_0_1px_rgba(66,226,255,0.62),0_0_18px_rgba(66,226,255,0.38)]"
+                              className="absolute whitespace-pre rounded border-2 border-[rgba(255,64,200,0.98)] bg-[rgba(255,64,200,0.34)] px-1.5 py-0.5 text-[#fff4fc] shadow-[0_0_0_1px_rgba(255,64,200,0.62),0_0_18px_rgba(255,64,200,0.38)]"
                               style={{
                                 left: item.left - 6,
                                 top: item.top - 4,
@@ -896,7 +896,7 @@ export function SchematicPdfViewer({
                               {item.text}
                             </span>
                             <span
-                              className="absolute rounded-full border border-[rgba(66,226,255,0.98)] bg-[rgba(10,31,40,0.92)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[rgba(210,248,255,0.98)] shadow-[0_0_12px_rgba(66,226,255,0.35)]"
+                              className="absolute rounded-full border border-[rgba(255,64,200,0.98)] bg-[rgba(40,10,32,0.92)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-[rgba(255,225,245,0.98)] shadow-[0_0_12px_rgba(255,64,200,0.35)]"
                               style={{
                                 left: item.left + Math.max(item.width - 6, 0),
                                 top: Math.max(item.top - 16, 0),
@@ -912,7 +912,7 @@ export function SchematicPdfViewer({
                       return (
                         <span
                           key={item.id}
-                          className="absolute whitespace-pre rounded border border-[rgba(255,73,185,0.84)] bg-[rgba(255,73,185,0.16)] text-[#fff7fc] shadow-[0_0_0_1px_rgba(255,73,185,0.22)]"
+                          className="absolute whitespace-pre rounded border border-[rgba(216,166,84,0.84)] bg-[rgba(216,166,84,0.16)] text-[#fffaf0] shadow-[0_0_0_1px_rgba(216,166,84,0.22)]"
                           style={{
                             left: item.left,
                             top: item.top,
@@ -964,7 +964,7 @@ export function SchematicPdfViewer({
                     }}
                     className={`w-full rounded-[18px] border px-3 py-3 text-left transition ${
                       currentPage === match.pageNumber
-                        ? "border-[rgba(255,73,185,0.88)] bg-[rgba(255,73,185,0.16)] shadow-[0_0_0_1px_rgba(255,73,185,0.32)]"
+                        ? "border-[rgba(255,64,200,0.88)] bg-[rgba(255,64,200,0.16)] shadow-[0_0_0_1px_rgba(255,64,200,0.32)]"
                         : "border-[var(--panel-border)] bg-[var(--background)] hover:bg-white/5"
                     }`}
                   >
