@@ -68,6 +68,47 @@ function sameViewport(left: BoardviewViewport, right: BoardviewViewport) {
   );
 }
 
+// Cor do item encontrado na busca (ou tocado): magenta, que nada mais usa.
+const FOUND_COLOR = "rgba(255,64,200,1)";
+const FOUND_FILL = "rgba(255,64,200,0.28)";
+const FOUND_HALO = "rgba(255,64,200,0.32)";
+
+type FoundMarker = {
+  center: { xMil: number; yMil: number };
+  box: { minXMil: number; maxXMil: number; minYMil: number; maxYMil: number } | null;
+  label: string;
+};
+
+function getFoundMarker(selection: BoardviewLabSelection | null): FoundMarker | null {
+  if (!selection) {
+    return null;
+  }
+
+  switch (selection.kind) {
+    case "component":
+      return {
+        center: { xMil: selection.component.centerXMil, yMil: selection.component.centerYMil },
+        box: selection.component,
+        label: selection.component.ref,
+      };
+    case "padPin":
+      return {
+        center: selection.padPin,
+        box: null,
+        label: `${selection.component?.ref ?? selection.padPin.partRef} pino ${selection.padPin.pinOrdinalWithinPart}`,
+      };
+    case "testPoint":
+      return {
+        center: selection.testPoint,
+        box: null,
+        label: `${selection.testPoint.id}${selection.testPoint.netName ? ` • ${selection.testPoint.netName}` : ""}`,
+      };
+    default:
+      // Net inteira: continua destacada em dourado, sem um ponto unico.
+      return null;
+  }
+}
+
 function getTooltipNetName(selection: BoardviewLabSelection): string | null {
   switch (selection.kind) {
     case "padPin":
@@ -706,6 +747,64 @@ export const BoardviewCanvas = forwardRef<
         context.font = "11px monospace";
         context.fillText(component.ref, center.x + 6, center.y - 8);
       }
+    }
+
+    // Item encontrado/selecionado por cima de tudo, numa cor que nada mais usa,
+    // para o tecnico achar o ponto exato (e nao um vizinho da mesma net).
+    const found = getFoundMarker(selectedItem);
+    if (found) {
+      const center = boardToCanvasPoint(found.center, viewport, bounds, mirrorX);
+      let boxWidth = 0;
+      let boxHeight = 0;
+
+      if (found.box) {
+        const corner = boardToCanvasPoint({ xMil: found.box.minXMil, yMil: found.box.maxYMil }, viewport, bounds, mirrorX);
+        const opposite = boardToCanvasPoint({ xMil: found.box.maxXMil, yMil: found.box.minYMil }, viewport, bounds, mirrorX);
+        boxWidth = Math.max(6, Math.abs(opposite.x - corner.x));
+        boxHeight = Math.max(6, Math.abs(opposite.y - corner.y));
+        context.fillStyle = FOUND_FILL;
+        context.fillRect(center.x - boxWidth / 2 - 4, center.y - boxHeight / 2 - 4, boxWidth + 8, boxHeight + 8);
+        context.strokeStyle = FOUND_COLOR;
+        context.lineWidth = 2.5;
+        context.strokeRect(center.x - boxWidth / 2 - 4, center.y - boxHeight / 2 - 4, boxWidth + 8, boxHeight + 8);
+      } else {
+        context.fillStyle = FOUND_COLOR;
+        context.fillRect(center.x - 5, center.y - 5, 10, 10);
+      }
+
+      const radius = Math.max(16, Math.hypot(boxWidth, boxHeight) / 2 + 12);
+      context.beginPath();
+      context.arc(center.x, center.y, radius, 0, Math.PI * 2);
+      context.strokeStyle = FOUND_COLOR;
+      context.lineWidth = 3;
+      context.stroke();
+      context.beginPath();
+      context.arc(center.x, center.y, radius + 8, 0, Math.PI * 2);
+      context.strokeStyle = FOUND_HALO;
+      context.lineWidth = 6;
+      context.stroke();
+
+      // Marcas de mira para fora do anel.
+      context.strokeStyle = FOUND_COLOR;
+      context.lineWidth = 2;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        context.beginPath();
+        context.moveTo(center.x + dx * (radius + 4), center.y + dy * (radius + 4));
+        context.lineTo(center.x + dx * (radius + 22), center.y + dy * (radius + 22));
+        context.stroke();
+      }
+
+      context.font = "bold 12px monospace";
+      const labelWidth = context.measureText(found.label).width + 12;
+      const labelX = center.x - labelWidth / 2;
+      const labelY = center.y - radius - 34;
+      context.fillStyle = "rgba(18,17,26,0.92)";
+      context.fillRect(labelX, labelY, labelWidth, 20);
+      context.strokeStyle = FOUND_COLOR;
+      context.lineWidth = 1.5;
+      context.strokeRect(labelX, labelY, labelWidth, 20);
+      context.fillStyle = "rgba(255,255,255,0.98)";
+      context.fillText(found.label, labelX + 6, labelY + 14);
     }
   }, [
     canvasPixelRatio,

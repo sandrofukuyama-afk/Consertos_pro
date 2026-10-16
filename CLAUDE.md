@@ -133,6 +133,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Boardview: item encontrado na busca (ou tocado) fica em **destaque magenta** por cima de tudo
+  (pedido do dono): caixa preenchida no componente, anel duplo, marcas de mira e etiqueta com o nome
+  (`TP-672 • +3VPCU`, `PU1001`, `PU1001 pino 3`). Antes o selecionado era roxo fino e um test point buscado
+  ficava amarelo igual aos vizinhos da mesma net. Magenta não é usado em mais nada (`FOUND_COLOR` /
+  `getFoundMarker()` em `boardview-canvas.tsx`). Net inteira continua em dourado. Cores do boardview: componente
+  topo = ponto verde, fundo = azul; pads verde-água; test points quadrado vermelho vazado; ligados à seleção =
+  dourado/amarelo. Não testado visualmente (só lint/tsc).
+
 - **2026-10-16** — Laboratório: a busca agora acha **test points** (relato do dono: "tp-672", citado pela IA, dava
   "Nenhum resultado"). Os test points não têm nome no arquivo (GenCAD grava `TESTPIN Probe_ …`), então o app
   numera `TP-1, TP-2…` (`gencad.ts` e `landrex-testlink.ts`) — e a busca (`searchBoardviewLabModel` em `lab.ts`)
