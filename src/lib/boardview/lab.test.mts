@@ -12,6 +12,7 @@ import {
   focusBoardviewViewportOnComponent,
   getComponentPadPins,
   getNetDetails,
+  getSelectionConnections,
   getSelectionHighlightNetName,
   searchBoardviewLabModel,
 } from "./lab.ts";
@@ -237,4 +238,32 @@ test("searchBoardviewLabModel finds test points by the app numbering (TP-n)", ()
     searchBoardviewLabModel(model, "tp-1", "bottom").filter((result) => result.selection.kind === "testPoint").length,
     0,
   );
+});
+
+test("getSelectionConnections draws lines to the other points on the same net", () => {
+  // R1:1 passa para a mesma net de U1:2 (PP3V3_S0).
+  const linked: ParsedBoardview = {
+    ...parsedFixture,
+    padPins: parsedFixture.padPins.map((pad) =>
+      pad.id === "R1:1" ? { ...pad, netName: "PP3V3_S0" } : pad,
+    ),
+  };
+  const model = buildBoardviewLabModel(linked);
+  const pad = model.padPinsById.get("U1:2")!;
+
+  const fromPad = getSelectionConnections(model, { kind: "padPin", padPin: pad, component: null, net: null });
+  assert.equal(fromPad.lines.length, 1);
+  assert.deepEqual(fromPad.connectedRefs, ["R1"]);
+
+  // Componente: liga pelos pinos dele, pula o terra.
+  const u1 = model.componentsByRef.get("u1")!;
+  const fromComponent = getSelectionConnections(model, { kind: "component", component: u1 });
+  assert.deepEqual(fromComponent.connectedRefs, ["R1"]);
+  assert.deepEqual(fromComponent.skippedNets, ["GND"]);
+
+  // Pino de terra: nenhuma linha.
+  const gnd = model.padPinsById.get("U1:1")!;
+  const fromGnd = getSelectionConnections(model, { kind: "padPin", padPin: gnd, component: null, net: null });
+  assert.equal(fromGnd.lines.length, 0);
+  assert.deepEqual(fromGnd.skippedNets, ["GND"]);
 });

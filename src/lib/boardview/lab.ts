@@ -1,5 +1,6 @@
 import type {
   BoardviewComponent,
+  BoardviewMountingSide,
   BoardviewNet,
   BoardviewPadPin,
   BoardviewPoint,
@@ -652,6 +653,115 @@ export function getSelectionVisibleComponents(
   }
 
   return [];
+}
+
+/** Nets grandes demais para desenhar ligacao (viram um borrao na tela). */
+export const CONNECTION_MAX_NET_POINTS = 80;
+/** Teto de linhas por selecao (componente grande com muitos pinos). */
+export const CONNECTION_MAX_LINES = 400;
+
+export type BoardviewConnectionLine = {
+  from: { xMil: number; yMil: number };
+  to: { xMil: number; yMil: number };
+  netName: string;
+  /** Lado do ponto de destino, para respeitar o filtro de lado. */
+  toSide: BoardviewMountingSide;
+};
+
+export type BoardviewConnections = {
+  lines: BoardviewConnectionLine[];
+  /** Componentes do outro lado da ligacao (sem o proprio componente). */
+  connectedRefs: string[];
+  /** Nets puladas por serem terra ou grandes demais. */
+  skippedNets: string[];
+  truncated: boolean;
+};
+
+/** Terra e "nets" de pinos sem ligacao: nao ha o que desenhar. */
+function isGroundNet(netName: string) {
+  return /(^|_)A?D?P?S?GND\d*($|_)|^VSS$|^(UNCONNECTED|NC|N\/C|NOCONNECT)/i.test(netName.trim());
+}
+
+/**
+ * Linhas de ligacao ("ratsnest") a partir do item selecionado: o boardview nao
+ * traz o desenho das trilhas, so quem esta ligado a quem, entao a ligacao vira
+ * uma linha reta do ponto selecionado ate cada pino/test point da mesma net.
+ * Terra e nets enormes sao puladas.
+ */
+export function getSelectionConnections(
+  model: BoardviewLabModel,
+  selection: BoardviewLabSelection | null,
+): BoardviewConnections {
+  const empty: BoardviewConnections = { lines: [], connectedRefs: [], skippedNets: [], truncated: false };
+
+  if (!selection || selection.kind === "net") {
+    return empty;
+  }
+
+  type Origin = { xMil: number; yMil: number; netName: string; padId: string | null; partRef: string | null };
+  const origins: Origin[] =
+    selection.kind === "padPin"
+      ? [{ ...pointOf(selection.padPin), netName: selection.padPin.netName, padId: selection.padPin.id, partRef: null }]
+      : selection.kind === "testPoint"
+        ? [{ ...pointOf(selection.testPoint), netName: selection.testPoint.netName, padId: null, partRef: null }]
+        : getComponentPadPins(model, selection.component).map((pad) => ({
+            ...pointOf(pad),
+            netName: pad.netName,
+            padId: pad.id,
+            partRef: selection.component.ref,
+          }));
+
+  const lines: BoardviewConnectionLine[] = [];
+  const connectedRefs = new Set<string>();
+  const skippedNets = new Set<string>();
+  let truncated = false;
+
+  for (const origin of origins) {
+    if (!origin.netName) {
+      continue;
+    }
+
+    const pads = model.padPinsByNetName.get(origin.netName) ?? [];
+    const testPoints = model.testPointsByNetName.get(origin.netName) ?? [];
+
+    if (isGroundNet(origin.netName) || pads.length + testPoints.length > CONNECTION_MAX_NET_POINTS) {
+      skippedNets.add(origin.netName);
+      continue;
+    }
+
+    const targets = [
+      ...pads
+        .filter((pad) => pad.id !== origin.padId && (!origin.partRef || pad.partRef !== origin.partRef))
+        .map((pad) => ({ point: pointOf(pad), side: pad.side, ref: pad.partRef })),
+      ...testPoints
+        .filter((testPoint) => testPoint.xMil !== origin.xMil || testPoint.yMil !== origin.yMil)
+        .map((testPoint) => ({ point: pointOf(testPoint), side: testPoint.side, ref: null })),
+    ];
+
+    for (const target of targets) {
+      if (lines.length >= CONNECTION_MAX_LINES) {
+        truncated = true;
+        break;
+      }
+      lines.push({ from: pointOf(origin), to: target.point, netName: origin.netName, toSide: target.side });
+      if (target.ref) {
+        connectedRefs.add(target.ref);
+      }
+    }
+  }
+
+  return {
+    lines,
+    connectedRefs: Array.from(connectedRefs).sort((left, right) =>
+      left.localeCompare(right, undefined, { numeric: true }),
+    ),
+    skippedNets: Array.from(skippedNets),
+    truncated,
+  };
+}
+
+function pointOf(value: { xMil: number; yMil: number }) {
+  return { xMil: value.xMil, yMil: value.yMil };
 }
 
 export function getComponentPadPins(

@@ -24,6 +24,7 @@ import {
   focusBoardviewViewportOnComponent,
   getNetDetails,
   getSelectionHighlightNetName,
+  getSelectionConnections,
   getSelectionVisibleComponents,
   inferNetVoltageHint,
 } from "@/lib/boardview/lab";
@@ -74,6 +75,10 @@ function sameViewport(left: BoardviewViewport, right: BoardviewViewport) {
 const FOUND_COLOR = "rgba(255,64,200,1)";
 const FOUND_FILL = "rgba(255,64,200,0.28)";
 const FOUND_HALO = "rgba(255,64,200,0.32)";
+// Linhas de ligacao saem do item encontrado (magenta) e terminam num anel claro.
+const CONNECTION_COLOR = "rgba(255,120,220,0.75)";
+const CONNECTION_COLOR_OTHER_SIDE = "rgba(255,120,220,0.45)";
+const CONNECTION_END_COLOR = "rgba(255,236,250,0.95)";
 
 type FoundMarker = {
   center: { xMil: number; yMil: number };
@@ -752,6 +757,35 @@ export const BoardviewCanvas = forwardRef<
       }
     }
 
+    // Linhas de ligacao: do item selecionado ate cada ponto da mesma net. O
+    // boardview nao traz as trilhas, entao sao retas ("para onde vai"). Linha
+    // tracejada = o ponto ligado esta no outro lado da placa.
+    const connections = getSelectionConnections(model, selectedItem);
+    if (connections.lines.length) {
+      context.lineWidth = 1.3;
+      for (const line of connections.lines) {
+        const from = boardToCanvasPoint(line.from, viewport, bounds, mirrorX);
+        const to = boardToCanvasPoint(line.to, viewport, bounds, mirrorX);
+        const otherSide = side !== "both" && line.toSide !== "both" && line.toSide !== side;
+        context.setLineDash(otherSide ? [5, 5] : []);
+        context.strokeStyle = otherSide ? CONNECTION_COLOR_OTHER_SIDE : CONNECTION_COLOR;
+        context.beginPath();
+        context.moveTo(from.x, from.y);
+        context.lineTo(to.x, to.y);
+        context.stroke();
+      }
+      context.setLineDash([]);
+
+      context.strokeStyle = CONNECTION_END_COLOR;
+      context.lineWidth = 1.5;
+      for (const line of connections.lines) {
+        const to = boardToCanvasPoint(line.to, viewport, bounds, mirrorX);
+        context.beginPath();
+        context.arc(to.x, to.y, 4.5, 0, Math.PI * 2);
+        context.stroke();
+      }
+    }
+
     // Item encontrado/selecionado por cima de tudo, numa cor que nada mais usa,
     // para o tecnico achar o ponto exato (e nao um vizinho da mesma net).
     const found = getFoundMarker(selectedItem);
@@ -913,6 +947,8 @@ export const BoardviewCanvas = forwardRef<
   const tooltipBottomCount =
     tooltipNetDetails?.padPins.filter((pad) => pad.side === "bottom").length ?? 0;
   const tooltipVoltageHint = tooltipNetName ? inferNetVoltageHint(tooltipNetName) : null;
+  const tooltipConnections =
+    model && tooltip ? getSelectionConnections(model, tooltip.selection) : null;
 
   return (
     <div className="relative h-full min-h-0 min-w-0 w-full flex-1 overflow-hidden bg-[#12111a]">
@@ -976,6 +1012,26 @@ export const BoardviewCanvas = forwardRef<
                   inferior: {tooltipBottomCount} ponto{tooltipBottomCount === 1 ? "" : "s"}
                 </p>
               </div>
+            ) : null}
+
+            {tooltipConnections?.connectedRefs.length ? (
+              <p className="mt-2 text-[var(--muted)]">
+                Ligado a {tooltipConnections.connectedRefs.length} componente
+                {tooltipConnections.connectedRefs.length === 1 ? "" : "s"}:{" "}
+                <span className="font-semibold text-[var(--foreground)]">
+                  {tooltipConnections.connectedRefs.slice(0, 10).join(", ")}
+                  {tooltipConnections.connectedRefs.length > 10 ? "…" : ""}
+                </span>
+              </p>
+            ) : null}
+            {tooltipConnections?.skippedNets.length ? (
+              <p className="mt-1 text-[10px] text-[var(--muted)]">
+                Sem linhas para {tooltipConnections.skippedNets.slice(0, 3).join(", ")}
+                {tooltipConnections.skippedNets.length > 3 ? "…" : ""} (terra, sem ligação ou pontos demais).
+              </p>
+            ) : null}
+            {tooltipConnections?.truncated ? (
+              <p className="mt-1 text-[10px] text-[var(--muted)]">Só as primeiras ligações foram desenhadas.</p>
             ) : null}
           </div>
         ) : null}

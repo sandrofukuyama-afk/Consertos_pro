@@ -133,6 +133,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Boardview: **linhas de ligação** (pedido do dono). Tocou num pino/test point → linhas retas
+  dele até cada ponto da mesma net; tocou num componente → linhas de cada pino dele. Os arquivos não trazem as
+  trilhas de cobre (o `.cad` da 0P5D tem só vias em `$ROUTES`, nenhum segmento), então é "para onde vai", não o
+  caminho físico. Linha tracejada = ponto ligado no outro lado (com filtro de lado ativo). Terra, "UNCONNECTED"/NC
+  e nets com mais de 80 pontos ficam sem linha; máx. 400 linhas. Cartão do toque lista "Ligado a N
+  componentes". `getSelectionConnections()` em `lab.ts` (testado), desenho em `boardview-canvas.tsx`.
+  Conferido na 0P5D: TP-672 (+3VPCU) → 48 ligações; PU1001 → 32 componentes. Não testado visualmente.
+
 - **2026-10-16** — Boardview: avisos não tapam mais a pinagem (relato do dono). Cada toque abria sozinho o
   "Drawer técnico" (no iPhone ~94% da largura, cobria a placa) — agora só abre pelo botão **"Detalhes"** (novo
   no cartão do toque, ou o da barra). O cartão do toque saiu de perto do ponto tocado e fica no **canto
