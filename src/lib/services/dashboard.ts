@@ -133,9 +133,11 @@ export async function getDashboardData(): Promise<DashboardData> {
     // Caso aberto pelo chat rapido nao tem modelo: o titulo vira o comeco do
     // relato (ex.: "ms1563 stealth 15m nao liga"). Com "Equipamento sem modelo"
     // os casos novos ficavam iguais na lista e pareciam nao ter aparecido.
+    // A descricao do caso (digitada ou registrada pela IA, ex.: "MSI Stealth 15M
+    // A11UEK (MS-1563)") vem antes do nome curto do catalogo ("MS 1563").
     const modelName =
-      model?.model_name ??
       row.equipment_label ??
+      model?.model_name ??
       row.equipment_serial_number ??
       manufacturer?.name ??
       summarizeReportAsTitle(row.initial_problem_report) ??

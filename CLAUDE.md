@@ -134,6 +134,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Título do caso na lista: `equipment_label` agora vem **antes** do nome do catálogo (o caso MSI
+  ficava "MS 1563", nome curto do catálogo, em vez de "MSI Stealth 15M A11UEK (MS-1563)"). Primeiro uso da
+  ferramenta de equipamento: a IA registrou "MSI GS65 Stealth" (chute; o técnico disse "Stealth 15M") —
+  descrição da ferramenta reforçada (usar as palavras do técnico, não acrescentar série/nome comercial; na
+  dúvida só o código da placa) e o rótulo do caso `0f89e59e` corrigido à mão. Há 3 casos do mesmo MSI
+  (`bbf8736b`, `f1ea50e2` arquivado, `0f89e59e`): o técnico abriu um novo pelo chat rápido em vez de continuar.
+
 - **2026-10-16** — IA registra o equipamento do caso: ferramenta `atualizar_equipamento_do_caso` (fabricante/modelo/
   placa) grava `equipment_label` (vira o título na lista) e liga `manufacturer_id`/`equipment_model_id` só se já
   existirem no catálogo com o mesmo nome normalizado — **não cria entradas no catálogo**. Instrução no prompt:

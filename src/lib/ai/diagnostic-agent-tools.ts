@@ -218,7 +218,7 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "atualizar_equipamento_do_caso",
     description:
-      "Registra marca/modelo/placa do equipamento no caso (vira o titulo do caso na lista). Use quando o caso ainda nao tem equipamento registrado e o tecnico informar o modelo, ou voce ler com certeza na foto da etiqueta/placa; ou quando o tecnico corrigir. Nao chute: so com o modelo dito pelo tecnico ou lido claramente.",
+      "Registra marca/modelo/placa do equipamento no caso (vira o titulo do caso na lista). Use quando o caso ainda nao tem equipamento registrado e o tecnico informar o modelo, ou voce ler com certeza na foto da etiqueta/placa; ou quando o tecnico corrigir. Nao chute: use as palavras do tecnico (pode corrigir grafia, ex.: 'steath' -> 'Stealth') e NAO acrescente serie, linha ou nome comercial que ele nao disse (ex.: nao transformar 'Stealth 15M' em 'GS65 Stealth'). Na duvida, registre so o codigo da placa.",
     input_schema: {
       type: "object",
       properties: {
