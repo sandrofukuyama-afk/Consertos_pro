@@ -133,6 +133,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Tela do caso: boardview e esquema abrem o laboratório **em outra aba** (pedido do dono, para
+  ver chat e placa ao mesmo tempo). Todos os links do caso para `/boardview/lab` usam a aba nomeada
+  `laboratorio-<id do caso>` (`labTabTarget()` em `diagnostic-bench-workspace.tsx`), então cliques seguintes
+  (outro componente, outra página do esquema) reaproveitam a mesma aba em vez de abrir várias. Ideias
+  seguintes conversadas: chat dentro do laboratório (gaveta no iPhone) e componentes/nets clicáveis nas
+  respostas da IA.
+
 - **2026-10-16** — Correção visual: no "Registro rápido da bancada" (painel do caso), os campos
   "Tipo de medição"/"Ponto medido" e "Valor medido"/"Unidade"/"Valor esperado"/"Tolerância" saíam do
   bloco do card (relato do dono, com foto). Mesma causa das correções visuais anteriores: `md:grid-cols-2`
