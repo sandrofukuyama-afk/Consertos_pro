@@ -134,6 +134,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Login com **conta bloqueada** agora é barrado com aviso (antes entrava e via tudo vazio). Relato:
+  casos abertos num PC não apareciam no celular nem em outros PCs. Banco e site conferidos (mesmo banco: as
+  respostas da IA desses casos foram gravadas pela Vercel; versão do celular = atual). Só 1 conta ativa
+  (Sandro, gmail); 6 bloqueadas (ex.: "Usuario Teste" tec…@consertospro.com.br e san…@hotmail.com). Com RLS
+  `is_active_authenticated_user()`, conta bloqueada não vê perfil nem casos, mas `getCurrentUser()` montava um
+  usuário com o e-mail e deixava entrar. Agora `requireCurrentUser()` manda para `/login?error=A conta X está
+  bloqueada…`. **Hipótese a confirmar**: os outros aparelhos estão logados numa conta bloqueada.
+
 - **2026-10-16** — Título do caso na lista: `equipment_label` agora vem **antes** do nome do catálogo (o caso MSI
   ficava "MS 1563", nome curto do catálogo, em vez de "MSI Stealth 15M A11UEK (MS-1563)"). Primeiro uso da
   ferramenta de equipamento: a IA registrou "MSI GS65 Stealth" (chute; o técnico disse "Stealth 15M") —
