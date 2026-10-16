@@ -217,3 +217,24 @@ test("net and component detail helpers expose connected pads quickly", () => {
   assert.equal(netDetails.padPins.length, 1);
   assert.equal(netDetails.testPoints.length, 1);
 });
+
+test("searchBoardviewLabModel finds test points by the app numbering (TP-n)", () => {
+  const model = buildBoardviewLabModel(parsedFixture);
+
+  for (const query of ["tp-1", "TP1", "tp 1"]) {
+    const results = searchBoardviewLabModel(model, query, "both");
+    const hit = results.find((result) => result.selection.kind === "testPoint");
+    assert.equal(hit?.title, "TP-1", query);
+    assert.equal(hit?.selection.kind === "testPoint" && hit.selection.net?.name, "GND", query);
+  }
+
+  // Busca de net nao lista test points.
+  assert.ok(
+    searchBoardviewLabModel(model, "gnd", "both").every((result) => result.selection.kind !== "testPoint"),
+  );
+  // Filtro de lado vale para test point.
+  assert.equal(
+    searchBoardviewLabModel(model, "tp-1", "bottom").filter((result) => result.selection.kind === "testPoint").length,
+    0,
+  );
+});

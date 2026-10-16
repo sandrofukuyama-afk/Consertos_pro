@@ -469,15 +469,47 @@ export function searchBoardviewLabModel(
     });
   }
 
+  // Test points: o arquivo muitas vezes nao traz nome (o GenCAD grava "Probe_"),
+  // entao o app numera TP-1, TP-2... e e esse numero que a IA cita. Aceita
+  // "tp-672", "TP672" ou "tp 672"; so busca quando parece um TP, para nao
+  // encher a lista ao procurar uma net.
+  const compactQuery = compactSearchValue(normalized);
+  if (/^tp\d+$/.test(compactQuery)) {
+    for (const testPoint of model.testPoints) {
+      const compactId = compactSearchValue(testPoint.id);
+
+      if (!compactId.startsWith(compactQuery) || !matchesSide(testPoint.side, sideFilter)) {
+        continue;
+      }
+
+      results.push({
+        id: `testPoint:${testPoint.id}`,
+        title: testPoint.id,
+        subtitle: `test point • ${testPoint.netName || "sem net"} • ${testPoint.side}`,
+        keywords: [testPoint.id, testPoint.netName],
+        score: compactId === compactQuery ? 0 : 1,
+        selection: {
+          kind: "testPoint",
+          testPoint,
+          net: model.netsByName.get(testPoint.netName) ?? null,
+        },
+      });
+    }
+  }
+
   results.sort((left, right) => {
     if (left.score !== right.score) {
       return left.score - right.score;
     }
 
-    return left.title.localeCompare(right.title);
+    return left.title.localeCompare(right.title, undefined, { numeric: true });
   });
 
   return results.slice(0, limit);
+}
+
+function compactSearchValue(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function collectSpatialCandidates(

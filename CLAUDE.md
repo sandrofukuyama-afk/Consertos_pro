@@ -133,6 +133,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Laboratório: a busca agora acha **test points** (relato do dono: "tp-672", citado pela IA, dava
+  "Nenhum resultado"). Os test points não têm nome no arquivo (GenCAD grava `TESTPIN Probe_ …`), então o app
+  numera `TP-1, TP-2…` (`gencad.ts` e `landrex-testlink.ts`) — e a busca (`searchBoardviewLabModel` em `lab.ts`)
+  só procurava componentes e nets. Aceita "tp-672", "TP672", "tp 672" (só quando o texto parece TP, para não
+  poluir busca de net), respeita o filtro de lado e centraliza a placa no ponto. Conferido no arquivo real da
+  0P5D: TP-672 = +3VPCU (top), TP-141 = REGN6V (bottom). A ferramenta `detalhar_net` da IA agora avisa que
+  `TP-n` é numeração do app (não aparece no esquema; lá se procura pela net). Teste novo em `lab.test.mts`.
+
 - **2026-10-16** — Tela do caso: boardview e esquema abrem o laboratório **em outra aba** (pedido do dono, para
   ver chat e placa ao mesmo tempo). Todos os links do caso para `/boardview/lab` usam a aba nomeada
   `laboratorio-<id do caso>` (`labTabTarget()` em `diagnostic-bench-workspace.tsx`), então cliques seguintes

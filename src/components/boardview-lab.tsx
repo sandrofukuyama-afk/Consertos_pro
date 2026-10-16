@@ -1830,7 +1830,8 @@ export function BoardviewLab({
                       selectEntry(
                         hit.selection,
                         hit.selection.kind === "component" ||
-                          hit.selection.kind === "padPin",
+                          hit.selection.kind === "padPin" ||
+                          hit.selection.kind === "testPoint",
                       )
                     }
                     className="w-full rounded-[16px] px-3 py-3 text-left transition hover:bg-white/5"

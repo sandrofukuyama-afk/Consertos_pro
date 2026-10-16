@@ -440,6 +440,12 @@ async function describeNet(ctx: DiagnosticAgentToolContext, input: Record<string
       id: testPoint.id,
       lado: testPoint.side,
     })),
+    ...(details.testPoints.length
+      ? {
+          sobre_test_points:
+            "Os IDs TP-n sao numeracao do app (o arquivo nao traz nome do test point). O tecnico acha digitando o ID na busca do laboratorio; no esquema eles nao aparecem, la procure pela net. Ao citar, diga o lado da placa.",
+        }
+      : {}),
     abrir_no_lab: ctx.workbench.buildLabHref("boardview", { net: netName }),
   };
 }
