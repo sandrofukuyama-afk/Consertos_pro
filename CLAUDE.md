@@ -113,8 +113,9 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    (App Store → Custom Install).
    O servidor responde em 172.30.0.1 e em 192.168.0.32 (`W:` no PC). Arquivos vão em
    `HDD4\Enviar para o ConsertosPro`, **não** em `ConsertosPro-watcher\src` (pasta do código).
-6. Conferir as primeiras conversas com a memória completa: `ai_responses.structured_response_json->>'memoryMode'`
-   deve ser `full`; se aparecer `fallback`, ler `memoryFallbackReason` e corrigir o pedido.
+6. ~~Conferir as primeiras conversas com a memória completa~~ — conferido em 16/10: 20 respostas, todas
+   `memoryMode: "full"`, nenhum `fallback`; 5 conversas guardadas. Continuar de olho depois de mudar
+   ferramentas/instruções (`memoryFallbackReason` diz o motivo se cair no modo de segurança).
 7. O bot do Telegram busca só na biblioteca do app. Busca automática em grupos/canais do Telegram exigiria
    um userbot (conta de pessoa, api_id/api_hash) rodando no ZimaOS: não existe ainda; o dono quer.
 3. Varrer o resto do `HDD4` (mac_firmware, Memorias_Dados, HD_Antigo, Manutenção_Cursos_Apostilas…)
@@ -132,6 +133,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-16** — IA registra o equipamento do caso: ferramenta `atualizar_equipamento_do_caso` (fabricante/modelo/
+  placa) grava `equipment_label` (vira o título na lista) e liga `manufacturer_id`/`equipment_model_id` só se já
+  existirem no catálogo com o mesmo nome normalizado — **não cria entradas no catálogo**. Instrução no prompt:
+  usar quando o caso não tem modelo e o técnico disser, ou ler com certeza na foto; nunca chutar.
+  Mudar ferramentas/prompt invalida o raciocínio salvo das conversas guardadas: o chat agora manda
+  `thinking.block_binding.prefix_mismatch_behavior: "drop_block"` (beta `thinking-binding-controls-2026-08-01`),
+  que descarta só o raciocínio antigo em vez de dar 400. Modo de segurança fica sem essa opção (mínimo possível).
 
 - **2026-10-16** — Casos novos abertos no PC não apareciam no app instalado no iPhone (relato do dono). O banco tinha
   os casos (MSI MS-1563 de 16/10, HP 15s de 15/10) e a lista (`getDashboardData`) não filtra por usuário nem usa

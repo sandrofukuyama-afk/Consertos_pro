@@ -215,6 +215,19 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
       required: ["resumo"],
     },
   },
+  {
+    name: "atualizar_equipamento_do_caso",
+    description:
+      "Registra marca/modelo/placa do equipamento no caso (vira o titulo do caso na lista). Use quando o caso ainda nao tem equipamento registrado e o tecnico informar o modelo, ou voce ler com certeza na foto da etiqueta/placa; ou quando o tecnico corrigir. Nao chute: so com o modelo dito pelo tecnico ou lido claramente.",
+    input_schema: {
+      type: "object",
+      properties: {
+        fabricante: { type: "string", description: "Ex.: MSI, HP, Dell, Apple." },
+        modelo: { type: "string", description: "Modelo comercial, ex.: GF63 Thin 10SC, 15s-fq1126TU." },
+        placa: { type: "string", description: "Codigo da placa, se souber. Ex.: MS-16R31, DA0P5DMB8C0." },
+      },
+    },
+  },
 ];
 
 class ToolInputError extends Error {}
@@ -667,6 +680,83 @@ async function updateCaseSummary(ctx: DiagnosticAgentToolContext, input: Record<
   return { ok: true };
 }
 
+function normalizeCatalogName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Grava o equipamento no caso. O texto vai sempre em equipment_label (titulo
+ * na lista); fabricante e modelo so sao ligados ao catalogo quando ja existem
+ * com o mesmo nome — a IA nao cria entradas novas no catalogo.
+ */
+async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
+  const manufacturerName = readString(input, "fabricante");
+  const modelName = readString(input, "modelo");
+  const boardCode = readString(input, "placa");
+
+  if (!manufacturerName && !modelName && !boardCode) {
+    throw new ToolInputError("Informe ao menos fabricante, modelo ou placa.");
+  }
+
+  const label = [
+    [manufacturerName, modelName].filter(Boolean).join(" "),
+    boardCode ? (manufacturerName || modelName ? `(${boardCode})` : boardCode) : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, 120);
+
+  const update: Record<string, string> = { equipment_label: label };
+  const linked: string[] = [];
+
+  let manufacturerId: string | null = null;
+  if (manufacturerName) {
+    const { data } = await ctx.supabase
+      .from("manufacturers")
+      .select("id, name")
+      .eq("normalized_name", normalizeCatalogName(manufacturerName))
+      .maybeSingle();
+    if (data?.id) {
+      manufacturerId = data.id as string;
+      update.manufacturer_id = manufacturerId;
+      linked.push(`fabricante ${data.name}`);
+    }
+  }
+
+  if (modelName && manufacturerId) {
+    const { data } = await ctx.supabase
+      .from("equipment_models")
+      .select("id, model_name")
+      .eq("manufacturer_id", manufacturerId)
+      .eq("normalized_model_name", normalizeCatalogName(modelName))
+      .maybeSingle();
+    if (data?.id) {
+      update.equipment_model_id = data.id as string;
+      linked.push(`modelo ${data.model_name}`);
+    }
+  }
+
+  const { error } = await ctx.supabase.from("diagnostics").update(update).eq("id", ctx.diagnosticId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  ctx.wroteToCase.value = true;
+  ctx.actions.push(`Registrou o equipamento: ${label}`);
+
+  return {
+    ok: true,
+    equipamento: label,
+    ligado_ao_catalogo: linked.length ? linked : "nao (modelo nao cadastrado no catalogo; ficou so a descricao)",
+  };
+}
+
 const TOOL_HANDLERS: Record<
   string,
   (ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) => Promise<unknown>
@@ -684,6 +774,7 @@ const TOOL_HANDLERS: Record<
   registrar_hipotese: recordHypothesis,
   atualizar_hipotese: updateHypothesis,
   atualizar_resumo_do_caso: updateCaseSummary,
+  atualizar_equipamento_do_caso: updateCaseEquipment,
 };
 
 export async function runDiagnosticAgentTool(

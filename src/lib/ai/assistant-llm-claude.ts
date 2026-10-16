@@ -29,7 +29,13 @@ const COMPACTION_INSTRUCTIONS = [
   "nets, componentes, test points e paginas de esquema/boardview ja localizados e o que se",
   "concluiu deles; hipoteses com status; o que ja foi descartado; o proximo passo combinado.",
 ].join(" ");
-const CHAT_BETAS = ["server-side-fallback-2026-07-01", "compact-2026-01-12"];
+const CHAT_BETAS = [
+  "server-side-fallback-2026-07-01",
+  "compact-2026-01-12",
+  "thinking-binding-controls-2026-08-01",
+];
+// Modo de seguranca: o minimo possivel (historico so em texto, sem raciocinio
+// salvo), para responder mesmo se a API recusar algo do pedido completo.
 const SAFE_MODE_BETAS = ["server-side-fallback-2026-07-01"];
 const WEB_FETCH_MAX_CONTENT_TOKENS = 4000;
 const MAX_OUTPUT_TOKENS = 32000;
@@ -295,7 +301,12 @@ export async function runClaudeDiagnosticAgent(args: {
       max_tokens: MAX_OUTPUT_TOKENS,
       betas: args.safeMode ? SAFE_MODE_BETAS : CHAT_BETAS,
       fallbacks: "default",
-      thinking: { type: "adaptive" },
+      // O raciocinio salvo so vale enquanto instrucoes e ferramentas nao mudam.
+      // Ao mudar (nova ferramenta, prompt ajustado), "drop_block" descarta so o
+      // raciocinio antigo e segue com a conversa, em vez de recusar o pedido.
+      thinking: args.safeMode
+        ? { type: "adaptive" }
+        : { type: "adaptive", block_binding: { prefix_mismatch_behavior: "drop_block" } },
       output_config: { effort },
       ...(args.safeMode
         ? {}

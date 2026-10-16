@@ -41,6 +41,7 @@ const TOOL_LABELS: Record<string, string> = {
   registrar_hipotese: "registrando hipótese",
   atualizar_hipotese: "atualizando hipótese",
   atualizar_resumo_do_caso: "atualizando resumo",
+  atualizar_equipamento_do_caso: "registrando equipamento",
 };
 
 function newClientMessageId() {
