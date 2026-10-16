@@ -133,6 +133,15 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Casos novos abertos no PC não apareciam no app instalado no iPhone (relato do dono). O banco tinha
+  os casos (MSI MS-1563 de 16/10, HP 15s de 15/10) e a lista (`getDashboardData`) não filtra por usuário nem usa
+  cache. (1) `RefreshOnReturn` (`src/components/refresh-on-return.tsx`, montado no `AppShell`, menos em
+  `/boardview`): `router.refresh()` ao voltar para o app (visibilitychange/focus/pageshow, no máx. 1x a cada
+  10 s) e a cada 60 s na tela inicial. (2) Menu do celular → "Sistema" mostra **endereço e versão**
+  (`window.location.host` + `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA`) para comparar o app do celular com o PC. O
+  dono diz que o "Forçar Atualização" (recarrega tudo) também não trazia os casos: suspeita de o app ter sido
+  instalado de outro endereço — **confirmar com a linha de versão**.
+
 - **2026-10-16** — Cores iguais no boardview e no esquema (pedido do dono): **magenta = selecionado**, **dourado =
   relacionado**. No esquema (`schematic-pdf-viewer.tsx`) o selecionado era azul-claro e as outras ocorrências
   rosa — parecido demais com o magenta do boardview. Agora: selecionado magenta com etiqueta "Selecionado",

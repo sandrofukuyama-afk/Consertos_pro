@@ -2,15 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 
 import { BackButton } from "@/components/back-button";
 import { Logo } from "@/components/logo";
 import { LogoutButton } from "@/components/logout-button";
+import { RefreshOnReturn } from "@/components/refresh-on-return";
 import { navItems } from "@/lib/mock-data";
 import type { AppUser } from "@/types/domain";
 
 const navGroups = ["Bancada", "Consulta", "Gestão"] as const;
+
+// Commit publicado (a Vercel preenche); "local" fora dela.
+const APP_VERSION = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local";
+
+function subscribeNothing() {
+  return () => {};
+}
 
 function isNavItemActive(href: string, pathname: string) {
   if (href === "/") {
@@ -44,6 +52,8 @@ export function AppShell({
   backFallbackHref = "/",
 }: AppShellProps) {
   const pathname = usePathname();
+  // Endereco que o app abriu (no app instalado nao ha barra de endereco).
+  const appHost = useSyncExternalStore(subscribeNothing, () => window.location.host, () => null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const isWorkspaceMode = shellMode === "workspace";
@@ -227,6 +237,11 @@ const renderSidebarContent = () => (
               </div>
               <span className="text-xs text-[var(--muted)]">Limpar cache</span>
             </button>
+            {/* Para comparar o app instalado no celular com o do PC: mesmo
+                endereco e mesma versao = mesmos dados. */}
+            <p className="mt-3 break-all px-1 font-mono text-[11px] text-[var(--muted)]">
+              {appHost ?? "…"} • versão {APP_VERSION}
+            </p>
           </div>
  
 
@@ -241,6 +256,11 @@ const renderSidebarContent = () => (
         isWorkspaceMode ? "px-2 py-2 md:px-3 md:py-3" : "px-3 py-3 md:px-5 md:py-4"
       }`}
     >
+      {/* Dados novos ao voltar para o app (iPhone); a lista de casos tambem a cada
+          minuto. O laboratorio fica de fora para nao recarregar a placa aberta. */}
+      {pathname.startsWith("/boardview") ? null : (
+        <RefreshOnReturn intervalMs={pathname === "/" ? 60_000 : undefined} />
+      )}
       <div
         className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-xs transition-opacity duration-300 lg:hidden ${
           isMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
