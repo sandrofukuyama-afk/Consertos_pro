@@ -141,6 +141,10 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   (`window.location.host` + `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA`) para comparar o app do celular com o PC. O
   dono diz que o "Forçar Atualização" (recarrega tudo) também não trazia os casos: suspeita de o app ter sido
   instalado de outro endereço — **confirmar com a linha de versão**.
+  **Causa real (confirmada):** o celular estava na versão certa (3756035) e os casos estavam na lista, mas casos
+  abertos pelo chat rápido não têm modelo e apareciam como **"Equipamento sem modelo"** — iguais entre si, o
+  dono não os reconhecia. `getDashboardData()` agora usa o começo do relato (48 caracteres) como título
+  quando não há modelo/rótulo/série/fabricante.
 
 - **2026-10-16** — Cores iguais no boardview e no esquema (pedido do dono): **magenta = selecionado**, **dourado =
   relacionado**. No esquema (`schematic-pdf-viewer.tsx`) o selecionado era azul-claro e as outras ocorrências

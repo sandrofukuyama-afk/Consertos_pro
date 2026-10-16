@@ -41,6 +41,16 @@ function isComputerQueueCategory(categoryName: string | null | undefined) {
   );
 }
 
+const REPORT_TITLE_MAX_CHARS = 48;
+
+function summarizeReportAsTitle(report: string | null | undefined) {
+  const text = report?.replace(/\s+/g, " ").trim();
+  if (!text) {
+    return null;
+  }
+  return text.length > REPORT_TITLE_MAX_CHARS ? `${text.slice(0, REPORT_TITLE_MAX_CHARS).trimEnd()}…` : text;
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await createClient();
 
@@ -120,11 +130,15 @@ export async function getDashboardData(): Promise<DashboardData> {
     const manufacturer = pickRelation(row.manufacturers);
     const category = pickRelation(row.equipment_categories);
 
+    // Caso aberto pelo chat rapido nao tem modelo: o titulo vira o comeco do
+    // relato (ex.: "ms1563 stealth 15m nao liga"). Com "Equipamento sem modelo"
+    // os casos novos ficavam iguais na lista e pareciam nao ter aparecido.
     const modelName =
       model?.model_name ??
       row.equipment_label ??
       row.equipment_serial_number ??
       manufacturer?.name ??
+      summarizeReportAsTitle(row.initial_problem_report) ??
       "Equipamento sem modelo";
 
     return {
