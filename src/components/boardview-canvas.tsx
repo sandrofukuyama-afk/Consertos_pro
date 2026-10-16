@@ -58,6 +58,8 @@ type BoardviewCanvasProps = {
   onSelectItem: (selection: BoardviewLabSelection) => void;
   onCanvasMetricsChange?: (metrics: CanvasMetrics) => void;
   onViewportChange?: (viewport: BoardviewViewport) => void;
+  /** Abre o painel de detalhes do item tocado (botao do cartao). */
+  onOpenDetails?: () => void;
 };
 
 function sameViewport(left: BoardviewViewport, right: BoardviewViewport) {
@@ -159,6 +161,7 @@ export const BoardviewCanvas = forwardRef<
     onSelectItem,
     onCanvasMetricsChange,
     onViewportChange,
+    onOpenDetails,
   },
   ref,
 ) {
@@ -910,12 +913,6 @@ export const BoardviewCanvas = forwardRef<
   const tooltipBottomCount =
     tooltipNetDetails?.padPins.filter((pad) => pad.side === "bottom").length ?? 0;
   const tooltipVoltageHint = tooltipNetName ? inferNetVoltageHint(tooltipNetName) : null;
-  const tooltipLeft = tooltip
-    ? Math.min(Math.max(tooltip.x + 14, 8), Math.max(8, canvasSize.width - 272))
-    : 0;
-  const tooltipTop = tooltip
-    ? Math.min(Math.max(tooltip.y + 14, 8), Math.max(8, canvasSize.height - 200))
-    : 0;
 
   return (
     <div className="relative h-full min-h-0 min-w-0 w-full flex-1 overflow-hidden bg-[#12111a]">
@@ -933,10 +930,9 @@ export const BoardviewCanvas = forwardRef<
         />
 
         {tooltip ? (
-          <div
-            className="pointer-events-auto absolute z-20 w-64 rounded-[16px] border border-[var(--panel-border)] bg-[rgba(18,17,26,0.96)] p-3 text-xs shadow-[0_18px_40px_rgba(0,0,0,0.4)] backdrop-blur"
-            style={{ left: tooltipLeft, top: tooltipTop }}
-          >
+          // Cartao no canto inferior esquerdo, longe do ponto tocado, para nao
+          // tapar a pinagem do componente.
+          <div className="pointer-events-auto absolute bottom-2 left-2 z-20 w-64 max-w-[calc(100%-1rem)] rounded-[16px] border border-[var(--panel-border)] bg-[rgba(18,17,26,0.96)] p-3 text-xs shadow-[0_18px_40px_rgba(0,0,0,0.4)] backdrop-blur">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-[var(--foreground)]">
@@ -946,6 +942,15 @@ export const BoardviewCanvas = forwardRef<
                   {getTooltipSubtitle(tooltip.selection)}
                 </p>
               </div>
+              {onOpenDetails ? (
+                <button
+                  type="button"
+                  onClick={onOpenDetails}
+                  className="shrink-0 rounded-full border border-[var(--panel-border)] bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-copper)] transition hover:bg-white/10"
+                >
+                  Detalhes
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setTooltip(null)}

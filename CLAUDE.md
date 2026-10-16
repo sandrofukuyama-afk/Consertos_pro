@@ -133,6 +133,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-16** — Boardview: avisos não tapam mais a pinagem (relato do dono). Cada toque abria sozinho o
+  "Drawer técnico" (no iPhone ~94% da largura, cobria a placa) — agora só abre pelo botão **"Detalhes"** (novo
+  no cartão do toque, ou o da barra). O cartão do toque saiu de perto do ponto tocado e fica no **canto
+  inferior esquerdo** do boardview (com "Detalhes" e "Fechar"). `selectEntry()` em `boardview-lab.tsx` não
+  chama mais `setDetailsOpen(true)`; prop `onOpenDetails` no `boardview-canvas.tsx`.
+  Obs.: `lab-focus.test.mts` já falhava antes (import sem extensão `./lab` não resolve no `node --test`).
+
 - **2026-10-16** — Boardview: item encontrado na busca (ou tocado) fica em **destaque magenta** por cima de tudo
   (pedido do dono): caixa preenchida no componente, anel duplo, marcas de mira e etiqueta com o nome
   (`TP-672 • +3VPCU`, `PU1001`, `PU1001 pino 3`). Antes o selecionado era roxo fino e um test point buscado

@@ -1223,7 +1223,8 @@ export function BoardviewLab({
     }
 
     setSelected(selection);
-    setDetailsOpen(true);
+    // O painel de detalhes nao abre sozinho: no iPhone ele cobre quase a placa
+    // inteira e esconde a pinagem. Abre pelo botao "Detalhes" (cartao ou barra).
     pendingSelectionFocusRef.current = autoFocus;
   }
 
@@ -1817,6 +1818,7 @@ export function BoardviewLab({
           }
           onCanvasMetricsChange={setCanvasSize}
           onViewportChange={(nextViewport) => setBoardScale(nextViewport.scale)}
+          onOpenDetails={() => setDetailsOpen(true)}
         />
         {query.trim() ? (
           <div className="absolute left-3 top-3 z-10 w-[min(24rem,calc(100%-1.5rem))] overflow-hidden rounded-[20px] border border-[var(--panel-border)] bg-[rgba(18,17,26,0.94)] shadow-[0_18px_40px_rgba(0,0,0,0.3)] backdrop-blur">
