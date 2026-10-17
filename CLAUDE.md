@@ -121,6 +121,10 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 3. Varrer o resto do `HDD4` (mac_firmware, Memorias_Dados, HD_Antigo, Manutenção_Cursos_Apostilas…)
    atrás de mais esquemas/BIOS.
 4. Testar em produção: leitura de foto das doadoras, "Ver na placa" no boardview, comando `peça` no Telegram.
+9. Dono tem um gravador **CH341A**. Já suportado em código (driver `flashrom` do agente de bancada,
+   `FLASHROM_PROGRAMMER=ch341a_spi` por padrão), mas nunca testado de verdade: falta instalar o `flashrom`
+   no PC da bancada, trocar `DRIVER=flashrom` no `.env` do agente (hoje `ezp2023`) e testar leitura/gravação
+   com uma placa de sucata antes de usar em cliente.
 8. Boardview `.cad` (GenCAD) é salvo na biblioteca com `file_format = 'other'` (o enum do banco não tem
    valor `'cad'` ainda — `toDbFileFormat()` em `technical-assets.mjs` faz esse desvio). Todo lugar que
    decide "isso é um boardview" (tela do caso, tela de associação, ferramenta da IA) reconhece esse caso
@@ -134,6 +138,10 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — Dono confirmou que tem um gravador **CH341A** (perguntou se é compatível com o agente de
+  bancada). É: o driver `flashrom` já vem configurado por padrão pro `ch341a_spi`
+  (`tools/bench-agent/drivers.mjs`), só falta instalar o `flashrom` no PC da bancada e trocar `DRIVER` no
+  `.env`. Registrada como pendência nova (nunca testado com hardware real).
 - **2026-10-18** — Correção visual: painel "BIOS (gravador)" do caso saindo da largura do painel lateral
   (relato do dono, com foto — rolagem horizontal, caixa "Gravar BIOS" cortada). Causa: o `<select>` de
   "Escolha o arquivo a gravar" (`diagnostic-bios-panel.tsx`) não tinha `w-full`, então crescia pro tamanho
