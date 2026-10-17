@@ -153,7 +153,7 @@ export function DiagnosticBiosPanel({ diagnosticId, data }: { diagnosticId: stri
               name="source"
               required
               defaultValue=""
-              className="rounded-xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-xs"
+              className="w-full min-w-0 rounded-xl border border-[var(--panel-border)] bg-[var(--background)] px-3 py-2 text-xs"
             >
               <option value="" disabled>
                 Escolha o arquivo a gravar

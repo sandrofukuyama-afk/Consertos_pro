@@ -134,6 +134,10 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — Correção visual: painel "BIOS (gravador)" do caso saindo da largura do painel lateral
+  (relato do dono, com foto — rolagem horizontal, caixa "Gravar BIOS" cortada). Causa: o `<select>` de
+  "Escolha o arquivo a gravar" (`diagnostic-bios-panel.tsx`) não tinha `w-full`, então crescia pro tamanho
+  do texto mais longo das opções (nomes de BIOS da biblioteca) em vez de respeitar a largura do painel.
 - **2026-10-18** — Correção: mesmo com o caso MSI Stealth 15M já ligado ao modelo certo do catálogo, a busca
   da tela de associação ainda trazia arquivos de placas de vídeo sem relação (RTX 4060, RTX 3080/3090...).
   Causa real: `searchTechnicalAssets()` (`src/app/api/technical-assets/route.ts`) deixava passar **qualquer**
