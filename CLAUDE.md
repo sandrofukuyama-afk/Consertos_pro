@@ -147,6 +147,10 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   `manufacturer_id` a partir da placa se ainda não tiver fabricante — mais robusto pra próximos casos com
   nome de catálogo diferente do nome comercial. Os 3 casos já abertos desse notebook continuam sem o
   modelo ligado (dono preferiu não mexer neles agora); a correção vale pra próximas conversas.
+- **2026-10-18** — O caso `bbf8736b` (MSI Stealth 15M A11UEK) ainda trazia arquivos de placa sem relação na
+  tela de associação mesmo depois da correção acima (ela só vale daqui pra frente). Ligado esse caso ao
+  modelo certo do catálogo à mão (`equipment_model_id`); os outros 2 casos arquivados do mesmo notebook
+  continuam sem ligação, por enquanto sem necessidade.
 - **2026-10-16** — Chat: **resposta pronta se perdia** ao gravar a conversa (relato "erro de resposta pela IA").
   Caso MSI `bbf8736b`, pergunta das tensões do PU28 (BQ24780S) às 06:06 UTC: a IA respondeu (log às 06:07:25,
   2.722 tokens), mas `saveChatThread` falhou e nada foi gravado. Causa mais provável: caractere nulo `\u0000`
