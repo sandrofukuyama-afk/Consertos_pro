@@ -134,6 +134,19 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — Correção: a tela "Associar placa e arquivos técnicos" do caso MSI Stealth 15M A11UEK
+  (`bbf8736b`) mostrava esquemas de uma placa de vídeo sem relação (V332) numa busca sem texto nem placa
+  selecionada — relato do dono com foto. Causa: o caso nunca ficou ligado ao catálogo (`equipment_model_id`
+  vazio), então o filtro de placa da tela não tinha nada pra pré-selecionar. Raiz do problema:
+  `atualizar_equipamento_do_caso` (ferramenta da IA) só liga ao catálogo quando o nome do modelo bate
+  exato (normalizado) com `equipment_models.model_name` — e esse modelo estava salvo como `"MS 1563"`
+  (nome curto baseado no código da placa, forma que a IA nunca usa ao conversar com o técnico), enquanto
+  a IA registra o nome comercial (`"Stealth 15M A11UEK"`). Duas correções: (1) catálogo renomeado para o
+  nome comercial, como os outros modelos MSI já estão (CYBORG 15, GeForce RTX...); (2) a ferramenta agora
+  também tenta achar o modelo pelo **código da placa** (`model_boards`) quando o nome não bate, e preenche
+  `manufacturer_id` a partir da placa se ainda não tiver fabricante — mais robusto pra próximos casos com
+  nome de catálogo diferente do nome comercial. Os 3 casos já abertos desse notebook continuam sem o
+  modelo ligado (dono preferiu não mexer neles agora); a correção vale pra próximas conversas.
 - **2026-10-16** — Chat: **resposta pronta se perdia** ao gravar a conversa (relato "erro de resposta pela IA").
   Caso MSI `bbf8736b`, pergunta das tensões do PU28 (BQ24780S) às 06:06 UTC: a IA respondeu (log às 06:07:25,
   2.722 tokens), mas `saveChatThread` falhou e nada foi gravado. Causa mais provável: caractere nulo `\u0000`

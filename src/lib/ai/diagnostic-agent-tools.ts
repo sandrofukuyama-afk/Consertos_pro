@@ -741,6 +741,35 @@ async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Recor
     }
   }
 
+  // O nome que o tecnico fala (ex.: "Stealth 15M A11UEK") raramente bate com o nome
+  // curto do catalogo (ex.: "MS 1563", baseado no codigo da placa) — quando o modelo
+  // nao casou mas veio o codigo da placa, tenta achar o modelo por ela.
+  if (!update.equipment_model_id && boardCode) {
+    const { data: board } = await ctx.supabase
+      .from("boards")
+      .select("id, board_code")
+      .ilike("board_code", boardCode)
+      .maybeSingle();
+    if (board?.id) {
+      const { data: modelBoard } = await ctx.supabase
+        .from("model_boards")
+        .select("equipment_model_id, equipment_models(id, model_name, manufacturer_id)")
+        .eq("board_id", board.id)
+        .maybeSingle();
+      const model = modelBoard?.equipment_models as
+        | { id: string; model_name: string; manufacturer_id: string }
+        | null
+        | undefined;
+      if (model?.id && (!manufacturerId || model.manufacturer_id === manufacturerId)) {
+        update.equipment_model_id = model.id;
+        if (!manufacturerId) {
+          update.manufacturer_id = model.manufacturer_id;
+        }
+        linked.push(`modelo ${model.model_name} (pela placa ${board.board_code})`);
+      }
+    }
+  }
+
   const { error } = await ctx.supabase.from("diagnostics").update(update).eq("id", ctx.diagnosticId);
 
   if (error) {
