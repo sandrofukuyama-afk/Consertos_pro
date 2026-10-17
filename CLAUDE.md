@@ -134,6 +134,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — Correção: mesmo com o caso MSI Stealth 15M já ligado ao modelo certo do catálogo, a busca
+  da tela de associação ainda trazia arquivos de placas de vídeo sem relação (RTX 4060, RTX 3080/3090...).
+  Causa real: `searchTechnicalAssets()` (`src/app/api/technical-assets/route.ts`) deixava passar **qualquer**
+  arquivo sem placa/modelo/fabricante vinculado (`boardId === null`) quando um filtro de placa estava ativo,
+  mesmo sem nenhum texto digitado — então toda a parte da biblioteca ainda sem associação (boa parte dos
+  ~1006 arquivos) aparecia em qualquer busca por placa/modelo. Agora esse "deixa passar" só vale quando há
+  texto digitado (a pessoa está procurando algo pra associar de propósito); busca só por placa/modelo, sem
+  texto, mostra só o que já está de fato ligado a ela.
 - **2026-10-18** — Correção: a tela "Associar placa e arquivos técnicos" do caso MSI Stealth 15M A11UEK
   (`bbf8736b`) mostrava esquemas de uma placa de vídeo sem relação (V332) numa busca sem texto nem placa
   selecionada — relato do dono com foto. Causa: o caso nunca ficou ligado ao catálogo (`equipment_model_id`

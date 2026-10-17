@@ -886,14 +886,24 @@ async function searchTechnicalAssets(request: Request) {
       };
     })
     .filter((item) => (fileFormat ? item.fileFormat === fileFormat : true))
-    .filter((item) => (boardId ? item.boardId === boardId || item.boardId === null : true))
+    // Arquivo sem placa/modelo/fabricante vinculado (boardId/equipmentModelId/manufacturerId null)
+    // so entra na lista filtrada quando ha texto digitado: sem isso, toda a biblioteca ainda sem
+    // associacao aparecia em qualquer busca por placa/modelo (ex.: o caso virava uma lista de
+    // placas de video sem relacao nenhuma com o notebook do caso).
+    .filter((item) =>
+      boardId ? item.boardId === boardId || (item.boardId === null && Boolean(normalizedQuery)) : true,
+    )
     .filter((item) =>
       equipmentModelId
-        ? item.equipmentModelId === equipmentModelId || item.equipmentModelId === null
+        ? item.equipmentModelId === equipmentModelId ||
+          (item.equipmentModelId === null && Boolean(normalizedQuery))
         : true,
     )
     .filter((item) =>
-      manufacturerId ? item.manufacturerId === manufacturerId || item.manufacturerId === null : true,
+      manufacturerId
+        ? item.manufacturerId === manufacturerId ||
+          (item.manufacturerId === null && Boolean(normalizedQuery))
+        : true,
     )
     .filter((item) => {
       if (!normalizedQuery) {
