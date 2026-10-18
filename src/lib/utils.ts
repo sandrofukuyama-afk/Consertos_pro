@@ -45,7 +45,7 @@ export function formatProviderLabel(value: string) {
 }
 
 /** Limite padrao de gasto da IA por caso (US$) quando o caso nao tem um proprio. So avisa, nao bloqueia. */
-export const DEFAULT_CHAT_COST_LIMIT_USD = 3;
+export const DEFAULT_CHAT_COST_LIMIT_USD = 10;
 
 /** A partir dessa fracao do limite o chat mostra o aviso "perto do limite". */
 export const CHAT_COST_WARNING_RATIO = 0.8;

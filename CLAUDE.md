@@ -149,7 +149,7 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   prompt fixo invalida o cache de 1 h uma vez por conversa e descarta o raciocínio antigo (`drop_block`), sem 400.
   Se a IA ficar curta demais em casos difíceis, afrouxar o limite de linhas.
 
-- **2026-10-18** — **Limite de gasto da IA por caso** (pedido do dono). Padrão US$ 3,00
+- **2026-10-18** — **Limite de gasto da IA por caso** (pedido do dono). Padrão US$ 10,00 (era 3,00 no primeiro commit; dono pediu ~US$ 10)
   (`DEFAULT_CHAT_COST_LIMIT_USD` em `src/lib/utils.ts`); cada caso pode ter o seu (coluna nova
   `diagnostics.ai_cost_limit_usd`, vazio = padrão; ação `updateChatCostLimitAction`). A etiqueta do topo do chat
   vira "Gasto no caso: US$ X de US$ Y" (toque abre o campo do limite; `chat-cost-meter.tsx`); a partir de 80% aviso
