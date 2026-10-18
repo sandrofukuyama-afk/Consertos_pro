@@ -419,7 +419,10 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         resolved_cases(
           case_status,
           resolution_summary,
-          repair_outcome
+          repair_outcome,
+          final_failure_mode,
+          confirmed_causes(title, technical_explanation, is_primary),
+          applied_solutions(title, procedure_description)
         ),
         diagnostic_symptoms(
           id,
@@ -1030,6 +1033,18 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           caseStatus: prettifyStatus(resolvedCase.case_status),
           resolutionSummary: resolvedCase.resolution_summary,
           repairOutcome: resolvedCase.repair_outcome,
+          finalFailureMode: resolvedCase.final_failure_mode ?? null,
+          cause: (() => {
+            const causes = resolvedCase.confirmed_causes ?? [];
+            const cause = causes.find((item) => item.is_primary) ?? causes[0];
+            return cause ? { title: cause.title, explanation: cause.technical_explanation } : null;
+          })(),
+          solution: resolvedCase.applied_solutions?.[0]
+            ? {
+                title: resolvedCase.applied_solutions[0].title,
+                procedure: resolvedCase.applied_solutions[0].procedure_description,
+              }
+            : null,
         }
       : null,
     symptoms: (data.diagnostic_symptoms ?? []).map((item) => {

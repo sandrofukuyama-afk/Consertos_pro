@@ -7,6 +7,12 @@ import {
   searchBoardviewLabModel,
 } from "@/lib/boardview/lab";
 import { findSchematicPdfMatches } from "@/lib/boardview/schematic-pdf";
+import {
+  CLOSURE_CASE_STATUSES,
+  CLOSURE_CAUSE_TYPES,
+  CLOSURE_SOLUTION_TYPES,
+  closeDiagnosticCase,
+} from "@/lib/services/diagnostic-closure";
 import type { DiagnosticTechnicalWorkbench } from "@/lib/services/assistant-technical-context";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -21,6 +27,8 @@ export type DiagnosticAgentToolContext = {
   actions: string[];
   /** Indica se o agente gravou algo no caso (para revalidar a pagina). */
   wroteToCase: { value: boolean };
+  /** A IA encerrou o caso nesta resposta (gera o parecer tecnico depois). */
+  closedCase?: { value: boolean };
 };
 
 const MEASUREMENT_TYPES = [
@@ -33,6 +41,9 @@ const MEASUREMENT_TYPES = [
   "continuity",
   "other",
 ] as const;
+
+const TEST_RESULT_STATUSES = ["passed", "failed", "inconclusive"] as const;
+const SCREEN_CONDITIONS = ["good", "broken", "no_image"] as const;
 
 const HYPOTHESIS_STATUSES = [
   "open",
@@ -226,6 +237,84 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
         modelo: { type: "string", description: "Modelo comercial, ex.: GF63 Thin 10SC, 15s-fq1126TU." },
         placa: { type: "string", description: "Codigo da placa, se souber. Ex.: MS-16R31, DA0P5DMB8C0." },
       },
+    },
+  },
+  {
+    name: "encerrar_diagnostico",
+    description:
+      "Encerra o caso e preenche o fechamento no painel: estado final, resumo, resultado do reparo, causa, solucao, testes feitos e dados do aparelho. Use SO quando o tecnico disser que o caso terminou (consertou e testou, vai entregar, cliente recusou, sem conserto) ou pedir para encerrar. Preencha com o que foi apurado na conversa e nos registros do caso (use consultar_registros_do_caso antes); nao invente: campo sem informacao fica de fora. Depois de encerrar, responda em 1-2 frases com o resumo do fechamento.",
+    input_schema: {
+      type: "object",
+      properties: {
+        estado_final: {
+          type: "string",
+          enum: [...CLOSURE_CASE_STATUSES],
+          description:
+            "confirmed = causa confirmada e reparo testado; probable = consertou mas a causa nao foi 100% comprovada; unresolved = sem conserto/cliente recusou.",
+        },
+        resumo: {
+          type: "string",
+          description: "Resumo tecnico do caso em 2-4 frases: defeito, o que foi medido, causa e o que foi feito.",
+        },
+        resultado_do_reparo: {
+          type: "string",
+          description: "Como o aparelho ficou, ex.: 'Liga, carrega e passou 30 min de teste' ou 'Devolvido sem reparo'.",
+        },
+        modo_de_falha: { type: "string", description: "Curto, ex.: 'PPBUS_G3H em curto', 'BIOS corrompida'." },
+        causa: {
+          type: "object",
+          properties: {
+            tipo: { type: "string", enum: [...CLOSURE_CAUSE_TYPES] },
+            titulo: { type: "string", description: "Ex.: 'Capacitor C7130 em curto no PPBUS_G3H'." },
+            explicacao: { type: "string", description: "Explicacao tecnica com as evidencias (medicoes)." },
+          },
+          required: ["tipo", "titulo", "explicacao"],
+        },
+        solucao: {
+          type: "object",
+          properties: {
+            tipo: { type: "string", enum: [...CLOSURE_SOLUTION_TYPES] },
+            titulo: { type: "string" },
+            procedimento: {
+              type: "string",
+              description: "O que foi feito, com referencias (componente trocado, valor, arquivo de BIOS).",
+            },
+          },
+          required: ["tipo", "titulo", "procedimento"],
+        },
+        testes_feitos: {
+          type: "array",
+          description: "Testes que o tecnico disse ter feito (nao repetir cada medicao, ja registrada).",
+          items: {
+            type: "object",
+            properties: {
+              teste: {
+                type: "string",
+                description:
+                  "Nome do teste do catalogo: Medição de tensão, Teste de continuidade, Regravação de BIOS, Substituição cruzada, Teste com fonte assimétrica.",
+              },
+              o_que_aconteceu: { type: "string" },
+              resultado: { type: "string", enum: [...TEST_RESULT_STATUSES] },
+            },
+            required: ["teste", "o_que_aconteceu", "resultado"],
+          },
+        },
+        aparelho: {
+          type: "object",
+          description: "Dados do aparelho que o tecnico informou (so os que ele disse).",
+          properties: {
+            numero_de_serie: { type: "string" },
+            chega_alimentacao: {
+              type: "boolean",
+              description: "Na entrada: tinha alimentacao (carregador detectado/consumo)?",
+            },
+            liga: { type: "boolean", description: "Na entrada: ligava?" },
+            tela: { type: "string", enum: [...SCREEN_CONDITIONS] },
+            estado_fisico: { type: "string", description: "Ex.: 'carcaca riscada, sinal de liquido no teclado'." },
+          },
+        },
+      },
+      required: ["estado_final", "resumo", "resultado_do_reparo"],
     },
   },
 ];
@@ -786,6 +875,178 @@ async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Recor
   };
 }
 
+function readObject(input: Record<string, unknown>, key: string) {
+  const value = input[key];
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+async function recordCaseTests(ctx: DiagnosticAgentToolContext, items: unknown) {
+  const registered: string[] = [];
+  const unmatched: string[] = [];
+
+  if (!Array.isArray(items) || !items.length) {
+    return { registered, unmatched };
+  }
+
+  const [{ data: catalog }, { data: lastRun }, { data: primaryBoard }] = await Promise.all([
+    ctx.supabase.from("tests").select("id, name"),
+    ctx.supabase
+      .from("diagnostic_test_runs")
+      .select("step_order")
+      .eq("diagnostic_id", ctx.diagnosticId)
+      .order("step_order", { ascending: false })
+      .limit(1),
+    ctx.supabase
+      .from("diagnostic_boards")
+      .select("id")
+      .eq("diagnostic_id", ctx.diagnosticId)
+      .eq("is_primary", true)
+      .maybeSingle(),
+  ]);
+
+  let step = lastRun?.[0]?.step_order ?? 0;
+
+  for (const raw of items) {
+    const item = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const name = readString(item, "teste");
+    const happened = readString(item, "o_que_aconteceu");
+    if (!name || !happened) {
+      continue;
+    }
+    const wanted = normalizeCatalogName(name);
+    const test = (catalog ?? []).find((entry) => {
+      const known = normalizeCatalogName(String(entry.name));
+      return known === wanted || known.includes(wanted) || wanted.includes(known);
+    });
+    if (!test) {
+      unmatched.push(name);
+      continue;
+    }
+
+    step += 1;
+    const { error } = await ctx.supabase.from("diagnostic_test_runs").insert({
+      diagnostic_id: ctx.diagnosticId,
+      test_id: test.id,
+      diagnostic_board_id: primaryBoard?.id ?? null,
+      performed_by_user_id: ctx.userId,
+      step_order: step,
+      result_status: readEnum(item, "resultado", TEST_RESULT_STATUSES),
+      actual_result: happened,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    registered.push(String(test.name));
+  }
+
+  return { registered, unmatched };
+}
+
+async function recordDeviceData(ctx: DiagnosticAgentToolContext, device: Record<string, unknown> | null) {
+  const filled: string[] = [];
+  if (!device) {
+    return filled;
+  }
+
+  const { data: current } = await ctx.supabase
+    .from("diagnostics")
+    .select("equipment_details")
+    .eq("id", ctx.diagnosticId)
+    .maybeSingle();
+  const details = { ...((current?.equipment_details as Record<string, unknown> | null) ?? {}) };
+  const update: Record<string, unknown> = {};
+
+  const serial = readString(device, "numero_de_serie");
+  if (serial) {
+    update.equipment_serial_number = serial;
+    filled.push("série");
+  }
+  const physical = readString(device, "estado_fisico");
+  if (physical) {
+    update.physical_condition_notes = physical;
+    filled.push("estado físico");
+  }
+  if (typeof device.chega_alimentacao === "boolean") {
+    details.powerPresent = device.chega_alimentacao;
+    filled.push("alimentação");
+  }
+  if (typeof device.liga === "boolean") {
+    details.powersOn = device.liga;
+    filled.push("liga");
+  }
+  const screen = readString(device, "tela");
+  if (screen && (SCREEN_CONDITIONS as readonly string[]).includes(screen)) {
+    details.screenCondition = screen;
+    filled.push("tela");
+  }
+
+  if (!filled.length) {
+    return filled;
+  }
+
+  const { error } = await ctx.supabase
+    .from("diagnostics")
+    .update({ ...update, equipment_details: details })
+    .eq("id", ctx.diagnosticId);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return filled;
+}
+
+async function closeCase(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
+  const caseStatus = readEnum(input, "estado_final", CLOSURE_CASE_STATUSES);
+  const summary = readString(input, "resumo", true)!;
+  const outcome = readString(input, "resultado_do_reparo", true)!;
+  const cause = readObject(input, "causa");
+  const solution = readObject(input, "solucao");
+
+  // Testes e dados do aparelho antes do fechamento: entram no texto usado na busca de casos parecidos.
+  const tests = await recordCaseTests(ctx, input.testes_feitos);
+  const deviceFields = await recordDeviceData(ctx, readObject(input, "aparelho"));
+
+  await closeDiagnosticCase(ctx.supabase, ctx.diagnosticId, ctx.userId, {
+    caseStatus,
+    resolutionSummary: summary,
+    repairOutcome: outcome,
+    finalFailureMode: readString(input, "modo_de_falha"),
+    cause: cause
+      ? {
+          type: readEnum(cause, "tipo", CLOSURE_CAUSE_TYPES),
+          title: readString(cause, "titulo") ?? "",
+          explanation: readString(cause, "explicacao") ?? "",
+        }
+      : null,
+    solution: solution
+      ? {
+          type: readEnum(solution, "tipo", CLOSURE_SOLUTION_TYPES),
+          title: readString(solution, "titulo") ?? "",
+          procedure: readString(solution, "procedimento") ?? "",
+        }
+      : null,
+  });
+
+  ctx.wroteToCase.value = true;
+  if (ctx.closedCase) {
+    ctx.closedCase.value = true;
+  }
+  ctx.actions.push(`Encerrou o caso (${caseStatus})`);
+  if (tests.registered.length) {
+    ctx.actions.push(`Registrou testes: ${tests.registered.join(", ")}`);
+  }
+  if (deviceFields.length) {
+    ctx.actions.push(`Preencheu dados do aparelho: ${deviceFields.join(", ")}`);
+  }
+
+  return {
+    ok: true,
+    testes_registrados: tests.registered,
+    testes_fora_do_catalogo: tests.unmatched,
+    dados_do_aparelho: deviceFields,
+    parecer: "o parecer tecnico estruturado sera gerado automaticamente em seguida",
+  };
+}
+
 const TOOL_HANDLERS: Record<
   string,
   (ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) => Promise<unknown>
@@ -804,6 +1065,7 @@ const TOOL_HANDLERS: Record<
   atualizar_hipotese: updateHypothesis,
   atualizar_resumo_do_caso: updateCaseSummary,
   atualizar_equipamento_do_caso: updateCaseEquipment,
+  encerrar_diagnostico: closeCase,
 };
 
 export async function runDiagnosticAgentTool(

@@ -141,6 +141,18 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — **IA encerra o caso pelo chat e preenche o painel** (pedido do dono, com foto do painel). Até aqui
+  todo caso era fechado pelo formulário com uma frase curta ("trocado fusível aberto") e causa, solução e testes
+  ficavam vazios. Ferramenta nova `encerrar_diagnostico` (`diagnostic-agent-tools.ts`): quando o técnico diz que
+  terminou (consertou/entregar/cliente recusou) ou pede para encerrar, a IA grava estado final, resumo, resultado,
+  modo de falha, causa confirmada, solução aplicada, testes feitos (casados por nome com o catálogo `tests`, hoje só
+  5; fora do catálogo são devolvidos à IA e não gravados) e dados do aparelho (série, estado físico, alimentação,
+  liga, tela). Lógica de encerramento extraída para `closeDiagnosticCase()` em `src/lib/services/diagnostic-closure.ts`,
+  usada também pelo formulário. Depois da resposta, o parecer técnico estruturado é gerado sozinho (`after()` em
+  `diagnostic-chat-post.ts`, custo de 1 parecer). Painel "Caso encerrado" agora mostra resultado, modo de falha,
+  causa e solução. Instrução nova no `PERSONA_PROMPT` (pergunta antes se faltar algo essencial). Não testado com
+  um caso real.
+
 - **2026-10-18** — Correção: a tela "Associar placa e arquivos técnicos" **recatalogava** cada arquivo escolhido
   com a placa/modelo do caso (`technical_asset_links` + `technical_assets.board_id/equipment_model_id`). Caso
   `ae5571a7` (MacBook Air A1466 2015, 820-00165-A): antes de chegarem os arquivos da 820-00165-A, a IA usou como

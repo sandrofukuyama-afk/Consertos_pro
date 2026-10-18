@@ -666,11 +666,28 @@ export function DiagnosticBenchWorkspace({
             <div>
               <div className="flex flex-wrap gap-2">
                 <StatusPill label={detail.resolvedCase.caseStatus} />
-                <StatusPill label={detail.resolvedCase.repairOutcome} />
               </div>
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                 {detail.resolvedCase.resolutionSummary}
               </p>
+              <div className="mt-3 divide-y divide-[var(--panel-border)]">
+                <InfoRow label="Resultado" value={detail.resolvedCase.repairOutcome} />
+                {detail.resolvedCase.finalFailureMode ? (
+                  <InfoRow label="Modo de falha" value={detail.resolvedCase.finalFailureMode} />
+                ) : null}
+              </div>
+              {detail.resolvedCase.cause ? (
+                <div className="mt-3 text-sm leading-6">
+                  <p className="font-semibold text-[var(--foreground)]">Causa: {detail.resolvedCase.cause.title}</p>
+                  <p className="text-[var(--muted)]">{detail.resolvedCase.cause.explanation}</p>
+                </div>
+              ) : null}
+              {detail.resolvedCase.solution ? (
+                <div className="mt-3 text-sm leading-6">
+                  <p className="font-semibold text-[var(--foreground)]">Solução: {detail.resolvedCase.solution.title}</p>
+                  <p className="whitespace-pre-wrap text-[var(--muted)]">{detail.resolvedCase.solution.procedure}</p>
+                </div>
+              ) : null}
             </div>
           ) : (
             <DiagnosticClosureForm diagnosticId={detail.id} />

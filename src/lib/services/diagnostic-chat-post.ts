@@ -3,6 +3,7 @@ import { after } from "next/server";
 
 import { analyzeBoardImage } from "@/lib/ai/image-analysis";
 import type { ClaudeChatProgressEvent } from "@/lib/ai/assistant-llm-claude";
+import { generateDiagnosticAssistantBenchResponse } from "@/lib/services/assistant";
 import { sendDiagnosticChatMessage } from "@/lib/services/diagnostic-chat";
 import { queueDiagnosticSemanticSync } from "@/lib/services/semantic-sync";
 import type { createClient } from "@/lib/supabase/server";
@@ -169,7 +170,7 @@ export async function postDiagnosticChatMessage(
     });
   }
 
-  const { wroteToCase } = await sendDiagnosticChatMessage(
+  const { wroteToCase, closedCase } = await sendDiagnosticChatMessage(
     diagnosticId,
     message,
     newAttachments.map(({ id, mimeType, base64 }) => ({ id, mimeType, base64 })),
@@ -184,6 +185,20 @@ export async function postDiagnosticChatMessage(
       revalidatePath("/");
     } catch {
       // So atualiza a lista de casos; nao pode derrubar a resposta ja salva.
+    }
+  }
+
+  // A IA encerrou o caso: gera o parecer tecnico estruturado do painel depois da
+  // resposta (leva ~30 s e nao pode segurar a tela).
+  if (closedCase) {
+    const generateReport = () =>
+      generateDiagnosticAssistantBenchResponse(diagnosticId).catch((error: unknown) => {
+        console.error("Parecer automatico apos encerrar o caso falhou", error);
+      });
+    try {
+      after(generateReport);
+    } catch {
+      void generateReport();
     }
   }
 

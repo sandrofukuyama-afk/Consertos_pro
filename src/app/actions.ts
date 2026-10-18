@@ -13,9 +13,9 @@ import {
 } from "@/lib/ai/image-analysis";
 import { generateDiagnosticAssistantBenchResponse } from "@/lib/services/assistant";
 import { postDiagnosticChatMessage } from "@/lib/services/diagnostic-chat-post";
+import { closeDiagnosticCase } from "@/lib/services/diagnostic-closure";
 import {
   syncDiagnosticEmbeddingSource,
-  syncResolvedCaseEmbeddingSource,
   syncSemanticBacklog,
   syncTechnicalDocumentSemanticSource,
 } from "@/lib/services/semantic";
@@ -1657,92 +1657,29 @@ export async function closeDiagnosticAction(formData: FormData) {
     redirect(`/diagnosticos/${diagnosticId}?error=Encerramento incompleto.`);
   }
 
-  const { data: existing } = await supabase
-    .from("resolved_cases")
-    .select("id")
-    .eq("diagnostic_id", diagnosticId)
-    .maybeSingle();
-
-  if (existing) {
-    redirect(`/diagnosticos/${diagnosticId}?error=Este diagnóstico já foi encerrado.`);
-  }
-
-  const mappedStatus = caseStatus === "unresolved" ? "unresolved" : "resolved";
-
-  const { error: diagnosticError } = await supabase
-    .from("diagnostics")
-    .update({
-      status: mappedStatus,
-      completed_at: new Date().toISOString(),
-      current_summary: resolutionSummary,
-    })
-    .eq("id", diagnosticId);
-
-  if (diagnosticError) {
-    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(diagnosticError.message)}`);
-  }
-
-  const { data: resolvedCase, error: resolvedError } = await supabase
-    .from("resolved_cases")
-    .insert({
-      diagnostic_id: diagnosticId,
-      case_status: caseStatus,
-      resolution_summary: resolutionSummary,
-      final_failure_mode: finalFailureMode,
-      repair_outcome: repairOutcome,
-      reviewed_by_user_id: user.id,
-      reviewed_at: new Date().toISOString(),
-      knowledge_promoted_at:
-        caseStatus === "confirmed" ? new Date().toISOString() : null,
-    })
-    .select("id")
-    .single();
-
-  if (resolvedError) {
-    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(resolvedError.message)}`);
-  }
-
-  let confirmedCauseId: string | null = null;
-
-  if (causeType && causeTitle && technicalExplanation) {
-    const { data: cause, error: causeError } = await supabase
-      .from("confirmed_causes")
-      .insert({
-        resolved_case_id: resolvedCase.id,
-        cause_type: causeType,
-        title: causeTitle,
-        technical_explanation: technicalExplanation,
-        is_primary: true,
-      })
-      .select("id")
-      .single();
-
-    if (causeError) {
-      redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(causeError.message)}`);
-    }
-
-    confirmedCauseId = cause.id;
-  }
-
-  if (solutionType && solutionTitle && procedureDescription) {
-    const { error: solutionError } = await supabase.from("applied_solutions").insert({
-      resolved_case_id: resolvedCase.id,
-      confirmed_cause_id: confirmedCauseId,
-      solution_type: solutionType,
-      title: solutionTitle,
-      procedure_description: procedureDescription,
-      was_effective: caseStatus !== "unresolved",
-      performed_by_user_id: user.id,
-      performed_at: new Date().toISOString(),
+  try {
+    await closeDiagnosticCase(supabase, diagnosticId, user.id, {
+      caseStatus: caseStatus === "unresolved" ? "unresolved" : caseStatus === "probable" ? "probable" : "confirmed",
+      resolutionSummary,
+      repairOutcome,
+      finalFailureMode,
+      cause:
+        causeType && causeTitle && technicalExplanation
+          ? { type: causeType, title: causeTitle, explanation: technicalExplanation }
+          : null,
+      solution:
+        solutionType && solutionTitle && procedureDescription
+          ? { type: solutionType, title: solutionTitle, procedure: procedureDescription }
+          : null,
     });
-
-    if (solutionError) {
-      redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(solutionError.message)}`);
-    }
+  } catch (error) {
+    redirect(
+      `/diagnosticos/${diagnosticId}?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Falha ao encerrar o diagnóstico.",
+      )}`,
+    );
   }
 
-  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
-  await syncResolvedCaseEmbeddingSource(diagnosticId, supabase);
   revalidatePath(`/diagnosticos/${diagnosticId}`);
   revalidatePath("/");
   revalidatePath("/conhecimento");

@@ -373,6 +373,9 @@ export type DiagnosticDetail = {
     caseStatus: string;
     resolutionSummary: string;
     repairOutcome: string;
+    finalFailureMode: string | null;
+    cause: { title: string; explanation: string } | null;
+    solution: { title: string; procedure: string } | null;
   } | null;
   symptoms: Array<{
     id: string;

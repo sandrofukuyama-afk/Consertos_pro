@@ -76,6 +76,10 @@ const PERSONA_PROMPT = [
   "- Se o estado do caso nao traz o equipamento (sem modelo) e o tecnico disser marca/",
   "  modelo/placa, ou voce ler com certeza na foto da etiqueta, registre com",
   "  atualizar_equipamento_do_caso. Corrija se o tecnico corrigir. Nunca chute modelo.",
+  "- Quando o tecnico disser que o caso terminou (consertou e testou, vai entregar,",
+  "  cliente recusou, sem conserto) ou pedir para encerrar, use encerrar_diagnostico",
+  "  preenchendo causa, solucao, testes e dados do aparelho com o que foi apurado. Se",
+  "  faltar algo essencial (ex.: o que foi trocado), pergunte antes de encerrar.",
   "- Pense na seguranca da placa e do tecnico: avise antes de passos com risco",
   "  (injetar tensao, retirar componente, aplicar calor perto de conectores/BGA).",
   "",
@@ -206,7 +210,7 @@ export async function sendDiagnosticChatMessage(
     existingUserResponseId?: string;
     onProgress?: (event: ClaudeChatProgressEvent) => void;
   } = {},
-): Promise<{ replyText: string; wroteToCase: boolean }> {
+): Promise<{ replyText: string; wroteToCase: boolean; closedCase: boolean }> {
   if (!isClaudeChatConfigured()) {
     throw new Error(
       "O chat de diagnóstico com IA (Claude) ainda não está configurado. Adicione a variável ANTHROPIC_API_KEY.",
@@ -290,12 +294,13 @@ export async function sendDiagnosticChatMessage(
 
   const actions: string[] = [];
   const wroteToCase = { value: false };
+  const closedCase = { value: false };
 
   const agentArgs = {
     stableSystemPrompt: [PERSONA_PROMPT, "", specialist.systemInstructions].join("\n"),
     history: thread.messages,
     newMessages,
-    toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase },
+    toolContext: { diagnosticId, userId, supabase, workbench, actions, wroteToCase, closedCase },
     deep: options.deep,
     onProgress: options.onProgress,
   };
@@ -398,7 +403,7 @@ export async function sendDiagnosticChatMessage(
     throw insertAssistantError;
   }
 
-  return { replyText, wroteToCase: wroteToCase.value };
+  return { replyText, wroteToCase: wroteToCase.value, closedCase: closedCase.value };
 }
 
 /**
