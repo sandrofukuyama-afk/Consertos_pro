@@ -10,11 +10,14 @@ import { logTokenUsage } from "@/lib/services/token-logger";
 // Opus com raciocinio adaptativo: o agente de bancada precisa seguir nets,
 // cruzar boardview/esquema e medicoes em varios passos antes de responder.
 // Modelo e esforco podem ser trocados por env var sem alterar codigo.
-// Custo: Sonnet 5.5 no dia a dia (metade do preco do Opus); o botao
-// "Pensar mais" do chat e o parecer usam o Opus 5.5.
-const DEFAULT_CLAUDE_CHAT_MODEL = "claude-sonnet-5-5";
+// Custo: Opus 5.5 esforco high no dia a dia (dobro do preco do Sonnet 5.5
+// medium usado ate 18/10) -- dono relatou que o Sonnet medium nao dava conta
+// de casos mais dificeis e precisou usar o Claude Code por fora pra terminar
+// o diagnostico do MS-1563. O botao "Pensar mais" usa o mesmo modelo/esforco
+// agora (fica sem efeito ate o dia a dia e o modo "pensar mais" divergirem de novo).
+const DEFAULT_CLAUDE_CHAT_MODEL = "claude-opus-5-5";
 const DEFAULT_CLAUDE_DEEP_MODEL = "claude-opus-5-5";
-const DEFAULT_CLAUDE_CHAT_EFFORT = "medium";
+const DEFAULT_CLAUDE_CHAT_EFFORT = "high";
 const CLAUDE_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
 // Voltas de consulta por mensagem. A conversa inteira fica em cache, entao cada
 // volta extra custa pouco; o limite so evita que uma resposta se arraste.

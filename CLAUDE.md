@@ -29,9 +29,12 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 - **PDF no servidor**: usar `extractPdfText` de `src/lib/pdf-text.ts` (carrega `pdf-parse/worker`
   antes do `pdf-parse`; sem isso dá "DOMMatrix is not defined" em produção).
 - **IA**: chat do diagnóstico = agente Claude com ferramentas (`src/lib/ai/assistant-llm-claude.ts`,
-  `diagnostic-agent-tools.ts`). Dia a dia em **Sonnet 5.5** (`ANTHROPIC_CHAT_MODEL`); botão
-  **"🧠 Pensar mais"** do chat (vale para uma mensagem) e o parecer técnico usam **Opus 5.5**
-  (`ANTHROPIC_CHAT_DEEP_MODEL`). Esforço `medium` (`ANTHROPIC_CHAT_EFFORT`). Escolha do dono para reduzir custo.
+  `diagnostic-agent-tools.ts`). Dia a dia em **Opus 5.5 esforço `high`** (`ANTHROPIC_CHAT_MODEL`/
+  `ANTHROPIC_CHAT_EFFORT`) desde 18/10 — o dono relatou que o Sonnet 5.5 esforço `medium` (usado até então
+  pra cortar custo) não dava conta de casos mais difíceis e precisou terminar um diagnóstico (MS-1563) pelo
+  Claude Code por fora. Botão **"🧠 Pensar mais"** e o parecer técnico usam **Opus 5.5** (`ANTHROPIC_CHAT_DEEP_MODEL`)
+  também — como o esforço é o mesmo dos dois, o botão hoje não muda nada na prática (só volta a fazer
+  diferença se o dia a dia for rebaixado de novo, ou se o modo "pensar mais" ganhar um esforço próprio mais alto).
 - **Envio do chat**: o composer (`diagnostic-chat-composer.tsx`) faz `fetch` em `POST /api/diagnosticos/[id]/chat`,
   que devolve a resposta **aos poucos** (NDJSON: `text`, `tools`, `ping` a cada 10 s, `done`/`error`); no fim a tela
   faz `router.refresh()`. Sem sinal por 45 s (90 s no primeiro) → aviso "Tentar de novo" sem perder o texto.
@@ -138,6 +141,15 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — Chat do diagnóstico volta pra **Opus 5.5, esforço `high`**, no dia a dia (era Sonnet 5.5
+  esforço `medium` desde 13/10, pra cortar custo). Motivo: o dono relatou que as respostas pareciam "bem
+  inferiores" ao chat do Claude Code; confirmado com um caso real — precisou terminar o diagnóstico do
+  MS-1563 usando o Claude Code por fora porque o chat do app (Sonnet medium) não deu conta. Custo real desse
+  caso com Sonnet foi ≈US$1,88; com Opus teria sido ≈US$3,76 (Opus custa exatamente o dobro do Sonnet 5.5
+  em entrada/saída/cache). Tentei trocar via variável de ambiente na Vercel (como o código já previa,
+  "sem alterar codigo") mas o MCP da Vercel não tem permissão de escrita em env var de produção nesta
+  conta; troquei o valor padrão direto em `assistant-llm-claude.ts`. Efeito colateral: o botão "🧠 Pensar
+  mais" usa o mesmo modelo/esforço do dia a dia agora, então não muda mais nada na prática.
 - **2026-10-18** — Dono confirmou que tem um gravador **CH341A** (perguntou se é compatível com o agente de
   bancada). É: o driver `flashrom` já vem configurado por padrão pro `ch341a_spi`
   (`tools/bench-agent/drivers.mjs`), só falta instalar o `flashrom` no PC da bancada e trocar `DRIVER` no
