@@ -4,10 +4,13 @@ import { useEffect, useRef, useState, useTransition, type FormEvent } from "reac
 import { useRouter } from "next/navigation";
 
 import { shrinkPhoto } from "@/lib/client/shrink-photo";
+import { formatUsd } from "@/lib/utils";
 
 type DiagnosticChatComposerProps = {
   diagnosticId: string;
   defaultMessage?: string;
+  /** Preenchido quando o caso ja passou do limite de gasto: pede confirmacao antes de enviar. */
+  costLimitReached?: { totalUsd: number; limitUsd: number } | null;
 };
 
 type ChatStreamEvent =
@@ -57,7 +60,11 @@ function describeTools(names: string[]) {
   return `Consultando: ${labels.join(", ")}…`;
 }
 
-export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: DiagnosticChatComposerProps) {
+export function DiagnosticChatComposer({
+  diagnosticId,
+  defaultMessage,
+  costLimitReached,
+}: DiagnosticChatComposerProps) {
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -201,9 +208,18 @@ export function DiagnosticChatComposer({ diagnosticId, defaultMessage }: Diagnos
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (canSend) {
-      void send();
+    if (!canSend) {
+      return;
     }
+    if (
+      costLimitReached &&
+      !window.confirm(
+        `Este caso já gastou ${formatUsd(costLimitReached.totalUsd)} de IA (limite ${formatUsd(costLimitReached.limitUsd)}). Enviar mesmo assim?`,
+      )
+    ) {
+      return;
+    }
+    void send();
   }
 
   return (

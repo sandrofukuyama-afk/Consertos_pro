@@ -5,6 +5,7 @@ import {
   addDiagnosticTestAction,
   generateDiagnosticAssistantAction,
 } from "@/app/actions";
+import { ChatCostMeter, ChatCostWarning } from "@/components/chat-cost-meter";
 import { ChatMessageBubble } from "@/components/chat-message-bubble";
 import { ChatScrollArea } from "@/components/chat-scroll-area";
 import { DiagnosticBiosPanel } from "@/components/diagnostic-bios-panel";
@@ -16,7 +17,6 @@ import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
 import type { DiagnosticBiosData } from "@/lib/services/bios-dumps";
 import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
-import { formatUsd } from "@/lib/utils";
 import type {
   CatalogOption,
   DiagnosticDetail,
@@ -371,19 +371,7 @@ export function DiagnosticBenchWorkspace({
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--foreground)]">
               {agentName}
-              {detail.chatCost.totalUsd > 0 ? (
-                <span
-                  className="ml-2 rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-2 py-0.5 align-middle text-[11px] font-medium text-[var(--muted)]"
-                  title={
-                    detail.chatCost.repliesWithoutCost
-                      ? `Gasto estimado da IA neste caso. ${detail.chatCost.repliesWithoutCost} resposta(s) antiga(s) sem custo registrado não entram na soma.`
-                      : "Gasto estimado da IA neste caso (soma de todas as respostas)."
-                  }
-                >
-                  Gasto no caso: {formatUsd(detail.chatCost.totalUsd)}
-                  {detail.chatCost.repliesWithoutCost ? "+" : ""}
-                </span>
-              ) : null}
+              <ChatCostMeter diagnosticId={detail.id} cost={detail.chatCost} />
             </p>
             <p className="truncate text-xs text-[var(--muted)]">
               Converse como num chat: diga o que mediu, mande fotos, pergunte o próximo passo.
@@ -424,8 +412,14 @@ export function DiagnosticBenchWorkspace({
         </ChatScrollArea>
 
         <div className="chat-composer-sticky sticky z-30 rounded-b-2xl border-t border-[var(--panel-border)] bg-[var(--card-surface)] p-3 sm:rounded-b-[28px] sm:p-4 lg:static">
+          <ChatCostWarning diagnosticId={detail.id} cost={detail.chatCost} />
           <DiagnosticChatComposer
             diagnosticId={detail.id}
+            costLimitReached={
+              detail.chatCost.level === "over"
+                ? { totalUsd: detail.chatCost.totalUsd, limitUsd: detail.chatCost.limitUsd }
+                : null
+            }
             defaultMessage={detail.chatMessages.length ? undefined : detail.initialReport}
           />
         </div>

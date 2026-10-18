@@ -445,6 +445,10 @@ export type DiagnosticDetail = {
     totalUsd: number;
     /** Respostas antigas sem custo registrado (o total fica um pouco abaixo do real). */
     repliesWithoutCost: number;
+    /** Limite do caso (ou o padrao do app); passar dele so avisa, nao bloqueia. */
+    limitUsd: number;
+    limitIsDefault: boolean;
+    level: "ok" | "near" | "over";
   };
   chatMessages: Array<{
     id: string;

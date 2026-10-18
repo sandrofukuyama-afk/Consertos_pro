@@ -5,7 +5,7 @@ import { getDiagnosticAssistantSnapshot } from "@/lib/services/assistant";
 import { getPreventiveInsightForModel } from "@/lib/services/statistics";
 import { createClient } from "@/lib/supabase/server";
 import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
-import { formatRelativeTime } from "@/lib/utils";
+import { CHAT_COST_WARNING_RATIO, DEFAULT_CHAT_COST_LIMIT_USD, formatRelativeTime } from "@/lib/utils";
 import type {
   ComponentAnnotation,
   DiagnosticDetail,
@@ -355,7 +355,11 @@ function summarizeChatCost(
     prompt_context_version: string | null;
     structured_response_json: unknown;
   }>,
+  limitRaw: number | string | null | undefined,
 ) {
+  const customLimit = limitRaw === null || limitRaw === undefined ? null : Number(limitRaw);
+  const hasCustomLimit = customLimit !== null && Number.isFinite(customLimit) && customLimit > 0;
+  const limitUsd = hasCustomLimit ? customLimit : DEFAULT_CHAT_COST_LIMIT_USD;
   let totalUsd = 0;
   let repliesWithoutCost = 0;
 
@@ -374,7 +378,18 @@ function summarizeChatCost(
     }
   }
 
-  return { totalUsd, repliesWithoutCost };
+  return {
+    totalUsd,
+    repliesWithoutCost,
+    limitUsd,
+    limitIsDefault: !hasCustomLimit,
+    level:
+      totalUsd >= limitUsd
+        ? ("over" as const)
+        : totalUsd >= limitUsd * CHAT_COST_WARNING_RATIO
+          ? ("near" as const)
+          : ("ok" as const),
+  };
 }
 
 export async function getDiagnosticDetail(diagnosticId: string) {
@@ -396,6 +411,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
         physical_condition_notes,
         created_at,
         equipment_model_id,
+        ai_cost_limit_usd,
         equipment_categories(name, slug),
         manufacturers(name),
         equipment_models(model_name),
@@ -1095,7 +1111,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     attachments,
     timeline,
     assistantSnapshot,
-    chatCost: summarizeChatCost(data.ai_responses ?? []),
+    chatCost: summarizeChatCost(data.ai_responses ?? [], data.ai_cost_limit_usd),
     chatMessages: [...(data.ai_responses ?? [])]
       .filter((item) => item.response_role === "user" || item.response_role === "assistant")
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())

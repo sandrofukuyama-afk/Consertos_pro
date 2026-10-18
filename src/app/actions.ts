@@ -1295,6 +1295,40 @@ export async function archiveDiagnosticFromQueueAction(formData: FormData) {
   );
 }
 
+export async function updateChatCostLimitAction(formData: FormData) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+  // Aceita "5", "5.50" e "5,50"; vazio volta para o limite padrao.
+  const limitRaw = String(formData.get("limit_usd") ?? "").trim().replace(",", ".");
+  const limitUsd = limitRaw ? Number(limitRaw) : null;
+
+  if (!diagnosticId) {
+    redirect("/?error=Diagnostico invalido.");
+  }
+
+  if (limitUsd !== null && (!Number.isFinite(limitUsd) || limitUsd <= 0 || limitUsd > 999999)) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent("Limite de gasto inválido.")}`);
+  }
+
+  const { error } = await supabase
+    .from("diagnostics")
+    .update({ ai_cost_limit_usd: limitUsd === null ? null : Math.round(limitUsd * 100) / 100 })
+    .eq("id", diagnosticId);
+
+  if (error) {
+    redirect(`/diagnosticos/${diagnosticId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  redirect(
+    `/diagnosticos/${diagnosticId}?message=${encodeURIComponent(
+      limitUsd === null ? "Limite de gasto voltou ao padrão." : "Limite de gasto do caso atualizado.",
+    )}`,
+  );
+}
+
 export async function generateDiagnosticAssistantAction(formData: FormData) {
   await requireCurrentUser();
 

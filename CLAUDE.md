@@ -141,6 +141,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — **Limite de gasto da IA por caso** (pedido do dono). Padrão US$ 3,00
+  (`DEFAULT_CHAT_COST_LIMIT_USD` em `src/lib/utils.ts`); cada caso pode ter o seu (coluna nova
+  `diagnostics.ai_cost_limit_usd`, vazio = padrão; ação `updateChatCostLimitAction`). A etiqueta do topo do chat
+  vira "Gasto no caso: US$ X de US$ Y" (toque abre o campo do limite; `chat-cost-meter.tsx`); a partir de 80% aviso
+  amarelo acima do campo de mensagem, ao passar do limite aviso vermelho e o composer pede confirmação antes de
+  cada envio. **Só avisa, não bloqueia** (e o servidor não confere o limite). Soma em `summarizeChatCost()`.
+
 - **2026-10-18** — **Contador de gastos no chat** (pedido do dono). Cada resposta grava `costUsd` no
   `structured_response_json` (custo rodada a rodada com o modelo que de fato respondeu + buscas na web a
   US$ 0,01 cada; `estimateCostUsd()` agora exportada de `token-logger.ts`, mesma tabela de preços do log). Tela:

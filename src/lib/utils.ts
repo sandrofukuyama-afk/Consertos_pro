@@ -44,6 +44,12 @@ export function formatProviderLabel(value: string) {
   return PROVIDER_LABELS[value] ?? value;
 }
 
+/** Limite padrao de gasto da IA por caso (US$) quando o caso nao tem um proprio. So avisa, nao bloqueia. */
+export const DEFAULT_CHAT_COST_LIMIT_USD = 3;
+
+/** A partir dessa fracao do limite o chat mostra o aviso "perto do limite". */
+export const CHAT_COST_WARNING_RATIO = 0.8;
+
 /** Valor em dolar no formato brasileiro (ex.: "US$ 0,09"); abaixo de 1 centavo vira "< US$ 0,01". */
 export function formatUsd(value: number) {
   if (value > 0 && value < 0.01) {
