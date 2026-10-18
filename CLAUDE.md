@@ -110,7 +110,7 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 1. Agente instalado e online no PC da bancada ("Bancada 1", `DRIVER=ezp2023`). Falta testar ler/gravar com
    placa de sucata antes de usar em cliente (e atualizar o PC para a v1.1.1).
-2. Vigia de pasta **rodando no ZimaOS** desde 17/10 (arquivos com `metadata.source = "pasta_monitorada"`: BIOS MSI
+2. Vigia de pasta **rodando no ZimaOS** desde 15/10 (arquivos com `metadata.source = "pasta_monitorada"`: Dell/Quanta em 15/10, BIOS MSI
    em 17/10, MacBook Air A1466 820-00165-A em 18/10). Arquivos vão em `HDD4\Enviar para o ConsertosPro`, **não** em
    `ConsertosPro-watcher\src` (pasta do código). **Falta copiar `src/classify.mjs` e `src/rules.mjs` de
    `tools/library-watcher` para `HDD4\ConsertosPro-watcher\src` e reiniciar o app no ZimaOS** (correção de 18/10
