@@ -55,6 +55,13 @@ function detectGpu(hay) {
   return null;
 }
 
+// "820-3115" e "820-3115-B" sao a mesma placa (so muda a revisao).
+function sameBoardCode(a, b) {
+  const clean = (value) => String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const [x, y] = [clean(a), clean(b)];
+  return Boolean(x && y && (x.startsWith(y) || y.startsWith(x)));
+}
+
 function capitalize(text) {
   if (text === "BIOS" || text === "firmware EC") return text === "BIOS" ? "BIOS" : "Firmware EC";
   if (text === "boardview (PDF)") return "Boardview (PDF)";
@@ -100,6 +107,12 @@ export function classifyFile(relativePath, size) {
     const rule = ruleByName ?? compiledModelRules.find(([regex]) => regex.test(hay));
     if (rule) {
       [, manufacturer, category, model, board] = rule.map((value) => value ?? "");
+      // O mesmo modelo pode ter varias placas: um codigo de placa escrito no nome
+      // do arquivo vale mais que a placa padrao da regra (ex.: A1466 820-00165-A).
+      const nameBoard = compiledBoardPatterns.map((regex) => regex.exec(nameHay)).find(Boolean)?.[0].toUpperCase();
+      if (nameBoard && !sameBoardCode(nameBoard, board)) {
+        board = nameBoard;
+      }
     }
     if (!manufacturer) {
       manufacturer = compiledBrandHints.find(([regex]) => regex.test(hay))?.[1] ?? "";

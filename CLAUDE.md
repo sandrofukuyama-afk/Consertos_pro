@@ -110,12 +110,11 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 1. Agente instalado e online no PC da bancada ("Bancada 1", `DRIVER=ezp2023`). Falta testar ler/gravar com
    placa de sucata antes de usar em cliente (e atualizar o PC para a v1.1.1).
-2. Vigia de pasta **ainda não roda** (em 15/10 as pastas Enviar/Enviados/Erros estavam vazias e nunca usadas).
-   `.env` em `HDD4\ConsertosPro-watcher` está pronto (DRY_RUN=0). Falta: descobrir o caminho real do volume
-   `raid` no ZimaOS: é `/DATA/raid` (app Arquivos mostra ZimaOS-HD/raid; compose já ajustado). Falta instalar
-   (App Store → Custom Install).
-   O servidor responde em 172.30.0.1 e em 192.168.0.32 (`W:` no PC). Arquivos vão em
-   `HDD4\Enviar para o ConsertosPro`, **não** em `ConsertosPro-watcher\src` (pasta do código).
+2. Vigia de pasta **rodando no ZimaOS** desde 17/10 (arquivos com `metadata.source = "pasta_monitorada"`: BIOS MSI
+   em 17/10, MacBook Air A1466 820-00165-A em 18/10). Arquivos vão em `HDD4\Enviar para o ConsertosPro`, **não** em
+   `ConsertosPro-watcher\src` (pasta do código). **Falta copiar `src/classify.mjs` e `src/rules.mjs` de
+   `tools/library-watcher` para `HDD4\ConsertosPro-watcher\src` e reiniciar o app no ZimaOS** (correção de 18/10
+   da placa errada; o PC de desenvolvimento não tem a unidade do servidor ligada).
 6. ~~Conferir as primeiras conversas com a memória completa~~ — conferido em 16/10: 20 respostas, todas
    `memoryMode: "full"`, nenhum `fallback`; 5 conversas guardadas. Continuar de olho depois de mudar
    ferramentas/instruções (`memoryFallbackReason` diz o motivo se cair no modo de segurança).
@@ -140,6 +139,15 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-18** — Correção: arquivos enviados pela pasta do vigia (MacBook Air A1466 **820-00165-A**: esquema,
+  boardview e 2 BIOS) não apareciam na busca pela placa. Estavam no banco e no Storage, mas o vigia ligou 3 deles à
+  placa **820-3437**: a regra `a1466` em `tools/library-watcher/src/rules.mjs` sempre punha essa placa, e o A1466
+  teve 3 placas (820-3209, 820-3437, 820-00165). A BIOS "Clear me" (sem "A1466" no nome) foi para a 820-00165-A,
+  mas sem modelo. Correção no `classify.mjs`: código de placa escrito no nome do arquivo vale mais que a placa
+  padrão da regra (`sameBoardCode` trata `820-3115` = `820-3115-B`); regra nova `820-00165` → A1466. Os 4 arquivos
+  foram corrigidos no banco (placa, modelo, `display_name`, `technical_asset_links`; placa 820-00165-A ligada ao
+  modelo A1466 em `model_boards` e à Apple). **Falta atualizar o vigia no ZimaOS** (pendência 2).
 
 - **2026-10-18** — **Respostas do chat mais curtas** (pedido do dono: "mais curtas, dinâmicas, só o necessário").
   Só mudou o texto de "Formato da resposta" no `PERSONA_PROMPT` (`diagnostic-chat.ts`): tamanho acompanha a pergunta

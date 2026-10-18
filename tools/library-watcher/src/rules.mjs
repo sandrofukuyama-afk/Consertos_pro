@@ -7,6 +7,8 @@ export const MODEL_RULES = [
   ["a1465|820-00164", "Apple", "Notebook", "MacBook Air 11\" A1465", "820-00164"],
   ["a.?1369|820-3023", "Apple", "Notebook", "MacBook Air 13\" A1369", "820-3023"],
   ["macbook_air_13_2011", "Apple", "Notebook", "MacBook Air 13\" A1369", null],
+  // A1466 teve 3 placas (820-3209, 820-3437, 820-00165): as especificas vem antes da generica.
+  ["820-00165", "Apple", "Notebook", "MacBook Air 13\" A1466", "820-00165-A"],
   ["a1466|820.3437", "Apple", "Notebook", "MacBook Air 13\" A1466", "820-3437"],
   ["a1706|820-00239|x362", "Apple", "Notebook", "Macbook Pro 1706", "820-00239"],
   ["820-3115", "Apple", "Notebook", "MacBook Pro 13\" A1278", "820-3115-B"],
