@@ -141,6 +141,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — **Respostas do chat mais curtas** (pedido do dono: "mais curtas, dinâmicas, só o necessário").
+  Só mudou o texto de "Formato da resposta" no `PERSONA_PROMPT` (`diagnostic-chat.ts`): tamanho acompanha a pergunta
+  (1–2 frases para pergunta simples, até ~6 linhas por passo), 1 linha do que a medição mostra + próximo passo em
+  negrito, no máximo 2 linhas "se der X / se der Y", um passo por vez, sem repetir o técnico/histórico nem descrever
+  consultas e registros. Tirado também "o que cada resultado possível significa" do "Como trabalhar". Mudar o
+  prompt fixo invalida o cache de 1 h uma vez por conversa e descarta o raciocínio antigo (`drop_block`), sem 400.
+  Se a IA ficar curta demais em casos difíceis, afrouxar o limite de linhas.
+
 - **2026-10-18** — **Limite de gasto da IA por caso** (pedido do dono). Padrão US$ 3,00
   (`DEFAULT_CHAT_COST_LIMIT_USD` em `src/lib/utils.ts`); cada caso pode ter o seu (coluna nova
   `diagnostics.ai_cost_limit_usd`, vazio = padrão; ação `updateChatCostLimitAction`). A etiqueta do topo do chat
