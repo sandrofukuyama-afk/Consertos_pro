@@ -43,3 +43,11 @@ const PROVIDER_LABELS: Record<string, string> = {
 export function formatProviderLabel(value: string) {
   return PROVIDER_LABELS[value] ?? value;
 }
+
+/** Valor em dolar no formato brasileiro (ex.: "US$ 0,09"); abaixo de 1 centavo vira "< US$ 0,01". */
+export function formatUsd(value: number) {
+  if (value > 0 && value < 0.01) {
+    return "< US$ 0,01";
+  }
+  return `US$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}

@@ -141,6 +141,16 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — **Contador de gastos no chat** (pedido do dono). Cada resposta grava `costUsd` no
+  `structured_response_json` (custo rodada a rodada com o modelo que de fato respondeu + buscas na web a
+  US$ 0,01 cada; `estimateCostUsd()` agora exportada de `token-logger.ts`, mesma tabela de preços do log). Tela:
+  "Agente • há 2 min • US$ 0,09" embaixo de cada resposta (`chat-message-bubble.tsx`) e "Gasto no caso: US$ X"
+  no topo do chat (`detail.chatCost`, soma em `summarizeChatCost()` de `diagnostics.ts`; "+" se faltar custo de
+  alguma resposta). Respostas antigas (114) preenchidas por script avulso casando cada resposta com a linha de
+  `ai_token_logs` (purpose `chat_diagnostico_claude`) gravada segundos antes (`costSource: "ai_token_logs"`).
+  Total até 18/10: US$ 14,00 (Fujitsu 33938fd5 US$ 10,42 na época do Opus; MSI bbf8736b US$ 1,69). Fora da
+  soma: análise de foto (gpt-4o-mini, ~US$ 0,004) e embeddings (centésimos de centavo).
+
 - **2026-10-18** — Chat do diagnóstico volta pra **Opus 5.5, esforço `high`**, no dia a dia (era Sonnet 5.5
   esforço `medium` desde 13/10, pra cortar custo). Motivo: o dono relatou que as respostas pareciam "bem
   inferiores" ao chat do Claude Code; confirmado com um caso real — precisou terminar o diagnóstico do

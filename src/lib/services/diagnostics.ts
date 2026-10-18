@@ -348,6 +348,35 @@ function buildEquipmentDetailItems(details: Record<string, unknown> | null | und
     }));
 }
 
+/** Soma o custo gravado em cada resposta do chat (structured_response_json.costUsd). */
+function summarizeChatCost(
+  responses: Array<{
+    response_role: string;
+    prompt_context_version: string | null;
+    structured_response_json: unknown;
+  }>,
+) {
+  let totalUsd = 0;
+  let repliesWithoutCost = 0;
+
+  for (const item of responses) {
+    if (item.response_role !== "assistant" || item.prompt_context_version !== "chat-v1") {
+      continue;
+    }
+    const cost =
+      item.structured_response_json && typeof item.structured_response_json === "object"
+        ? (item.structured_response_json as Record<string, unknown>).costUsd
+        : undefined;
+    if (typeof cost === "number") {
+      totalUsd += cost;
+    } else {
+      repliesWithoutCost += 1;
+    }
+  }
+
+  return { totalUsd, repliesWithoutCost };
+}
+
 export async function getDiagnosticDetail(diagnosticId: string) {
   const supabase = await createClient();
 
@@ -1066,6 +1095,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     attachments,
     timeline,
     assistantSnapshot,
+    chatCost: summarizeChatCost(data.ai_responses ?? []),
     chatMessages: [...(data.ai_responses ?? [])]
       .filter((item) => item.response_role === "user" || item.response_role === "assistant")
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
@@ -1093,6 +1123,10 @@ export async function getDiagnosticDetail(diagnosticId: string) {
           text: item.raw_response_text ?? item.reasoning_summary ?? "",
           createdAt: formatRelativeTime(item.created_at),
           modelName,
+          costUsd:
+            item.response_role === "assistant" && typeof structured?.costUsd === "number"
+              ? structured.costUsd
+              : null,
           agentActions: Array.isArray(structured?.agentActions)
             ? (structured.agentActions as unknown[]).map(String)
             : [],

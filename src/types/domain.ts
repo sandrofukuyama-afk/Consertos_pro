@@ -440,12 +440,20 @@ export type DiagnosticDetail = {
     } | null;
     annotations: ComponentAnnotation[];
   }>;
+  /** Gasto da IA no chat deste caso (soma das respostas com custo registrado). */
+  chatCost: {
+    totalUsd: number;
+    /** Respostas antigas sem custo registrado (o total fica um pouco abaixo do real). */
+    repliesWithoutCost: number;
+  };
   chatMessages: Array<{
     id: string;
     role: "user" | "assistant";
     text: string;
     createdAt: string;
     modelName: string | null;
+    /** Custo estimado da resposta da IA em US$; null em respostas sem registro. */
+    costUsd: number | null;
     agentActions: string[];
     sources: string[];
     photos: Array<{

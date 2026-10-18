@@ -18,28 +18,51 @@ const CACHE_READ_FACTOR = 0.1;
 const CACHE_WRITE_FACTOR = 1.25;
 const CACHE_WRITE_1H_FACTOR = 2;
 
+// Busca na web da Anthropic: US$ 10 por 1000 buscas (fora os tokens).
+export const WEB_SEARCH_COST_USD = 0.01;
+
+type CacheUsage = {
+  cacheReadTokens?: number;
+  // cacheWriteTokens e o total gravado; cacheWrite1hTokens e a parte de 1 h dele.
+  cacheWriteTokens?: number;
+  cacheWrite1hTokens?: number;
+};
+
+/** Custo estimado em US$ de uma chamada, pela tabela de precos acima. */
+export function estimateCostUsd(
+  model: string,
+  promptTokens: number,
+  completionTokens: number,
+  cache: CacheUsage = {},
+) {
+  const [, inputPerMillion, outputPerMillion] = PRICES.find(([pattern]) => pattern.test(model)) ?? [null, 0, 0];
+  const cacheRead = cache.cacheReadTokens ?? 0;
+  const cacheWrite = cache.cacheWriteTokens ?? 0;
+  const cacheWrite1h = Math.min(cache.cacheWrite1hTokens ?? 0, cacheWrite);
+
+  return (
+    (promptTokens * inputPerMillion +
+      cacheRead * inputPerMillion * CACHE_READ_FACTOR +
+      (cacheWrite - cacheWrite1h) * inputPerMillion * CACHE_WRITE_FACTOR +
+      cacheWrite1h * inputPerMillion * CACHE_WRITE_1H_FACTOR +
+      completionTokens * outputPerMillion) /
+    1_000_000
+  );
+}
+
 export async function logTokenUsage(
   model: string,
   purpose: string,
   promptTokens: number,
   completionTokens: number,
-  // cacheWriteTokens e o total gravado; cacheWrite1hTokens e a parte de 1 h dele.
-  cache: { cacheReadTokens?: number; cacheWriteTokens?: number; cacheWrite1hTokens?: number } = {},
+  cache: CacheUsage & { extraCostUsd?: number } = {},
 ) {
   try {
     const supabase = await createClient();
-    const [, inputPerMillion, outputPerMillion] = PRICES.find(([pattern]) => pattern.test(model)) ?? [null, 0, 0];
     const cacheRead = cache.cacheReadTokens ?? 0;
     const cacheWrite = cache.cacheWriteTokens ?? 0;
-    const cacheWrite1h = Math.min(cache.cacheWrite1hTokens ?? 0, cacheWrite);
-
     const estimatedCost =
-      (promptTokens * inputPerMillion +
-        cacheRead * inputPerMillion * CACHE_READ_FACTOR +
-        (cacheWrite - cacheWrite1h) * inputPerMillion * CACHE_WRITE_FACTOR +
-        cacheWrite1h * inputPerMillion * CACHE_WRITE_1H_FACTOR +
-        completionTokens * outputPerMillion) /
-      1_000_000;
+      estimateCostUsd(model, promptTokens, completionTokens, cache) + (cache.extraCostUsd ?? 0);
 
     const {
       data: { user },

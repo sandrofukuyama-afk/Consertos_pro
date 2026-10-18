@@ -1,4 +1,5 @@
 import { ChatMarkdown } from "@/components/chat-markdown";
+import { formatUsd } from "@/lib/utils";
 import type { DiagnosticDetail } from "@/types/domain";
 
 type ChatMessage = DiagnosticDetail["chatMessages"][number];
@@ -63,6 +64,7 @@ export function ChatMessageBubble({ entry, agentName }: { entry: ChatMessage; ag
       </div>
       <p className="mt-1 px-1 text-[11px] text-[var(--muted)]">
         {agentName} • {entry.createdAt}
+        {entry.costUsd !== null ? <span title="Custo estimado desta resposta da IA"> • {formatUsd(entry.costUsd)}</span> : null}
       </p>
     </div>
   );

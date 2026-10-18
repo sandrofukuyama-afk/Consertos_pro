@@ -375,6 +375,8 @@ export async function sendDiagnosticChatMessage(
       modelName: result.modelName,
       agentActions: actions,
       memoryMode: fallbackReason ? "fallback" : "full",
+      // Custo estimado desta resposta (US$), para o contador de gastos do chat.
+      costUsd: Math.round(result.costUsd * 10_000) / 10_000,
       ...(fallbackReason ? { memoryFallbackReason: fallbackReason } : {}),
     },
     model_name: result.modelName,

@@ -16,6 +16,7 @@ import { MeasurementForm } from "@/components/measurement-form";
 import { StatusPill } from "@/components/status-pill";
 import type { DiagnosticBiosData } from "@/lib/services/bios-dumps";
 import { isBoardviewFileFormat } from "@/lib/technical-assets.mjs";
+import { formatUsd } from "@/lib/utils";
 import type {
   CatalogOption,
   DiagnosticDetail,
@@ -368,7 +369,22 @@ export function DiagnosticBenchWorkspace({
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--panel-border)] px-4 py-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-[var(--foreground)]">{agentName}</p>
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              {agentName}
+              {detail.chatCost.totalUsd > 0 ? (
+                <span
+                  className="ml-2 rounded-full border border-[var(--panel-border)] bg-[var(--background)] px-2 py-0.5 align-middle text-[11px] font-medium text-[var(--muted)]"
+                  title={
+                    detail.chatCost.repliesWithoutCost
+                      ? `Gasto estimado da IA neste caso. ${detail.chatCost.repliesWithoutCost} resposta(s) antiga(s) sem custo registrado não entram na soma.`
+                      : "Gasto estimado da IA neste caso (soma de todas as respostas)."
+                  }
+                >
+                  Gasto no caso: {formatUsd(detail.chatCost.totalUsd)}
+                  {detail.chatCost.repliesWithoutCost ? "+" : ""}
+                </span>
+              ) : null}
+            </p>
             <p className="truncate text-xs text-[var(--muted)]">
               Converse como num chat: diga o que mediu, mande fotos, pergunte o próximo passo.
             </p>

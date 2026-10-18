@@ -5,7 +5,7 @@ import {
   runDiagnosticAgentTool,
   type DiagnosticAgentToolContext,
 } from "@/lib/ai/diagnostic-agent-tools";
-import { logTokenUsage } from "@/lib/services/token-logger";
+import { estimateCostUsd, logTokenUsage, WEB_SEARCH_COST_USD } from "@/lib/services/token-logger";
 
 // Opus com raciocinio adaptativo: o agente de bancada precisa seguir nets,
 // cruzar boardview/esquema e medicoes em varios passos antes de responder.
@@ -100,6 +100,8 @@ export type ClaudeChatResult = {
   modelName: string;
   tokensInput: number;
   tokensOutput: number;
+  /** Custo estimado desta resposta em US$ (todas as rodadas + buscas na web). */
+  costUsd: number;
   /** Mensagens acrescentadas a conversa nesta resposta, para gravar no caso. */
   appendedMessages: Anthropic.Beta.BetaMessageParam[];
 };
@@ -293,6 +295,8 @@ export async function runClaudeDiagnosticAgent(args: {
   let tokensCacheWrite1h = 0;
   let tokensOutput = 0;
   let servedModel = requestedModel;
+  let costUsd = 0;
+  let webSearchCount = 0;
   let replyText = "";
   let pausedText = "";
   const sources: string[] = [];
@@ -342,6 +346,17 @@ export async function runClaudeDiagnosticAgent(args: {
     });
 
     servedModel = message.model;
+    // Custo rodada a rodada, com o modelo que de fato respondeu (o fallback pode
+    // trocar de modelo no meio) e as buscas na web, cobradas a parte.
+    const webSearches = message.usage.server_tool_use?.web_search_requests ?? 0;
+    webSearchCount += webSearches;
+    costUsd +=
+      estimateCostUsd(message.model, message.usage.input_tokens, message.usage.output_tokens, {
+        cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
+        cacheWriteTokens: message.usage.cache_creation_input_tokens ?? 0,
+        cacheWrite1hTokens: message.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0,
+      }) +
+      webSearches * WEB_SEARCH_COST_USD;
     tokensInput += message.usage.input_tokens;
     tokensCacheWrite += message.usage.cache_creation_input_tokens ?? 0;
     tokensCacheWrite1h += message.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
@@ -406,10 +421,12 @@ export async function runClaudeDiagnosticAgent(args: {
       cacheReadTokens: tokensCacheRead,
       cacheWriteTokens: tokensCacheWrite,
       cacheWrite1hTokens: tokensCacheWrite1h,
+      extraCostUsd: webSearchCount * WEB_SEARCH_COST_USD,
     });
   }
 
   return {
+    costUsd,
     replyText:
       replyText ||
       "Não foi possível gerar uma resposta agora. Tente reenviar a mensagem em instantes.",
