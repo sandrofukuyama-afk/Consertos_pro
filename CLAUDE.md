@@ -146,9 +146,10 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   apoio o boardview da 820-3437 e o esquema do A1465 (820-00164, placa irmã); ao salvar a tela, o esquema do A1465
   virou "A1466 / 820-3437" no catálogo e o caso ficou com placa 820-3437 (relato do dono, com foto). Agora
   `associateDiagnosticTechnicalAssetsAction` só cataloga arquivo que ainda não tem placa nem modelo; arquivo já
-  catalogado entra no caso só como apoio. **Correção dos dados pendente** (o modo automático do Claude Code bloqueou
-  o SQL): devolver o esquema `6bebf1a3` ao A1465/820-00164, apagar o link `ba72f394`, pôr a placa 820-00165-A no
-  caso e trocar os arquivos escolhidos pelos novos (`d742f6aa` boardview, `c9eba156` esquema).
+  catalogado entra no caso só como apoio. Dados corrigidos: esquema `6bebf1a3` de volta ao A1465/820-00164, caso
+  com placa 820-00165-A e arquivos novos (`d742f6aa` boardview, `c9eba156` esquema). **Falta apagar** o link errado
+  `technical_asset_links.id = ba72f394-6ff9-4566-8b47-077d7301e45f` (esquema A1465 → A1466/820-3437): o modo
+  automático do Claude Code bloqueia `delete` no banco; rodar no SQL Editor do Supabase.
 
 - **2026-10-18** — Correção: arquivos enviados pela pasta do vigia (MacBook Air A1466 **820-00165-A**: esquema,
   boardview e 2 BIOS) não apareciam na busca pela placa. Estavam no banco e no Storage, mas o vigia ligou 3 deles à
