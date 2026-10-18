@@ -140,6 +140,16 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-18** — Correção: a tela "Associar placa e arquivos técnicos" **recatalogava** cada arquivo escolhido
+  com a placa/modelo do caso (`technical_asset_links` + `technical_assets.board_id/equipment_model_id`). Caso
+  `ae5571a7` (MacBook Air A1466 2015, 820-00165-A): antes de chegarem os arquivos da 820-00165-A, a IA usou como
+  apoio o boardview da 820-3437 e o esquema do A1465 (820-00164, placa irmã); ao salvar a tela, o esquema do A1465
+  virou "A1466 / 820-3437" no catálogo e o caso ficou com placa 820-3437 (relato do dono, com foto). Agora
+  `associateDiagnosticTechnicalAssetsAction` só cataloga arquivo que ainda não tem placa nem modelo; arquivo já
+  catalogado entra no caso só como apoio. **Correção dos dados pendente** (o modo automático do Claude Code bloqueou
+  o SQL): devolver o esquema `6bebf1a3` ao A1465/820-00164, apagar o link `ba72f394`, pôr a placa 820-00165-A no
+  caso e trocar os arquivos escolhidos pelos novos (`d742f6aa` boardview, `c9eba156` esquema).
+
 - **2026-10-18** — Correção: arquivos enviados pela pasta do vigia (MacBook Air A1466 **820-00165-A**: esquema,
   boardview e 2 BIOS) não apareciam na busca pela placa. Estavam no banco e no Storage, mas o vigia ligou 3 deles à
   placa **820-3437**: a regra `a1466` em `tools/library-watcher/src/rules.mjs` sempre punha essa placa, e o A1466

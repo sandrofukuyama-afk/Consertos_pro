@@ -1197,6 +1197,18 @@ export async function associateDiagnosticTechnicalAssetsAction(formData: FormDat
   await ensureDiagnosticModelBoardLink(resolvedBoardId, resolvedEquipmentModelId);
 
   for (const assetId of assetIds) {
+    // Arquivo ja catalogado (outra placa/modelo) entra no caso so como apoio
+    // (ex.: esquema de placa irma): nao recatalogar com a placa do caso.
+    const asset = assets.find((item) => item.id === assetId);
+    const alreadyCataloged = Boolean(
+      asset?.board_id ||
+        asset?.equipment_model_id ||
+        asset?.technical_asset_links?.some((link) => link.board_id || link.equipment_model_id),
+    );
+    if (alreadyCataloged) {
+      continue;
+    }
+
     await ensureDiagnosticTechnicalAssetLink({
       assetId,
       boardId: resolvedBoardId,
