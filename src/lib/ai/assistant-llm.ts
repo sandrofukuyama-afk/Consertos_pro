@@ -430,7 +430,7 @@ async function generateNarrativeWithClaude(
     fallbacks: "default",
     thinking: { type: "adaptive" },
     output_config: {
-      effort: getClaudeChatEffort(),
+      effort: getClaudeChatEffort(true),
       format: { type: "json_schema", schema: CLAUDE_NARRATIVE_SCHEMA },
     },
     system: systemPrompt,

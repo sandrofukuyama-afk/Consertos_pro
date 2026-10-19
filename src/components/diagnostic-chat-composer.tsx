@@ -73,7 +73,7 @@ export function DiagnosticChatComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(defaultMessage ?? "");
   const [photos, setPhotos] = useState<File[]>([]);
-  // "Pensar mais" vale so para a proxima mensagem (Opus, ~2x o custo).
+  // "Pensar mais" vale so para a proxima mensagem (Opus com esforco alto: mais lento).
   const [deep, setDeep] = useState(false);
   const [state, setState] = useState<SendState>({ phase: "idle" });
   // Mesmo id em todas as tentativas da mesma mensagem: se a primeira chegou ao

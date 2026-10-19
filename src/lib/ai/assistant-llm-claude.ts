@@ -13,11 +13,12 @@ import { estimateCostUsd, logTokenUsage, WEB_SEARCH_COST_USD } from "@/lib/servi
 // Custo: Opus 5.5 esforco high no dia a dia (dobro do preco do Sonnet 5.5
 // medium usado ate 18/10) -- dono relatou que o Sonnet medium nao dava conta
 // de casos mais dificeis e precisou usar o Claude Code por fora pra terminar
-// o diagnostico do MS-1563. O botao "Pensar mais" usa o mesmo modelo/esforco
-// agora (fica sem efeito ate o dia a dia e o modo "pensar mais" divergirem de novo).
+// o diagnostico do MS-1563. Em 19/10 o dia a dia foi para esforco medium: com
+// high algumas respostas pensavam 2-4 min. "Pensar mais" e o parecer usam high.
 const DEFAULT_CLAUDE_CHAT_MODEL = "claude-opus-5-5";
 const DEFAULT_CLAUDE_DEEP_MODEL = "claude-opus-5-5";
-const DEFAULT_CLAUDE_CHAT_EFFORT = "high";
+const DEFAULT_CLAUDE_CHAT_EFFORT = "medium";
+const DEFAULT_CLAUDE_DEEP_EFFORT = "high";
 const CLAUDE_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
 // Voltas de consulta por mensagem. A conversa inteira fica em cache, entao cada
 // volta extra custa pouco; o limite so evita que uma resposta se arraste.
@@ -54,11 +55,14 @@ export function getClaudeChatModelName(deep = false) {
   return process.env.ANTHROPIC_CHAT_MODEL || DEFAULT_CLAUDE_CHAT_MODEL;
 }
 
-export function getClaudeChatEffort(): ClaudeEffort {
-  const configured = process.env.ANTHROPIC_CHAT_EFFORT as ClaudeEffort | undefined;
-  return configured && CLAUDE_EFFORT_LEVELS.includes(configured)
-    ? configured
-    : DEFAULT_CLAUDE_CHAT_EFFORT;
+export function getClaudeChatEffort(deep = false): ClaudeEffort {
+  const configured = (deep ? process.env.ANTHROPIC_CHAT_DEEP_EFFORT : process.env.ANTHROPIC_CHAT_EFFORT) as
+    | ClaudeEffort
+    | undefined;
+  if (configured && CLAUDE_EFFORT_LEVELS.includes(configured)) {
+    return configured;
+  }
+  return deep ? DEFAULT_CLAUDE_DEEP_EFFORT : DEFAULT_CLAUDE_CHAT_EFFORT;
 }
 
 export function isClaudeChatConfigured() {
@@ -276,7 +280,7 @@ export async function runClaudeDiagnosticAgent(args: {
 
   const client = new Anthropic();
   const requestedModel = getClaudeChatModelName(Boolean(args.deep));
-  const effort = getClaudeChatEffort();
+  const effort = getClaudeChatEffort(Boolean(args.deep));
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     ...DIAGNOSTIC_AGENT_TOOLS,
     { type: "web_search_20260209", name: "web_search", max_uses: 3 },

@@ -29,12 +29,11 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 - **PDF no servidor**: usar `extractPdfText` de `src/lib/pdf-text.ts` (carrega `pdf-parse/worker`
   antes do `pdf-parse`; sem isso dá "DOMMatrix is not defined" em produção).
 - **IA**: chat do diagnóstico = agente Claude com ferramentas (`src/lib/ai/assistant-llm-claude.ts`,
-  `diagnostic-agent-tools.ts`). Dia a dia em **Opus 5.5 esforço `high`** (`ANTHROPIC_CHAT_MODEL`/
-  `ANTHROPIC_CHAT_EFFORT`) desde 18/10 — o dono relatou que o Sonnet 5.5 esforço `medium` (usado até então
+  `diagnostic-agent-tools.ts`). Dia a dia em **Opus 5.5 esforço `medium`** desde 19/10 (`ANTHROPIC_CHAT_MODEL`/
+  `ANTHROPIC_CHAT_EFFORT`; em `high` de 18 a 19/10 algumas respostas pensavam 2–4 min) — Opus desde 18/10 — o dono relatou que o Sonnet 5.5 esforço `medium` (usado até então
   pra cortar custo) não dava conta de casos mais difíceis e precisou terminar um diagnóstico (MS-1563) pelo
-  Claude Code por fora. Botão **"🧠 Pensar mais"** e o parecer técnico usam **Opus 5.5** (`ANTHROPIC_CHAT_DEEP_MODEL`)
-  também — como o esforço é o mesmo dos dois, o botão hoje não muda nada na prática (só volta a fazer
-  diferença se o dia a dia for rebaixado de novo, ou se o modo "pensar mais" ganhar um esforço próprio mais alto).
+  Claude Code por fora. Botão **"🧠 Pensar mais"** e o parecer técnico usam **Opus 5.5 esforço `high`**
+  (`ANTHROPIC_CHAT_DEEP_MODEL`/`ANTHROPIC_CHAT_DEEP_EFFORT`).
 - **Envio do chat**: o composer (`diagnostic-chat-composer.tsx`) faz `fetch` em `POST /api/diagnosticos/[id]/chat`,
   que devolve a resposta **aos poucos** (NDJSON: `text`, `tools`, `ping` a cada 10 s, `done`/`error`); no fim a tela
   faz `router.refresh()`. Sem sinal por 45 s (90 s no primeiro) → aviso "Tentar de novo" sem perder o texto.
@@ -152,7 +151,9 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   `generateQueryEmbedding()` (`embeddings.ts`) guarda o vetor no cache de dados do Next por 30 dias (mesmo texto =
   mesmo vetor; vetor de reserva, sem OpenAI, não vai pro cache); a busca semântica também usa. (2) A demora maior do
   chat é o raciocínio do Opus 5.5 `high`: 2 respostas de 19/10 geraram 16.830 e 9.070 tokens de saída (4 min e
-  2 min 15 s); as normais têm 500–1.500 tokens e levam 10–25 s.
+  2 min 15 s); as normais têm 500–1.500 tokens e levam 10–25 s. Dono escolheu: dia a dia em **Opus 5.5 esforço
+  `medium`**; "🧠 Pensar mais" e o parecer técnico em `high` (`getClaudeChatEffort(deep)`, variável nova opcional
+  `ANTHROPIC_CHAT_DEEP_EFFORT`). O botão volta a fazer diferença.
 
 - **2026-10-18** — **IA encerra o caso pelo chat e preenche o painel** (pedido do dono, com foto do painel). Até aqui
   todo caso era fechado pelo formulário com uma frase curta ("trocado fusível aberto") e causa, solução e testes
