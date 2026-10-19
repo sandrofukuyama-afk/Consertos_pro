@@ -63,7 +63,7 @@ export function createHashedEmbedding(input: string) {
   return normalizeVector(vector);
 }
 
-async function createOpenAIEmbedding(input: string) {
+async function createOpenAIEmbedding(input: string, logUsage = true) {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -95,7 +95,8 @@ async function createOpenAIEmbedding(input: string) {
   };
 
   // Log token consumption asynchronously
-  if (payload.usage) {
+  // Dentro do cache (unstable_cache) nao da para gravar o log: ele le cookies().
+  if (payload.usage && logUsage) {
     logTokenUsage(
       OPENAI_EMBEDDING_MODEL,
       "gerar_embedding",
@@ -125,7 +126,7 @@ export function formatVectorLiteral(vector: number[]) {
   return `[${vector.map((value) => value.toFixed(8)).join(",")}]`;
 }
 
-export async function generateTextEmbedding(input: string) {
+export async function generateTextEmbedding(input: string, options: { logUsage?: boolean } = {}) {
   const normalized = normalizeText(input);
 
   if (!normalized) {
@@ -137,7 +138,7 @@ export async function generateTextEmbedding(input: string) {
 
   if (process.env.OPENAI_API_KEY) {
     try {
-      const vector = await createOpenAIEmbedding(normalized);
+      const vector = await createOpenAIEmbedding(normalized, options.logUsage ?? true);
 
       if (vector) {
         return {
@@ -162,7 +163,7 @@ export async function generateTextEmbedding(input: string) {
 // erro dentro do cache para nao ficar guardado.
 const cachedOpenAIEmbedding = unstable_cache(
   async (normalized: string) => {
-    const result = await generateTextEmbedding(normalized);
+    const result = await generateTextEmbedding(normalized, { logUsage: false });
     if (result.model !== OPENAI_EMBEDDING_MODEL) {
       throw new Error("embedding de reserva nao vai para o cache");
     }

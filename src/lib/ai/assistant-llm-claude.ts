@@ -73,6 +73,9 @@ export function isClaudeChatConfigured() {
 export function toFriendlyClaudeError(error: unknown) {
   const raw = error instanceof Error ? error.message : String(error);
   const status = error instanceof Anthropic.APIError ? error.status : undefined;
+  // Texto original da Anthropic no log da Vercel: a mensagem traduzida esconde o
+  // detalhe (ex.: saldo zerado x limite de gasto mensal atingido).
+  console.error(`Erro da Anthropic no chat (status ${status ?? "?"}): ${raw}`);
 
   if (/credit balance|billing|purchase credits/i.test(raw)) {
     return new Error(

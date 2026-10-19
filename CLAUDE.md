@@ -151,6 +151,10 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   em "Fase 1 aplicada no Supabase") por "Nenhum caso aberto" + como reabrir. Gasto registrado da IA em out/2026 até
   19/10: Anthropic US$ 27,06 (chat Opus 5.5 US$ 14,30; Opus 5 US$ 7,84; Sonnet 5.5 US$ 4,93), OpenAI US$ 0,17.
   Em 19/10 os **créditos da Anthropic acabaram** (erro no chat); recarga só pelo dono em console.anthropic.com.
+  Depois da recarga o erro continuou (4 tentativas sem resposta, 17:21–17:40): `toFriendlyClaudeError` agora grava o
+  texto original da Anthropic no log da Vercel ("Erro da Anthropic no chat") para separar saldo zerado de recarga
+  em outra organização / limite de gasto mensal. Corrigido também o "Failed to log token usage … cookies() inside
+  unstable_cache()": o embedding em cache não grava mais o log de gasto (centésimos de centavo).
 
 - **2026-10-19** — **Reabrir caso** + página do caso mais leve (relato do dono: "reabri um caso e não aparece nos
   casos", "app/chat lento"). Caso A1466 `ae5571a7`: encerrado pela IA em 18/10; em 19/10 o defeito voltou, o técnico
