@@ -40,8 +40,20 @@ function summarizeReportAsTitle(report: string | null | undefined) {
   return text.length > REPORT_TITLE_MAX_CHARS ? `${text.slice(0, REPORT_TITLE_MAX_CHARS).trimEnd()}…` : text;
 }
 
+// Inicio do dia de hoje no Japao (UTC+9, sem horario de verao), em ISO/UTC.
+function startOfTodayInJapanIso() {
+  const japanNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const japanMidnightUtc = Date.UTC(
+    japanNow.getUTCFullYear(),
+    japanNow.getUTCMonth(),
+    japanNow.getUTCDate(),
+  );
+  return new Date(japanMidnightUtc - 9 * 60 * 60 * 1000).toISOString();
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await createClient();
+  const todayStart = startOfTodayInJapanIso();
 
   const diagnosticsResult = await supabase
     .from("diagnostics")
@@ -54,13 +66,15 @@ export async function getDashboardData(): Promise<DashboardData> {
         current_summary,
         initial_problem_report,
         updated_at,
+        completed_at,
         equipment_categories(name),
         equipment_models(model_name),
         manufacturers(name)
       `,
     )
+    .or(`status.in.(draft,active,waiting_input),completed_at.gte.${todayStart}`)
     .order("updated_at", { ascending: false })
-    .limit(24);
+    .limit(200);
 
   const diagnosticsRows = diagnosticsResult.data ?? [];
 
@@ -159,8 +173,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   const waitingCount = queueDiagnostics.filter(
     (item) => item.status === "Aguardando teste",
   ).length;
-  const resolvedCount = diagnostics.filter(
-    (item) => item.status === "Resolvido hoje",
+  const resolvedCount = diagnosticsRows.filter(
+    (row) => row.status === "resolved" && row.completed_at && row.completed_at >= todayStart,
   ).length;
 
   const kpis: Kpi[] = [

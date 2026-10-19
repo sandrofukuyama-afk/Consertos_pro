@@ -140,6 +140,18 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-19** — Correção: o **parecer automático ao encerrar nunca era gerado**. Rodava com `after()` na mesma
+  função do chat, e a resposta do "encerrando" (A1466, 18/10) levou ~4 min 40 s: a Vercel cortou a função em 300 s
+  (`Task timed out after 300 seconds`, log de 11:03:59 UTC) logo depois de gravar a resposta. Agora o fim do chat
+  manda `done` com `closedCase` e a tela chama `POST /api/diagnosticos/[id]/parecer` (rota nova, 300 s próprios)
+  e recarrega o painel quando fica pronto. Sem nenhum `narrativa_diagnostico_claude` em `ai_token_logs` em outubro.
+  Tela inicial: "Resolvidos hoje" contava todos os resolvidos desde sempre (5) — agora só os com `completed_at` de
+  hoje no horário do Japão; a consulta (`getDashboardData`) pega só casos em andamento + encerrados hoje (antes: os
+  24 mais recentes de qualquer status, então caso aberto antigo podia sumir). Texto da lista vazia trocado (falava
+  em "Fase 1 aplicada no Supabase") por "Nenhum caso aberto" + como reabrir. Gasto registrado da IA em out/2026 até
+  19/10: Anthropic US$ 27,06 (chat Opus 5.5 US$ 14,30; Opus 5 US$ 7,84; Sonnet 5.5 US$ 4,93), OpenAI US$ 0,17.
+  Em 19/10 os **créditos da Anthropic acabaram** (erro no chat); recarga só pelo dono em console.anthropic.com.
+
 - **2026-10-19** — **Reabrir caso** + página do caso mais leve (relato do dono: "reabri um caso e não aparece nos
   casos", "app/chat lento"). Caso A1466 `ae5571a7`: encerrado pela IA em 18/10; em 19/10 o defeito voltou, o técnico
   pediu "reabrir o caso" e a IA respondeu "Reabri o caso" **sem ter ferramenta para isso** (só atualizou o resumo) —

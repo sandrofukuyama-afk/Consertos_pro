@@ -67,7 +67,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const ping = setInterval(() => send({ type: "ping" }), PING_INTERVAL_MS);
 
     try {
-      await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files, {
+      const result = await postDiagnosticChatMessage(supabase, user.id, diagnosticId, message, files, {
         deep,
         clientMessageId,
         onProgress: (event) => send(event),
@@ -77,7 +77,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       } catch {
         // A tela chama router.refresh() de qualquer forma.
       }
-      send({ type: "done" });
+      send({ type: "done", closedCase: result.closedCase });
     } catch (error) {
       send({
         type: "error",

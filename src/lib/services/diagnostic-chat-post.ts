@@ -3,7 +3,6 @@ import { after } from "next/server";
 
 import { analyzeBoardImage } from "@/lib/ai/image-analysis";
 import type { ClaudeChatProgressEvent } from "@/lib/ai/assistant-llm-claude";
-import { generateDiagnosticAssistantBenchResponse } from "@/lib/services/assistant";
 import { sendDiagnosticChatMessage } from "@/lib/services/diagnostic-chat";
 import { queueDiagnosticSemanticSync } from "@/lib/services/semantic-sync";
 import type { createClient } from "@/lib/supabase/server";
@@ -113,7 +112,7 @@ export async function postDiagnosticChatMessage(
 
   if (previousTurn?.answered) {
     // A resposta chegou a ser gravada; a tela so precisa recarregar.
-    return;
+    return { closedCase: false };
   }
 
   if (previousTurn?.inProgress) {
@@ -188,20 +187,6 @@ export async function postDiagnosticChatMessage(
     }
   }
 
-  // A IA encerrou o caso: gera o parecer tecnico estruturado do painel depois da
-  // resposta (leva ~30 s e nao pode segurar a tela).
-  if (closedCase) {
-    const generateReport = () =>
-      generateDiagnosticAssistantBenchResponse(diagnosticId).catch((error: unknown) => {
-        console.error("Parecer automatico apos encerrar o caso falhou", error);
-      });
-    try {
-      after(generateReport);
-    } catch {
-      void generateReport();
-    }
-  }
-
   // Analise estruturada da foto (OpenAI) depois que a resposta ja foi entregue:
   // so enriquece o anexo para as proximas mensagens, nao precisa segurar a tela.
   const photos = previousTurn
@@ -215,6 +200,10 @@ export async function postDiagnosticChatMessage(
       void analyzeChatPhotos(supabase, photos);
     }
   }
+
+  // A IA encerrou o caso: a tela pede o parecer tecnico num pedido separado
+  // (aqui nao cabe: a resposta longa ja pode ter gasto quase os 300 s da funcao).
+  return { closedCase };
 }
 
 async function analyzeChatPhotos(supabase: SupabaseClient, photos: SavedChatPhoto[]) {

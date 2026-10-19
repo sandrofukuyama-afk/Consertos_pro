@@ -17,7 +17,7 @@ type ChatStreamEvent =
   | { type: "text"; delta: string }
   | { type: "tools"; names: string[] }
   | { type: "ping" }
-  | { type: "done" }
+  | { type: "done"; closedCase?: boolean }
   | { type: "error"; message: string };
 
 type SendState =
@@ -95,6 +95,20 @@ export function DiagnosticChatComposer({
   const busy = state.phase === "sending" || isRefreshing;
   const canSend = (text.trim().length > 0 || photos.length > 0) && !busy;
 
+  // A IA encerrou o caso: gera o parecer tecnico em outro pedido (leva ~30-60 s)
+  // e recarrega o painel quando ficar pronto.
+  function requestClosingReport() {
+    void fetch(`/api/diagnosticos/${diagnosticId}/parecer`, { method: "POST", keepalive: true })
+      .then((response) => {
+        if (response.ok) {
+          startRefresh(() => router.refresh());
+        }
+      })
+      .catch(() => {
+        // Sem parecer automatico; o botao "Gerar parecer" do painel continua la.
+      });
+  }
+
   async function send() {
     const sentText = text.trim();
     setState({ phase: "sending", sentText, photoCount: photos.length, reply: "", activity: "" });
@@ -171,6 +185,9 @@ export function DiagnosticChatComposer({
             throw new Error(event.message);
           } else if (event.type === "done") {
             finished = true;
+            if (event.closedCase) {
+              requestClosingReport();
+            }
           }
         }
       }

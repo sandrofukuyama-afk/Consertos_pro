@@ -4,19 +4,20 @@ export function DashboardEmptyState() {
   return (
     <div className="rounded-[24px] border border-dashed border-[var(--panel-border)] bg-[var(--background)] px-5 py-10 text-center">
       <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--muted)]">
-        Sem diagnósticos ainda
+        Nenhum caso aberto
       </p>
       <h4 className="mt-3 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-        O banco já está pronto para receber o primeiro caso
+        Todos os casos estão encerrados
       </h4>
       <p className="mx-auto mt-3 max-w-2xl break-words text-sm leading-6 text-[var(--muted)]">
-        Agora que a Fase 1 foi aplicada no Supabase, esta tela passa a refletir os dados reais assim que um diagnóstico for criado.
+        Comece um diagnóstico novo acima. Para voltar a um caso encerrado, ache-o na busca, abra e toque em
+        &quot;Reabrir caso&quot; no painel lateral.
       </p>
       <Link
-        href="/diagnosticos/novo"
-        className="mt-5 inline-flex rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white"
+        href="/busca"
+        className="mt-5 inline-flex rounded-full border border-[var(--panel-border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
       >
-        Criar primeiro diagnóstico
+        Buscar casos encerrados
       </Link>
     </div>
   );
