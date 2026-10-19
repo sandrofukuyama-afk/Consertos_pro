@@ -12,6 +12,7 @@ import {
   CLOSURE_CAUSE_TYPES,
   CLOSURE_SOLUTION_TYPES,
   closeDiagnosticCase,
+  reopenDiagnosticCase,
 } from "@/lib/services/diagnostic-closure";
 import type { DiagnosticTechnicalWorkbench } from "@/lib/services/assistant-technical-context";
 import type { createClient } from "@/lib/supabase/server";
@@ -315,6 +316,18 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
         },
       },
       required: ["estado_final", "resumo", "resultado_do_reparo"],
+    },
+  },
+  {
+    name: "reabrir_diagnostico",
+    description:
+      "Reabre um caso encerrado: volta para a lista de casos ativos e apaga o fechamento (causa/solucao). Use quando o tecnico pedir para reabrir ou disser que o defeito voltou num caso encerrado.",
+    input_schema: {
+      type: "object",
+      properties: {
+        motivo: { type: "string", description: "Ex.: 'defeito voltou: nao liga, LED do MagSafe apagado'." },
+      },
+      required: ["motivo"],
     },
   },
 ];
@@ -1047,6 +1060,19 @@ async function closeCase(ctx: DiagnosticAgentToolContext, input: Record<string, 
   };
 }
 
+async function reopenCase(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
+  const reason = readString(input, "motivo", true)!;
+  const { alreadyOpen } = await reopenDiagnosticCase(ctx.supabase, ctx.diagnosticId, reason);
+
+  if (alreadyOpen) {
+    return { ok: true, aviso: "o caso ja estava aberto" };
+  }
+
+  ctx.wroteToCase.value = true;
+  ctx.actions.push("Reabriu o caso");
+  return { ok: true };
+}
+
 const TOOL_HANDLERS: Record<
   string,
   (ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) => Promise<unknown>
@@ -1066,6 +1092,7 @@ const TOOL_HANDLERS: Record<
   atualizar_resumo_do_caso: updateCaseSummary,
   atualizar_equipamento_do_caso: updateCaseEquipment,
   encerrar_diagnostico: closeCase,
+  reabrir_diagnostico: reopenCase,
 };
 
 export async function runDiagnosticAgentTool(

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatVectorLiteral,
+  generateQueryEmbedding,
   generateTextEmbedding,
   getEmbeddingProviderName,
   isExternalEmbeddingConfigured,
@@ -453,7 +454,7 @@ export async function getSemanticSearchResults(
     };
   }
 
-  const { vector } = await generateTextEmbedding(trimmed);
+  const { vector } = await generateQueryEmbedding(trimmed);
   const { data } = await supabase.rpc("match_embedding_sources", {
     query_embedding: formatVectorLiteral(vector),
     match_count: 6,

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import { logTokenUsage } from "@/lib/services/token-logger";
 
 export const EMBEDDING_DIMENSIONS = 1536;
@@ -153,4 +154,33 @@ export async function generateTextEmbedding(input: string) {
     vector: createHashedEmbedding(normalized),
     model: "hashing-v1",
   };
+}
+
+// Embedding da OpenAI para o mesmo texto e sempre o mesmo: guardado no cache de
+// dados do Next. A tela do caso busca casos parecidos a cada abertura e antes
+// chamava a OpenAI toda vez (~0,5-1 s). Resultado de reserva (sem OpenAI) lanca
+// erro dentro do cache para nao ficar guardado.
+const cachedOpenAIEmbedding = unstable_cache(
+  async (normalized: string) => {
+    const result = await generateTextEmbedding(normalized);
+    if (result.model !== OPENAI_EMBEDDING_MODEL) {
+      throw new Error("embedding de reserva nao vai para o cache");
+    }
+    return result;
+  },
+  ["text-embedding-v1"],
+  { revalidate: 60 * 60 * 24 * 30 },
+);
+
+/** Para consultas (busca de casos/documentos parecidos); para gravar use generateTextEmbedding. */
+export async function generateQueryEmbedding(input: string) {
+  const normalized = normalizeText(input);
+  if (!normalized || !process.env.OPENAI_API_KEY) {
+    return generateTextEmbedding(input);
+  }
+  try {
+    return await cachedOpenAIEmbedding(normalized);
+  } catch {
+    return generateTextEmbedding(input);
+  }
 }

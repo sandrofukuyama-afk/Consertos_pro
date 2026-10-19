@@ -13,7 +13,7 @@ import {
 } from "@/lib/ai/image-analysis";
 import { generateDiagnosticAssistantBenchResponse } from "@/lib/services/assistant";
 import { postDiagnosticChatMessage } from "@/lib/services/diagnostic-chat-post";
-import { closeDiagnosticCase } from "@/lib/services/diagnostic-closure";
+import { closeDiagnosticCase, reopenDiagnosticCase } from "@/lib/services/diagnostic-closure";
 import {
   syncDiagnosticEmbeddingSource,
   syncSemanticBacklog,
@@ -1630,6 +1630,30 @@ export async function extractAttachmentComponentRefAction(
   }
 
   return result;
+}
+
+export async function reopenDiagnosticAction(formData: FormData) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+
+  if (!diagnosticId) {
+    redirect("/?error=Diagnostico invalido.");
+  }
+
+  try {
+    await reopenDiagnosticCase(supabase, diagnosticId, null);
+  } catch (error) {
+    redirect(
+      `/diagnosticos/${diagnosticId}?error=${encodeURIComponent(
+        error instanceof Error ? error.message : "Falha ao reabrir o caso.",
+      )}`,
+    );
+  }
+
+  revalidatePath(`/diagnosticos/${diagnosticId}`);
+  revalidatePath("/");
+  redirect(`/diagnosticos/${diagnosticId}?message=${encodeURIComponent("Caso reaberto.")}`);
 }
 
 export async function closeDiagnosticAction(formData: FormData) {

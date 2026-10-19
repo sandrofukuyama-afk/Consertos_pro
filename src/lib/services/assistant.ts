@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   formatVectorLiteral,
-  generateTextEmbedding,
+  generateQueryEmbedding,
   getEmbeddingProviderName,
   isExternalEmbeddingConfigured,
 } from "@/lib/ai/embeddings";
@@ -952,7 +952,7 @@ export async function getSimilarCasesAndDocuments(
     };
   }
 
-  const { vector } = await generateTextEmbedding(query);
+  const { vector } = await generateQueryEmbedding(query);
   const { data } = await supabase.rpc("match_embedding_sources", {
     query_embedding: formatVectorLiteral(vector),
     match_count: 10,

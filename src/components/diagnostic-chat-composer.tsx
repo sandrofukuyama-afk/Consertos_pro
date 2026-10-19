@@ -46,6 +46,7 @@ const TOOL_LABELS: Record<string, string> = {
   atualizar_resumo_do_caso: "atualizando resumo",
   atualizar_equipamento_do_caso: "registrando equipamento",
   encerrar_diagnostico: "encerrando o caso",
+  reabrir_diagnostico: "reabrindo o caso",
 };
 
 function newClientMessageId() {

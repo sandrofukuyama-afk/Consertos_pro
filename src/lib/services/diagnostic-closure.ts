@@ -138,3 +138,56 @@ export async function closeDiagnosticCase(
 
   return { resolvedCaseId: resolvedCase.id as string };
 }
+
+/**
+ * Reabre um caso encerrado (o defeito voltou ou o encerramento estava errado):
+ * volta a "ativo" e apaga o fechamento (causa e solucao vao junto, em cascata),
+ * para nao ficar como caso resolvido na base de conhecimento.
+ */
+export async function reopenDiagnosticCase(
+  supabase: SupabaseServerClient,
+  diagnosticId: string,
+  reason: string | null,
+) {
+  const { data: diagnostic, error: readError } = await supabase
+    .from("diagnostics")
+    .select("status, current_summary")
+    .eq("id", diagnosticId)
+    .maybeSingle();
+
+  if (readError) {
+    throw new Error(readError.message);
+  }
+  if (!diagnostic) {
+    throw new Error("Diagnóstico não encontrado.");
+  }
+  if (diagnostic.status === "active" || diagnostic.status === "waiting_input") {
+    return { alreadyOpen: true };
+  }
+
+  const { error: deleteError } = await supabase
+    .from("resolved_cases")
+    .delete()
+    .eq("diagnostic_id", diagnosticId);
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  const { error: updateError } = await supabase
+    .from("diagnostics")
+    .update({
+      status: "active",
+      completed_at: null,
+      current_summary: reason
+        ? `Reaberto: ${reason}${diagnostic.current_summary ? `\nAntes: ${diagnostic.current_summary}` : ""}`
+        : diagnostic.current_summary,
+    })
+    .eq("id", diagnosticId);
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  await syncDiagnosticEmbeddingSource(diagnosticId, supabase);
+
+  return { alreadyOpen: false };
+}

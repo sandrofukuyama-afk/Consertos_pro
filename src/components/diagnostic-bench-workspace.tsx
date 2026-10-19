@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   addDiagnosticTestAction,
   generateDiagnosticAssistantAction,
+  reopenDiagnosticAction,
 } from "@/app/actions";
 import { ChatCostMeter, ChatCostWarning } from "@/components/chat-cost-meter";
 import { ChatMessageBubble } from "@/components/chat-message-bubble";
@@ -688,6 +689,14 @@ export function DiagnosticBenchWorkspace({
                   <p className="whitespace-pre-wrap text-[var(--muted)]">{detail.resolvedCase.solution.procedure}</p>
                 </div>
               ) : null}
+              <form action={reopenDiagnosticAction} className="mt-4">
+                <input type="hidden" name="diagnostic_id" value={detail.id} />
+                <FormSubmitButton
+                  idleLabel="Reabrir caso"
+                  pendingLabel="Reabrindo..."
+                  className="rounded-full border border-[var(--panel-border)] px-4 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:border-[rgba(109,94,242,0.4)] disabled:opacity-60"
+                />
+              </form>
             </div>
           ) : (
             <DiagnosticClosureForm diagnosticId={detail.id} />

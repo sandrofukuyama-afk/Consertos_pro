@@ -141,6 +141,19 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-19** — **Reabrir caso** + página do caso mais leve (relato do dono: "reabri um caso e não aparece nos
+  casos", "app/chat lento"). Caso A1466 `ae5571a7`: encerrado pela IA em 18/10; em 19/10 o defeito voltou, o técnico
+  pediu "reabrir o caso" e a IA respondeu "Reabri o caso" **sem ter ferramenta para isso** (só atualizou o resumo) —
+  o caso seguiu `resolved` e fora da lista. Agora: `reopenDiagnosticCase()` em `diagnostic-closure.ts` (volta para
+  `active`, apaga `resolved_cases` com causa/solução em cascata, resumo "Reaberto: motivo"), ferramenta da IA
+  `reabrir_diagnostico`, botão **"Reabrir caso"** no painel "Caso encerrado" (`reopenDiagnosticAction`) e regra no
+  prompt: nunca dizer que fez algo no caso sem a ferramenta ter respondido ok. Lentidão: (1) a tela do caso gerava
+  um embedding na OpenAI a cada abertura para achar casos parecidos (`getSimilarCasesAndDocuments`) — agora
+  `generateQueryEmbedding()` (`embeddings.ts`) guarda o vetor no cache de dados do Next por 30 dias (mesmo texto =
+  mesmo vetor; vetor de reserva, sem OpenAI, não vai pro cache); a busca semântica também usa. (2) A demora maior do
+  chat é o raciocínio do Opus 5.5 `high`: 2 respostas de 19/10 geraram 16.830 e 9.070 tokens de saída (4 min e
+  2 min 15 s); as normais têm 500–1.500 tokens e levam 10–25 s.
+
 - **2026-10-18** — **IA encerra o caso pelo chat e preenche o painel** (pedido do dono, com foto do painel). Até aqui
   todo caso era fechado pelo formulário com uma frase curta ("trocado fusível aberto") e causa, solução e testes
   ficavam vazios. Ferramenta nova `encerrar_diagnostico` (`diagnostic-agent-tools.ts`): quando o técnico diz que
