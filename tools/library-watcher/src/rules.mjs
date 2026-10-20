@@ -11,6 +11,7 @@ export const MODEL_RULES = [
   ["820-00165", "Apple", "Notebook", "MacBook Air 13\" A1466", "820-00165-A"],
   ["a1466|820.3437", "Apple", "Notebook", "MacBook Air 13\" A1466", "820-3437"],
   ["a1706|820-00239|x362", "Apple", "Notebook", "Macbook Pro 1706", "820-00239"],
+  ["surface ?laptop ?3|m1098028", "Microsoft", "Notebook", "Surface Laptop 3", "M1098028-008"],
   ["820-3115", "Apple", "Notebook", "MacBook Pro 13\" A1278", "820-3115-B"],
   ["820-2796", "Apple", "Notebook", "MacBook Pro 13\" A1278", "820-2796"],
   ["820-3330|j31", "Apple", "Notebook", "MacBook Pro 15\" A1286", "820-3330-B"],
@@ -131,6 +132,7 @@ export const MODEL_RULES = [
 
 export const BRAND_HINTS = [
   ["apple|macbook|imac|iphone|ipad", "Apple"],
+  ["microsoft|\\bsurface\\b", "Microsoft"],
   ["dell|inspiron|latitude", "Dell"],
   ["acer|aspire|nitro", "Acer"],
   ["asus|\\brog", "Asus"],
@@ -174,5 +176,7 @@ export const BOARD_PATTERNS = [
   "\\bda0[a-z0-9]{8}\\b",
   "\\b6050a\\d{7}\\b",
   "\\b820-\\d{4,5}(?:-[a-z])?\\b",
+  // Microsoft Surface: M1098028-008
+  "\\bm\\d{7}-\\d{3}\\b",
   "\\bmbx-\\d{3}\\b",
 ];

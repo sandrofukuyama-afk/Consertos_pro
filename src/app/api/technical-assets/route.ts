@@ -762,6 +762,37 @@ function normalizeSearchText(value: string | null | undefined) {
     .replace(/\s+/g, " ");
 }
 
+// Palavras que so dizem o tipo de arquivo: sozinhas nao bastam para trazer
+// arquivo sem associacao numa busca filtrada pela placa/modelo do caso.
+const GENERIC_SEARCH_TOKENS = new Set([
+  "boardview",
+  "board",
+  "view",
+  "bv",
+  "esquema",
+  "esquemas",
+  "schematic",
+  "schematics",
+  "bios",
+  "firmware",
+  "ec",
+  "pdf",
+  "brd",
+  "bdv",
+  "cad",
+  "asc",
+  "bin",
+  "rom",
+  "fz",
+  "tvw",
+  "arquivo",
+  "arquivos",
+  "placa",
+  "notebook",
+  "laptop",
+  "datasheet",
+]);
+
 async function searchTechnicalAssets(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
@@ -833,6 +864,7 @@ async function searchTechnicalAssets(request: Request) {
 
   const rows = (data ?? []) as TechnicalAssetRow[];
   const normalizedQuery = normalizeSearchText(query);
+  const hasSpecificQuery = queryTokens.some((token) => !GENERIC_SEARCH_TOKENS.has(token));
 
   const items = rows
     .map((row) => {
@@ -887,22 +919,23 @@ async function searchTechnicalAssets(request: Request) {
     })
     .filter((item) => (fileFormat ? item.fileFormat === fileFormat : true))
     // Arquivo sem placa/modelo/fabricante vinculado (boardId/equipmentModelId/manufacturerId null)
-    // so entra na lista filtrada quando ha texto digitado: sem isso, toda a biblioteca ainda sem
-    // associacao aparecia em qualquer busca por placa/modelo (ex.: o caso virava uma lista de
-    // placas de video sem relacao nenhuma com o notebook do caso).
+    // so entra na lista filtrada quando o texto digitado e especifico (codigo de placa/modelo):
+    // sem isso, toda a biblioteca ainda sem associacao aparecia em qualquer busca por placa/modelo,
+    // e uma palavra generica como "boardview" trazia todo boardview sem associacao (de outros
+    // fabricantes) porque o nome deles e so "Boardview".
     .filter((item) =>
-      boardId ? item.boardId === boardId || (item.boardId === null && Boolean(normalizedQuery)) : true,
+      boardId ? item.boardId === boardId || (item.boardId === null && hasSpecificQuery) : true,
     )
     .filter((item) =>
       equipmentModelId
         ? item.equipmentModelId === equipmentModelId ||
-          (item.equipmentModelId === null && Boolean(normalizedQuery))
+          (item.equipmentModelId === null && hasSpecificQuery)
         : true,
     )
     .filter((item) =>
       manufacturerId
         ? item.manufacturerId === manufacturerId ||
-          (item.manufacturerId === null && Boolean(normalizedQuery))
+          (item.manufacturerId === null && hasSpecificQuery)
         : true,
     )
     .filter((item) => {

@@ -113,8 +113,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    em 17/10, MacBook Air A1466 820-00165-A em 18/10). Arquivos vão em `HDD4\Enviar para o ConsertosPro`, **não** em
    `ConsertosPro-watcher\src` (pasta do código). `classify.mjs`/`rules.mjs` da correção de 18/10 já copiados para
    `W:\Servidor\HDD4\ConsertosPro-watcher\src` (W: = `\\192.168.0.32\raid`; backup `*.bak-20261018`). App reiniciado pelo dono em
-   18/10 com `POLL_SECONDS=30`/`STABLE_SECONDS=15` no `.env` (arquivo entra em ~30–60 s). Falta conferir o 1º envio
-   com a versão nova. Reiniciar: painel do ZimaOS (`http://192.168.0.32`) → app consertospro-watcher → ⋮ → Restart.
+   18/10 com `POLL_SECONDS=30`/`STABLE_SECONDS=15` no `.env` (arquivo entra em ~30–60 s). 1º envio com a versão nova
+   (Surface Laptop 3, 20/10) entrou sem classificação — regra nova copiada em 20/10, **falta reiniciar**. Reiniciar: painel do ZimaOS (`http://192.168.0.32`) → app consertospro-watcher → ⋮ → Restart.
 6. ~~Conferir as primeiras conversas com a memória completa~~ — conferido em 16/10: 20 respostas, todas
    `memoryMode: "full"`, nenhum `fallback`; 5 conversas guardadas. Continuar de olho depois de mudar
    ferramentas/instruções (`memoryFallbackReason` diz o motivo se cair no modo de segurança).
@@ -139,6 +139,20 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-20** — Correção: a tela "Associar placa e arquivos técnicos" ainda trazia arquivos de outros modelos/
+  fabricantes (relato do dono, com foto). Eram arquivos **sem associação** que passavam no filtro de placa/modelo do
+  caso sempre que havia **qualquer** texto digitado — uma palavra genérica como "boardview" trazia todo boardview sem
+  associação, porque o nome deles é só "Boardview". Agora (`searchTechnicalAssets` em
+  `src/app/api/technical-assets/route.ts`) só passam com texto **específico** (`GENERIC_SEARCH_TOKENS` lista as
+  palavras de tipo: boardview, esquema, bios, pdf, brd, asc…). Os que apareceram eram o 1º envio com o vigia novo:
+  **Microsoft Surface Laptop 3, placa M1098028-008** (esquema, BIOS e 5 `.asc`, 20/10 11:24) — entraram sem
+  fabricante/modelo/placa porque o vigia não tinha regra para Surface nem o formato de código `M1234567-008`.
+  `rules.mjs`: regra `surface ?laptop ?3|m1098028`, marca Microsoft (`microsoft|surface`) e padrão de placa
+  `\bm\d{7}-\d{3}\b`; copiado para o servidor (backup `rules.mjs.bak-20261020`), **falta reiniciar o vigia**.
+  No banco: criados fabricante Microsoft, modelo Surface Laptop 3 (Notebook), placa M1098028-008 e o vínculo entre
+  eles; os 7 arquivos ligados (`technical_asset_links`, `board_id`/`equipment_model_id`, `display_name`). Restam 27
+  arquivos antigos sem associação na biblioteca (de 1025).
 
 - **2026-10-20** — **Relatório de serviço para o cliente** (pedido do dono). Página `/diagnosticos/[id]/relatorio`
   (botão "📄 Relatório para o cliente" no painel "Caso encerrado"): a IA escreve a partir do caso (fechamento,
