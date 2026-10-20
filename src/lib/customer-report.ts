@@ -21,7 +21,8 @@ export type CustomerReport = {
 export const WORKSHOP_INFO = {
   name: "Casablanca Eletroshop",
   address: "",
-  phone: "",
+  phone: "0276-613858",
+  whatsapp: "+81-80-4087-7905",
   email: "",
 };
 

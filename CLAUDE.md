@@ -148,7 +148,7 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   da data de conclusão) e assinaturas. Técnico revisa/edita na própria página e usa "Salvar PDF / Compartilhar"
   (impressão do navegador; no iPhone gera o PDF para LINE/WhatsApp/e-mail). Guardado em `diagnostics.customer_report`
   (jsonb, migration `20261020090000`); formato e textos fixos pt/ja em `src/lib/customer-report.ts` (nome da oficina
-  **Casablanca Eletroshop** em `WORKSHOP_INFO`; endereço/telefone/e-mail vazios até o dono passar); IA em
+  **Casablanca Eletroshop**, Tel. 0276-613858, WhatsApp +81-80-4087-7905 em `WORKSHOP_INFO`; endereço/e-mail vazios); IA em
   `src/lib/ai/customer-report-llm.ts` (Opus do dia a dia, saída JSON, log `relatorio_cliente_claude`); serviço em
   `src/lib/services/customer-report.ts`; ações `generateCustomerReportAction`/`updateCustomerReportAction`. O laudo
   antigo (`/laudo`, sem link e com botão de imprimir quebrado em componente de servidor) redireciona para o novo.
