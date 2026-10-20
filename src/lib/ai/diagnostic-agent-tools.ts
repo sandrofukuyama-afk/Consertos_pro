@@ -230,13 +230,14 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "atualizar_equipamento_do_caso",
     description:
-      "Registra marca/modelo/placa do equipamento no caso (vira o titulo do caso na lista). Use quando o caso ainda nao tem equipamento registrado e o tecnico informar o modelo, ou voce ler com certeza na foto da etiqueta/placa; ou quando o tecnico corrigir. Nao chute: use as palavras do tecnico (pode corrigir grafia, ex.: 'steath' -> 'Stealth') e NAO acrescente serie, linha ou nome comercial que ele nao disse (ex.: nao transformar 'Stealth 15M' em 'GS65 Stealth'). Na duvida, registre so o codigo da placa.",
+      "Registra marca/modelo/placa do equipamento no caso e liga ao catalogo tecnico, CRIANDO no catalogo o que nao existir (fabricante, modelo, placa) - assim a busca de esquema/boardview/BIOS do caso ja acha os arquivos desse aparelho. Use logo na 1a mensagem do caso quando o tecnico disser marca, modelo ou codigo da placa (mesmo so parte), ou quando voce ler com certeza na foto da etiqueta/placa; e quando o tecnico corrigir. Como cria entrada no catalogo, NAO chute: use as palavras do tecnico (pode corrigir grafia, ex.: 'steath' -> 'Stealth', 'inspirom' -> 'Inspiron') e NAO acrescente serie, linha ou nome comercial que ele nao disse. Modelo = nome comercial (ex.: 'Inspiron 15 5565'), nunca numero de serie, service tag ou part number (ex.: 'PF66F', 'CN-0...'). Codigo da placa so no campo placa (ex.: LA-D804P, DA0P5DMB8C0, 820-00165-A, MS-16R31), nunca o codinome sozinho (ex.: 'BAL23'). Na duvida, registre so fabricante e placa.",
     input_schema: {
       type: "object",
       properties: {
         fabricante: { type: "string", description: "Ex.: MSI, HP, Dell, Apple." },
         modelo: { type: "string", description: "Modelo comercial, ex.: GF63 Thin 10SC, 15s-fq1126TU." },
         placa: { type: "string", description: "Codigo da placa, se souber. Ex.: MS-16R31, DA0P5DMB8C0." },
+        categoria: { type: "string", enum: ["Notebook", "Desktop", "Smartphone", "Tablet", "Televisão", "Placa de vídeo"] },
       },
     },
   },
@@ -791,15 +792,26 @@ function normalizeCatalogName(value: string) {
     .replace(/\s+/g, " ");
 }
 
+const EQUIPMENT_CATEGORIES: Record<string, string> = {
+  Notebook: "notebook",
+  Desktop: "desktop",
+  Smartphone: "smartphone",
+  Tablet: "tablet",
+  "Televisão": "television",
+  "Placa de vídeo": "video_card",
+};
+
 /**
- * Grava o equipamento no caso. O texto vai sempre em equipment_label (titulo
- * na lista); fabricante e modelo so sao ligados ao catalogo quando ja existem
- * com o mesmo nome — a IA nao cria entradas novas no catalogo.
+ * Grava o equipamento no caso e liga ao catalogo, criando o que faltar
+ * (fabricante, modelo, placa e o vinculo modelo-placa). Assim os arquivos que
+ * chegarem depois (vigia de pasta, tela de associacao) ja caem no mesmo modelo.
+ * O texto vai sempre em equipment_label (titulo na lista).
  */
 async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
   const manufacturerName = readString(input, "fabricante");
   const modelName = readString(input, "modelo");
-  const boardCode = readString(input, "placa");
+  const boardCode = readString(input, "placa")?.toUpperCase() ?? null;
+  const categoryName = readString(input, "categoria");
 
   if (!manufacturerName && !modelName && !boardCode) {
     throw new ToolInputError("Informe ao menos fabricante, modelo ou placa.");
@@ -813,69 +825,171 @@ async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Recor
     .join(" ")
     .slice(0, 120);
 
+  const sb = ctx.supabase;
   const update: Record<string, string> = { equipment_label: label };
   const linked: string[] = [];
+  const created: string[] = [];
 
-  let manufacturerId: string | null = null;
-  if (manufacturerName) {
-    const { data } = await ctx.supabase
-      .from("manufacturers")
-      .select("id, name")
-      .eq("normalized_name", normalizeCatalogName(manufacturerName))
-      .maybeSingle();
+  // Categoria do modelo novo: a informada, senao a do caso, senao Notebook.
+  const { data: diagnostic } = await sb
+    .from("diagnostics")
+    .select("equipment_category_id, equipment_categories(slug)")
+    .eq("id", ctx.diagnosticId)
+    .maybeSingle();
+  const caseCategorySlug =
+    (diagnostic?.equipment_categories as unknown as { slug?: string } | null)?.slug ?? null;
+  const caseUnclassified = !caseCategorySlug || caseCategorySlug === "nao-classificado";
+  const wantedSlug =
+    (categoryName ? EQUIPMENT_CATEGORIES[categoryName] : null) ?? (caseUnclassified ? "notebook" : null);
+  let categoryId = caseUnclassified ? null : ((diagnostic?.equipment_category_id as string | null) ?? null);
+  if (wantedSlug && wantedSlug !== caseCategorySlug) {
+    const { data } = await sb.from("equipment_categories").select("id").eq("slug", wantedSlug).maybeSingle();
     if (data?.id) {
-      manufacturerId = data.id as string;
-      update.manufacturer_id = manufacturerId;
-      linked.push(`fabricante ${data.name}`);
+      categoryId = data.id as string;
+      // Caso aberto pelo chat rapido fica "Nao classificado": corrige so com categoria informada.
+      if (caseUnclassified && categoryName) {
+        update.equipment_category_id = categoryId;
+      }
     }
   }
 
+  // Fabricante: acha ou cria.
+  let manufacturerId: string | null = null;
+  if (manufacturerName) {
+    const normalized = normalizeCatalogName(manufacturerName);
+    const { data } = await sb.from("manufacturers").select("id, name").eq("normalized_name", normalized).maybeSingle();
+    if (data?.id) {
+      manufacturerId = data.id as string;
+      linked.push(`fabricante ${data.name}`);
+    } else {
+      const { data: row, error } = await sb
+        .from("manufacturers")
+        .insert({ name: manufacturerName, normalized_name: normalized })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      manufacturerId = row.id as string;
+      created.push(`fabricante ${manufacturerName}`);
+    }
+  }
+
+  // Placa: acha (sem diferenciar maiusculas) ou cria.
+  let boardId: string | null = null;
+  let boardManufacturerId: string | null = null;
+  if (boardCode) {
+    const { data } = await sb
+      .from("boards")
+      .select("id, board_code, manufacturer_id")
+      .ilike("board_code", boardCode)
+      .limit(1)
+      .maybeSingle();
+    if (data?.id) {
+      boardId = data.id as string;
+      boardManufacturerId = (data.manufacturer_id as string | null) ?? null;
+      linked.push(`placa ${data.board_code}`);
+      if (!boardManufacturerId && manufacturerId) {
+        await sb.from("boards").update({ manufacturer_id: manufacturerId }).eq("id", boardId);
+        boardManufacturerId = manufacturerId;
+      }
+    } else {
+      const { data: boardType } = await sb.from("board_types").select("id").eq("slug", "mainboard").maybeSingle();
+      const { data: row, error } = await sb
+        .from("boards")
+        .insert({ board_type_id: boardType?.id, manufacturer_id: manufacturerId, board_code: boardCode })
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      boardId = row.id as string;
+      boardManufacturerId = manufacturerId;
+      created.push(`placa ${boardCode}`);
+    }
+  }
+  manufacturerId ??= boardManufacturerId;
+
+  // Modelo: pelo nome; senao o modelo que a placa ja tem (o nome que o tecnico
+  // fala raramente bate com o do catalogo); senao cria.
+  let modelId: string | null = null;
   if (modelName && manufacturerId) {
-    const { data } = await ctx.supabase
+    const { data } = await sb
       .from("equipment_models")
       .select("id, model_name")
       .eq("manufacturer_id", manufacturerId)
       .eq("normalized_model_name", normalizeCatalogName(modelName))
       .maybeSingle();
     if (data?.id) {
-      update.equipment_model_id = data.id as string;
+      modelId = data.id as string;
       linked.push(`modelo ${data.model_name}`);
     }
   }
-
-  // O nome que o tecnico fala (ex.: "Stealth 15M A11UEK") raramente bate com o nome
-  // curto do catalogo (ex.: "MS 1563", baseado no codigo da placa) — quando o modelo
-  // nao casou mas veio o codigo da placa, tenta achar o modelo por ela.
-  if (!update.equipment_model_id && boardCode) {
-    const { data: board } = await ctx.supabase
-      .from("boards")
-      .select("id, board_code")
-      .ilike("board_code", boardCode)
-      .maybeSingle();
-    if (board?.id) {
-      const { data: modelBoard } = await ctx.supabase
-        .from("model_boards")
-        .select("equipment_model_id, equipment_models(id, model_name, manufacturer_id)")
-        .eq("board_id", board.id)
-        .maybeSingle();
-      const model = modelBoard?.equipment_models as
-        | { id: string; model_name: string; manufacturer_id: string }
-        | null
-        | undefined;
-      if (model?.id && (!manufacturerId || model.manufacturer_id === manufacturerId)) {
-        update.equipment_model_id = model.id;
-        if (!manufacturerId) {
-          update.manufacturer_id = model.manufacturer_id;
-        }
-        linked.push(`modelo ${model.model_name} (pela placa ${board.board_code})`);
-      }
+  if (!modelId && boardId) {
+    const { data: links } = await sb
+      .from("model_boards")
+      .select("equipment_models(id, model_name, manufacturer_id)")
+      .eq("board_id", boardId);
+    type LinkedModel = { id: string; model_name: string; manufacturer_id: string };
+    const models = (links ?? [])
+      .map((link) => link.equipment_models as unknown as LinkedModel | null)
+      .filter((model): model is LinkedModel =>
+        Boolean(model?.id && (!manufacturerId || model.manufacturer_id === manufacturerId)),
+      );
+    if (models.length === 1) {
+      modelId = models[0].id;
+      manufacturerId ??= models[0].manufacturer_id;
+      linked.push(`modelo ${models[0].model_name} (pela placa ${boardCode})`);
     }
   }
+  if (!modelId && modelName && manufacturerId && categoryId) {
+    const { data: row, error } = await sb
+      .from("equipment_models")
+      .insert({
+        manufacturer_id: manufacturerId,
+        equipment_category_id: categoryId,
+        model_name: modelName,
+        normalized_model_name: normalizeCatalogName(modelName),
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    modelId = row.id as string;
+    created.push(`modelo ${modelName}`);
+  }
 
-  const { error } = await ctx.supabase.from("diagnostics").update(update).eq("id", ctx.diagnosticId);
+  if (modelId && boardId) {
+    const { error } = await sb.from("model_boards").insert({
+      equipment_model_id: modelId,
+      board_id: boardId,
+      role_label: "Associacao tecnica",
+      is_primary: false,
+    });
+    if (error && error.code !== "23505") throw new Error(error.message);
+  }
 
+  if (manufacturerId) update.manufacturer_id = manufacturerId;
+  if (modelId) update.equipment_model_id = modelId;
+
+  const { error } = await sb.from("diagnostics").update(update).eq("id", ctx.diagnosticId);
   if (error) {
     throw new Error(error.message);
+  }
+
+  // Placa principal do caso (filtro da tela de associacao e consultas da IA).
+  if (boardId) {
+    const { data: caseBoards } = await sb
+      .from("diagnostic_boards")
+      .select("id, board_id, is_primary")
+      .eq("diagnostic_id", ctx.diagnosticId);
+    const rows = caseBoards ?? [];
+    const same = rows.find((row) => row.board_id === boardId);
+    if (!same?.is_primary) {
+      await sb.from("diagnostic_boards").update({ is_primary: false }).eq("diagnostic_id", ctx.diagnosticId);
+      if (same) {
+        await sb.from("diagnostic_boards").update({ is_primary: true, role_label: "Placa principal" }).eq("id", same.id);
+      } else {
+        await sb
+          .from("diagnostic_boards")
+          .insert({ diagnostic_id: ctx.diagnosticId, board_id: boardId, role_label: "Placa principal", is_primary: true });
+      }
+    }
   }
 
   ctx.wroteToCase.value = true;
@@ -884,7 +998,8 @@ async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Recor
   return {
     ok: true,
     equipamento: label,
-    ligado_ao_catalogo: linked.length ? linked : "nao (modelo nao cadastrado no catalogo; ficou so a descricao)",
+    ja_no_catalogo: linked.length ? linked : "nada",
+    criado_no_catalogo: created.length ? created : "nada",
   };
 }
 

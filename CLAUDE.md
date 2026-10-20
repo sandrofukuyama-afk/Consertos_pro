@@ -146,6 +146,17 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-20** — **IA cria no catálogo o aparelho do caso** (pedido do dono: "quando começa um caso, já deixa
+  preenchido marca, modelo e placa; se não existe no catálogo, cria"). `atualizar_equipamento_do_caso`
+  (`diagnostic-agent-tools.ts`) antes só ligava ao que já existia — o caso do Dell ficou "Dell Inspiron PF66F (BAL23
+  LA-D804P)" sem modelo nem placa. Agora acha **ou cria** fabricante, placa (`boards`, tipo mainboard; placa sem
+  fabricante ganha o do caso) e modelo (pelo nome; senão o modelo único que a placa já tem; senão cria, categoria
+  informada/do caso/Notebook), liga modelo↔placa (`model_boards`) e põe a placa como **placa principal** do caso
+  (`diagnostic_boards`). Campo novo `categoria` (corrige caso "Não classificado"). Prompt: usar logo na 1ª mensagem,
+  antes de buscar arquivos; modelo = nome comercial, nunca série/service tag/part number (PF66F); codinome (BAL23)
+  não é placa. Combina com o vigia (arquivo só com código da placa herda o modelo dela). Caso Dell `62773698` com
+  rótulo "Dell Inspiron 15 5565 (LA-D804P)" e placa principal. Não testado com um caso novo real.
+
 - **2026-10-20** — Correção: arquivos do **Dell Inspiron 15 5565 (LA-D804P, BAL23)** enviados pela pasta (esquema,
   boardview .cad, 2 BIOS, EC) não apareciam na busca pelo aparelho. O vigia criou só a placa LA-D804P (sem fabricante,
   porque o 1º arquivo foi o esquema "BAL23 la-d804p…") e nenhum modelo; `BAL22..bin` e `EC.bin` (nome sem nada) ficaram
@@ -361,7 +372,7 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
 - **2026-10-16** — IA registra o equipamento do caso: ferramenta `atualizar_equipamento_do_caso` (fabricante/modelo/
   placa) grava `equipment_label` (vira o título na lista) e liga `manufacturer_id`/`equipment_model_id` só se já
-  existirem no catálogo com o mesmo nome normalizado — **não cria entradas no catálogo**. Instrução no prompt:
+  existirem no catálogo com o mesmo nome normalizado — **não cria entradas no catálogo** (mudou em 20/10: agora cria). Instrução no prompt:
   usar quando o caso não tem modelo e o técnico disser, ou ler com certeza na foto; nunca chutar.
   Mudar ferramentas/prompt invalida o raciocínio salvo das conversas guardadas: o chat agora manda
   `thinking.block_binding.prefix_mismatch_behavior: "drop_block"` (beta `thinking-binding-controls-2026-08-01`),
