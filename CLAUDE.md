@@ -146,6 +146,17 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-20** — Correção: arquivos do **Dell Inspiron 15 5565 (LA-D804P, BAL23)** enviados pela pasta (esquema,
+  boardview .cad, 2 BIOS, EC) não apareciam na busca pelo aparelho. O vigia criou só a placa LA-D804P (sem fabricante,
+  porque o 1º arquivo foi o esquema "BAL23 la-d804p…") e nenhum modelo; `BAL22..bin` e `EC.bin` (nome sem nada) ficaram
+  soltos. A IA do vigia nem era chamada: `incompleto` só valia sem placa. Agora (`tools/library-watcher`):
+  `incompleto` = sem fabricante **ou sem modelo**; placa já existente sem fabricante ganha o fabricante do arquivo
+  seguinte; arquivo só com código de placa herda o modelo único que a placa já tem (`modelOfBoard` em `importer.mjs`);
+  regra `5565|la-d804p|bal23`. Banco: modelo novo `Inspiron 15 5565` (Dell) ligado à placa, os 5 arquivos ligados e
+  renomeados, caso `62773698` ligado ao modelo. Arquivos copiados para o ZimaOS (backup `*.bak-20261020b`);
+  **falta reiniciar o app consertospro-watcher**. Arquivo com nome genérico (EC.bin) continua sem como ser
+  classificado: mandar dentro de uma pasta com o nome do aparelho (o vigia lê o nome da pasta).
+
 - **2026-10-20** — Laboratório lê **boardview ASC (Tebo-ICT)** — relato do dono: o boardview do Surface Laptop 3
   (M1098028-008) não carregava (era só para download). Parser novo `src/lib/boardview/tebo-asc.ts` (contorno real do
   Format.asc, peças/lado/pinos/nets do Pins.asc, test points `TP-n` do Nails.asc; polegada/mm/mil), detectado pelo

@@ -146,7 +146,8 @@ export function classifyFile(relativePath, size) {
     placa: board,
     observacao: notes.join("; "),
     nome_exibicao: displayName || capitalize(kind),
-    // Sem fabricante nem modelo/placa: vale pedir ajuda a IA, se configurada.
-    incompleto: !manufacturer || (!model && !board),
+    // Sem fabricante ou sem modelo: vale pedir ajuda a IA, se configurada. So a
+    // placa nao basta: sem modelo o arquivo nao aparece na busca pelo aparelho.
+    incompleto: !manufacturer || !model,
   };
 }

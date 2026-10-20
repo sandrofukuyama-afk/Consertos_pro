@@ -79,8 +79,12 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
       "modelos",
     ).map((m) => [`${m.manufacturer_id}|${m.normalized_model_name}`, m.id]),
   );
+  // Placa -> { id, manufacturerId } (o fabricante pode chegar depois, num 2o arquivo).
   const boards = new Map(
-    must(await supabase.from("boards").select("id, board_code"), "placas").map((b) => [normalizeText(b.board_code), b.id]),
+    must(await supabase.from("boards").select("id, board_code, manufacturer_id"), "placas").map((b) => [
+      normalizeText(b.board_code),
+      { id: b.id, manufacturerId: b.manufacturer_id },
+    ]),
   );
   const modelBoards = new Set(
     must(await supabase.from("model_boards").select("board_id, equipment_model_id"), "modelo-placa").map(
@@ -145,9 +149,17 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
   async function ensureBoard(manufacturerId, boardCode) {
     if (!boardCode) return null;
     const key = normalizeText(boardCode);
-    if (boards.has(key)) return boards.get(key);
+    const known = boards.get(key);
+    if (known) {
+      // Placa criada antes sem fabricante (ex.: esquema so com o codigo da placa).
+      if (!known.manufacturerId && manufacturerId && !dryRun) {
+        must(await supabase.from("boards").update({ manufacturer_id: manufacturerId }).eq("id", known.id), `placa ${boardCode}`);
+        known.manufacturerId = manufacturerId;
+      }
+      return known.id;
+    }
     created.placas += 1;
-    if (dryRun) return boards.set(key, `dry:${key}`).get(key);
+    if (dryRun) return boards.set(key, { id: `dry:${key}`, manufacturerId }).get(key).id;
     const row = must(
       await supabase
         .from("boards")
@@ -156,7 +168,7 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
         .single(),
       `placa ${boardCode}`,
     );
-    boards.set(key, row.id);
+    boards.set(key, { id: row.id, manufacturerId });
     return row.id;
   }
 
@@ -183,11 +195,18 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
   }
 
   /** Garante o catalogo para uma classificacao e devolve os ids alvo. */
+  /** Modelo unico ja ligado a placa no catalogo (ou null se nenhum/varios). */
+  function modelOfBoard(boardId) {
+    const linked = [...modelBoards].filter((key) => key.endsWith(`|${boardId}`));
+    return linked.length === 1 ? linked[0].split("|")[0] : null;
+  }
+
   async function ensureTargets(item) {
     const categoryId = await ensureCategory(item.categoria || "Notebook");
     const manufacturerId = await ensureManufacturer(item.fabricante);
-    const modelId = await ensureModel(manufacturerId, categoryId, item.modelo);
     const boardId = await ensureBoard(manufacturerId, item.placa);
+    // Arquivo so com o codigo da placa (sem modelo): herda o modelo que a placa ja tem.
+    const modelId = (await ensureModel(manufacturerId, categoryId, item.modelo)) ?? (boardId ? modelOfBoard(boardId) : null);
     await ensureModelBoard(modelId, boardId);
     return { manufacturerId, modelId, boardId };
   }
