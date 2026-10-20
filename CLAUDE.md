@@ -153,8 +153,9 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   fabricante ganha o do caso) e modelo (pelo nome; senão o modelo único que a placa já tem; senão cria, categoria
   informada/do caso/Notebook), liga modelo↔placa (`model_boards`) e põe a placa como **placa principal** do caso
   (`diagnostic_boards`). Campo novo `categoria` (corrige caso "Não classificado"). Prompt: usar logo na 1ª mensagem,
-  antes de buscar arquivos; modelo = nome comercial, nunca série/service tag/part number (PF66F); codinome (BAL23)
-  não é placa. Combina com o vigia (arquivo só com código da placa herda o modelo dela). Caso Dell `62773698` com
+  antes de buscar arquivos; modelo = nome comercial, nunca série/service tag/part number nem o **modelo regulatório** da
+  etiqueta Dell ("Reg Model P66F", "Reg Type P66F003" — vale para vários modelos, ex.: Inspiron 5565 e 5567; com só
+  ele, a IA registra fabricante + placa e pergunta o modelo); codinome (BAL23) não é placa. Combina com o vigia (arquivo só com código da placa herda o modelo dela). Caso Dell `62773698` com
   rótulo "Dell Inspiron 15 5565 (LA-D804P)" e placa principal. Não testado com um caso novo real.
 
 - **2026-10-20** — Correção: arquivos do **Dell Inspiron 15 5565 (LA-D804P, BAL23)** enviados pela pasta (esquema,
