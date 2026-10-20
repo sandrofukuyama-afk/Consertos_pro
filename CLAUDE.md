@@ -152,7 +152,9 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   conteúdo em `parse.ts`. Conferido no arquivo real: 2.772 peças, 9.773 pinos, 153 test points, 2.491 nets,
   247 × 181 mm, 85 ms. Teste `tebo-asc.test.mts`. `isBoardviewFileFormat` aceita `.asc` gravado como `'other'`;
   tela de associação mostra "Boardview ASC". Caso Surface `0c80c930` já com Pins.asc como boardview e o
-  M1098028-008.pdf como esquema. Não testado visualmente no laboratório.
+  M1098028-008.pdf como esquema. 1ª tentativa no laboratório deu "Formato inválido": a tela valida a extensão antes
+  de ler (`getTechnicalAssetFormat` em `technical-assets.mjs`, só brd/bdv/cad/pdf) — agora aceita `.asc`
+  (`toDbFileFormat` grava como `'other'`), botões "Abrir boardview" aceitam `.asc`.
 
 - **2026-10-20** — Correção: a tela "Associar placa e arquivos técnicos" ainda trazia arquivos de outros modelos/
   fabricantes (relato do dono, com foto). Eram arquivos **sem associação** que passavam no filtro de placa/modelo do

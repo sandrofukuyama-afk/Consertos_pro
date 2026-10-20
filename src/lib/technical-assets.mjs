@@ -21,7 +21,11 @@ export function getTechnicalAssetFormat(fileName) {
   }
 
   const extension = normalized.split(".").pop();
-  return extension === "brd" || extension === "bdv" || extension === "cad" || extension === "pdf"
+  return extension === "brd" ||
+    extension === "bdv" ||
+    extension === "cad" ||
+    extension === "asc" ||
+    extension === "pdf"
     ? extension
     : null;
 }
@@ -37,7 +41,7 @@ export function mapTechnicalAssetType(format) {
  * -- add a 'cad' migration before changing this.
  */
 export function toDbFileFormat(format) {
-  return format === "cad" ? "other" : format;
+  return format === "cad" || format === "asc" ? "other" : format;
 }
 
 /**
@@ -82,7 +86,7 @@ export function validateTechnicalAssetFile(fileLike) {
 
   if (!format) {
     throw new TechnicalAssetValidationError(
-      "Formato invalido. Use apenas arquivos .brd, .bdv, .cad ou .pdf.",
+      "Formato invalido. Use apenas arquivos .brd, .bdv, .cad, .asc ou .pdf.",
     );
   }
 

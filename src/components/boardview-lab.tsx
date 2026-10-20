@@ -93,7 +93,7 @@ type BoardviewLabProps = {
     slot: SaveableTechnicalFileSlot;
     assetId: string;
     fileName: string;
-    format: "brd" | "bdv" | "cad" | "pdf";
+    format: "brd" | "bdv" | "cad" | "asc" | "pdf";
     mimeType: string;
     fileSizeBytes: number;
     association: TechnicalFileAssociation;
@@ -127,7 +127,7 @@ type SaveableTechnicalFileState = {
   slot: SaveableTechnicalFileSlot;
   file: File;
   fileName: string;
-  format: "brd" | "bdv" | "cad" | "pdf";
+  format: "brd" | "bdv" | "cad" | "asc" | "pdf";
   assetType: "boardview" | "schematic_pdf";
   mimeType: string;
   fileSizeBytes: number;
@@ -233,7 +233,9 @@ function buildErroredSaveableTechnicalFileState(
       ? "bdv"
       : file.name.toLowerCase().endsWith(".cad")
         ? "cad"
-        : "brd";
+        : file.name.toLowerCase().endsWith(".asc")
+          ? "asc"
+          : "brd";
 
   return {
     slot,
@@ -1291,7 +1293,7 @@ export function BoardviewLab({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível abrir este arquivo de boardview.";
       setErrorMessage(
-        `Falha ao abrir o boardview. Confirme se o arquivo é um .brd Landrex/Testlink ou um GenCAD (.cad) válido. Detalhe: ${message}`,
+        `Falha ao abrir o boardview. Confirme se o arquivo é um .brd Landrex/Testlink, um GenCAD (.cad) ou um ASC (Tebo-ICT) válido. Detalhe: ${message}`,
       );
       setModel(null);
       setFileName(file.name);
@@ -1864,14 +1866,14 @@ export function BoardviewLab({
         Laboratório técnico
       </p>
       <h3 className="mt-4 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
-        Abra um BRD, BDV, CAD (GenCAD) ou esquema local
+        Abra um boardview (BRD, BDV, CAD ou ASC) ou esquema local
       </h3>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <label className="cursor-pointer rounded-full bg-[var(--accent-copper)] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]">
-          Abrir BRD/BDV/CAD
+          Abrir boardview
           <input
             type="file"
-            accept=".brd,.bdv,.cad"
+            accept=".brd,.bdv,.cad,.asc"
             className="hidden"
             onChange={handleFileSelection}
           />
@@ -1906,10 +1908,10 @@ export function BoardviewLab({
       <div className="border-b border-[var(--panel-border)] px-3 py-2.5 sm:px-3.5">
         <div className="flex flex-wrap items-center gap-2">
           <label className="cursor-pointer rounded-full bg-[var(--accent-copper)] px-3.5 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5b4ed9]">
-            {isReadingFile ? "Lendo BRD/BDV/CAD..." : "Abrir BRD/BDV/CAD"}
+            {isReadingFile ? "Lendo boardview..." : "Abrir boardview"}
             <input
               type="file"
-              accept=".brd,.bdv,.cad"
+              accept=".brd,.bdv,.cad,.asc"
               className="hidden"
               onChange={handleFileSelection}
             />
