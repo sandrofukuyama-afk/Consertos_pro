@@ -114,7 +114,9 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    `ConsertosPro-watcher\src` (pasta do código). `classify.mjs`/`rules.mjs` da correção de 18/10 já copiados para
    `W:\Servidor\HDD4\ConsertosPro-watcher\src` (W: = `\\192.168.0.32\raid`; backup `*.bak-20261018`). App reiniciado pelo dono em
    18/10 com `POLL_SECONDS=30`/`STABLE_SECONDS=15` no `.env` (arquivo entra em ~30–60 s). 1º envio com a versão nova
-   (Surface Laptop 3, 20/10) entrou sem classificação — regra nova copiada em 20/10, **falta reiniciar**. Reiniciar: painel do ZimaOS (`http://192.168.0.32`) → app consertospro-watcher → ⋮ → Restart.
+   (Surface Laptop 3, 20/10) entrou sem classificação — regra nova copiada e vigia reiniciado em 20/10. **Classificação
+   por IA ligada** em 20/10 (`ANTHROPIC_API_KEY` própria "vigia ZimaOS" + `ANTHROPIC_MODEL=claude-haiku-5-5` no `.env`;
+   só é chamada quando as regras não reconhecem o arquivo). Falta conferir o 1º arquivo de marca nova com a IA. Reiniciar: painel do ZimaOS (`http://192.168.0.32`) → app consertospro-watcher → ⋮ → Restart.
 6. ~~Conferir as primeiras conversas com a memória completa~~ — conferido em 16/10: 20 respostas, todas
    `memoryMode: "full"`, nenhum `fallback`; 5 conversas guardadas. Continuar de olho depois de mudar
    ferramentas/instruções (`memoryFallbackReason` diz o motivo se cair no modo de segurança).
