@@ -1,11 +1,12 @@
 import { GenCadParserError, isGenCadBoardview, parseGenCadBoardview } from "@/lib/boardview/gencad";
+import { isTeboAscBoardview, parseTeboAscBoardview, TeboAscParserError } from "@/lib/boardview/tebo-asc";
 import {
   LandrexBoardviewParserError,
   parseLandrexTestlinkBoardview,
 } from "@/lib/boardview/landrex-testlink";
 import type { ParsedBoardview } from "@/types/boardview";
 
-export { GenCadParserError, LandrexBoardviewParserError };
+export { GenCadParserError, LandrexBoardviewParserError, TeboAscParserError };
 
 /**
  * Detects the boardview text format (GenCAD 1.4 or Landrex/Testlink
@@ -19,6 +20,10 @@ export function parseBoardviewFile(bytes: Uint8Array | ArrayBuffer): ParsedBoard
 
   if (isGenCadBoardview(input)) {
     return parseGenCadBoardview(input);
+  }
+
+  if (isTeboAscBoardview(input)) {
+    return parseTeboAscBoardview(input);
   }
 
   return parseLandrexTestlinkBoardview(input);

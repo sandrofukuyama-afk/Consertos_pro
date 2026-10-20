@@ -562,7 +562,9 @@ test("toAssetKindForTest recognizes .cad (GenCAD) even when stored as file_forma
   assert.equal(toAssetKindForTest("cad", "placa.cad"), "boardview");
   assert.equal(toAssetKindForTest("brd", "placa.brd"), "boardview");
   assert.equal(toAssetKindForTest("pdf", "esquema.pdf"), "schematic");
-  // A genuinely unreadable format tagged 'other' (.bdv/.fz/.tvw/.asc) must
+  // .asc (Tebo-ICT) tambem fica como 'other' e o laboratorio le.
+  assert.equal(toAssetKindForTest("other", "Pins.asc"), "boardview");
+  // A genuinely unreadable format tagged 'other' (.fz/.tvw) must
   // stay download-only, not be mistaken for a readable boardview.
   assert.equal(toAssetKindForTest("other", "placa.fz"), null);
   assert.equal(toAssetKindForTest("other", undefined), null);

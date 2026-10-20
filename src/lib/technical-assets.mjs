@@ -55,7 +55,9 @@ export function isBoardviewFileFormat(fileFormat, fileName) {
     return true;
   }
 
-  return fileFormat === "other" && Boolean(String(fileName ?? "").trim().toLowerCase().endsWith(".cad"));
+  // .cad (GenCAD) e .asc (Tebo-ICT, conjunto de 5 arquivos) ficam gravados como 'other'.
+  const name = String(fileName ?? "").trim().toLowerCase();
+  return fileFormat === "other" && (name.endsWith(".cad") || name.endsWith(".asc"));
 }
 
 export function getTechnicalAssetMimeType(format, providedMimeType = "") {

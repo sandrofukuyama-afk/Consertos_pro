@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
+import { buildAscBundle } from "@/lib/boardview/asc-bundle";
 import { createClient } from "@/lib/supabase/server";
 import { TECHNICAL_ASSET_BUCKET } from "@/lib/technical-assets.mjs";
 
@@ -37,6 +38,21 @@ export async function GET(request: Request, context: RouteContext) {
 
   if (!asset) {
     return NextResponse.json({ error: "Arquivo tecnico nao encontrado." }, { status: 404 });
+  }
+
+  // Boardview ASC: o laboratorio precisa dos 5 arquivos do conjunto juntos
+  // (~1 MB, cabe na funcao). Baixar (?download=1) continua dando so o arquivo.
+  if (!shouldDownload && asset.original_filename.toLowerCase().endsWith(".asc")) {
+    const bundle = await buildAscBundle(supabase, asset.id);
+    if (bundle) {
+      return new NextResponse(bundle as BodyInit, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=latin1",
+          "Cache-Control": "private, no-store, max-age=0",
+        },
+      });
+    }
   }
 
   // Redireciona para link temporario do Storage, sem passar o arquivo (boardviews

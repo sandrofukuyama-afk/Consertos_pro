@@ -1,9 +1,12 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
   buildBoardviewLabModel,
   getComponentPadPins,
   getNetDetails,
   searchBoardviewLabModel,
 } from "@/lib/boardview/lab";
+import { buildAscBundle } from "@/lib/boardview/asc-bundle";
 import { parseBoardviewFile } from "@/lib/boardview/parse";
 import {
   findSchematicPdfMatches,
@@ -595,6 +598,14 @@ async function downloadAssetBytes(
   asset: AssociatedTechnicalAsset,
   supabase: AssistantTechnicalContextSupabaseClient,
 ): Promise<AssetDownloadResult> {
+  // Boardview ASC: junta os 5 arquivos do conjunto (ver buildAscBundle).
+  if (asset.storagePath.toLowerCase().endsWith(".asc")) {
+    const bundle = await buildAscBundle(supabase as unknown as SupabaseClient, asset.id);
+    if (bundle) {
+      return { bytes: bundle, bucketUsed: asset.storageBucket, attemptedBuckets: [asset.storageBucket], warning: null };
+    }
+  }
+
   const candidateBuckets = Array.from(
     new Set(
       [asset.storageBucket, TECHNICAL_ASSET_BUCKET, "technical-documents"].filter(

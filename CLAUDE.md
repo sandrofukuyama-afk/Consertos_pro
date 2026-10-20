@@ -60,12 +60,16 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   `metadata.display_name` (nunca na descrição, que guarda o caminho de origem com "Bios").
   Mesma lógica na IA, na Biblioteca, em `/busca`, no painel do caso e no bot (`technical-library-search.ts`).
 - Supabase devolve no máximo 1000 linhas por consulta: paginar com `.range()`.
-- O laboratório (`/boardview/lab`) lê **.brd (Landrex testlink) e .cad (GenCAD 1.4, texto puro —
-  exportado por ferramentas como CAMCAD/Mentor Graphics)**, além de **.pdf**; `src/lib/boardview/parse.ts`
+- O laboratório (`/boardview/lab`) lê **.brd (Landrex testlink), .cad (GenCAD 1.4, texto puro —
+  exportado por ferramentas como CAMCAD/Mentor Graphics) e .asc (Tebo-ICT, ex.: Surface)**, além de **.pdf**; `src/lib/boardview/parse.ts`
   detecta o formato pelo conteúdo (cabeçalho `$HEADER`/`GENCAD`), não pela extensão, então um `.cad` ou
   `.brd` com qualquer um dos dois conteúdos abre normalmente. GenCAD não traz o contorno da placa pronto
   (só grava componentes/pads/nets/testpins), então o contorno exibido é a caixa delimitadora dos pads,
-  não o desenho real da borda. `.bdv/.fz/.tvw/.asc` e BIOS continuam só para download (sem parser).
+  não o desenho real da borda. ASC são **5 arquivos** (Format/Parts/Pins/Nets/Nails), cada um vira um item da
+  biblioteca: ao abrir qualquer um, o servidor junta os irmãos da mesma pasta de origem
+  (`buildAscBundle` em `src/lib/boardview/asc-bundle.ts`, ~1 MB, usado por `/api/technical-assets/[id]/content` e
+  pela IA) e `tebo-asc.ts` lê o conjunto (o Pins.asc sozinho já monta a placa). `.bdv/.fz/.tvw` e BIOS continuam
+  só para download (sem parser).
   Boardview "view_locked" (com senha) não abre.
 - Mobile/iPhone: campos com 16px (evita zoom), `viewport-fit=cover` + safe areas, composer do chat
   fixo acima da barra inferior. Painel lateral do caso tem ~360px: formulários ali em **uma coluna**.
@@ -141,6 +145,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-20** — Laboratório lê **boardview ASC (Tebo-ICT)** — relato do dono: o boardview do Surface Laptop 3
+  (M1098028-008) não carregava (era só para download). Parser novo `src/lib/boardview/tebo-asc.ts` (contorno real do
+  Format.asc, peças/lado/pinos/nets do Pins.asc, test points `TP-n` do Nails.asc; polegada/mm/mil), detectado pelo
+  conteúdo em `parse.ts`. Conferido no arquivo real: 2.772 peças, 9.773 pinos, 153 test points, 2.491 nets,
+  247 × 181 mm, 85 ms. Teste `tebo-asc.test.mts`. `isBoardviewFileFormat` aceita `.asc` gravado como `'other'`;
+  tela de associação mostra "Boardview ASC". Caso Surface `0c80c930` já com Pins.asc como boardview e o
+  M1098028-008.pdf como esquema. Não testado visualmente no laboratório.
 
 - **2026-10-20** — Correção: a tela "Associar placa e arquivos técnicos" ainda trazia arquivos de outros modelos/
   fabricantes (relato do dono, com foto). Eram arquivos **sem associação** que passavam no filtro de placa/modelo do

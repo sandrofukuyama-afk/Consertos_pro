@@ -71,6 +71,10 @@ function formatAssetTypeLabel(format: string, fileName?: string) {
     return "Boardview CAD";
   }
 
+  if (format === "other" && fileName?.trim().toLowerCase().endsWith(".asc")) {
+    return "Boardview ASC";
+  }
+
   return format.toUpperCase();
 }
 
