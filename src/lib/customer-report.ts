@@ -20,7 +20,11 @@ export type CustomerReport = {
 // Dados da oficina no cabeçalho do relatorio. Campo vazio nao aparece.
 export const WORKSHOP_INFO = {
   name: "Casablanca Eletroshop",
-  address: "",
+  // Endereco escrito conforme o idioma do relatorio.
+  address: {
+    pt: "〒370-0532 Gunma-ken, Oura-gun, Oizumi-machi, Sakata 4-18-1",
+    ja: "〒370-0532 群馬県邑楽郡大泉町坂田4-18-1",
+  },
   phone: "0276-613858",
   whatsapp: "+81-80-4087-7905",
   email: "",

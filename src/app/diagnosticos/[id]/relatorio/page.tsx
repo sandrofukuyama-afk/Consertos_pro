@@ -184,7 +184,7 @@ function ReportSheet({
   const doneAt = formatReportDate(completedAt, report.language);
   const warrantyFrom = doneAt ?? formatReportDate(report.generatedAt, report.language) ?? "";
   const contact = [
-    WORKSHOP_INFO.address,
+    WORKSHOP_INFO.address[report.language],
     WORKSHOP_INFO.phone ? `Tel. ${WORKSHOP_INFO.phone}` : "",
     WORKSHOP_INFO.whatsapp ? `WhatsApp ${WORKSHOP_INFO.whatsapp}` : "",
     WORKSHOP_INFO.email,
