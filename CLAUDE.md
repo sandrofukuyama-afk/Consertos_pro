@@ -154,7 +154,11 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   `\bm\d{7}-\d{3}\b`; copiado para o servidor (backup `rules.mjs.bak-20261020`), **falta reiniciar o vigia**.
   No banco: criados fabricante Microsoft, modelo Surface Laptop 3 (Notebook), placa M1098028-008 e o vínculo entre
   eles; os 7 arquivos ligados (`technical_asset_links`, `board_id`/`equipment_model_id`, `display_name`). Restam 27
-  arquivos antigos sem associação na biblioteca (de 1025).
+  arquivos antigos sem associação na biblioteca (de 1025). O caso `0c80c930` ("Microsoft Surface Laptop 3 (1867)",
+  aberto 20/10 11:20) foi registrado pela IA **antes** de o catálogo ter Microsoft/Surface, então ficou sem
+  fabricante/modelo/placa e a tela de associação (sem filtro) mostrava a biblioteca toda (A1466 junto); ligado à mão
+  a Microsoft / Surface Laptop 3 / placa M1098028-008. Limitação conhecida: caso registrado antes de o catálogo ter o
+  modelo não é religado sozinho quando o modelo é criado depois.
 
 - **2026-10-20** — **Relatório de serviço para o cliente** (pedido do dono). Página `/diagnosticos/[id]/relatorio`
   (botão "📄 Relatório para o cliente" no painel "Caso encerrado"): a IA escreve a partir do caso (fechamento,
