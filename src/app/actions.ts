@@ -14,6 +14,7 @@ import {
 import { generateDiagnosticAssistantBenchResponse } from "@/lib/services/assistant";
 import { postDiagnosticChatMessage } from "@/lib/services/diagnostic-chat-post";
 import { closeDiagnosticCase, reopenDiagnosticCase } from "@/lib/services/diagnostic-closure";
+import { generateCustomerReport, getCustomerReportData, saveCustomerReport } from "@/lib/services/customer-report";
 import {
   syncDiagnosticEmbeddingSource,
   syncSemanticBacklog,
@@ -1630,6 +1631,78 @@ export async function extractAttachmentComponentRefAction(
   }
 
   return result;
+}
+
+export async function generateCustomerReportAction(formData: FormData) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+  const language = formData.get("language") === "ja" ? "ja" : "pt";
+  const page = `/diagnosticos/${diagnosticId}/relatorio`;
+
+  if (!diagnosticId) {
+    redirect("/?error=Diagnostico invalido.");
+  }
+
+  try {
+    await generateCustomerReport(supabase, diagnosticId, language);
+  } catch (error) {
+    redirect(
+      `${page}?error=${encodeURIComponent(error instanceof Error ? error.message : "Falha ao gerar o relatório.")}`,
+    );
+  }
+
+  revalidatePath(page);
+  redirect(page);
+}
+
+// "Peça - observação" por linha (o primeiro " - " separa); linhas vazias somem.
+function parseReportLines(value: FormDataEntryValue | null) {
+  return String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const index = line.indexOf(" - ");
+      return index >= 0
+        ? [line.slice(0, index).trim(), line.slice(index + 3).trim()]
+        : [line, ""];
+    });
+}
+
+export async function updateCustomerReportAction(formData: FormData) {
+  await requireCurrentUser();
+  const supabase = await createClient();
+  const diagnosticId = String(formData.get("diagnostic_id") ?? "").trim();
+  const page = `/diagnosticos/${diagnosticId}/relatorio`;
+  const text = (key: string) => String(formData.get(key) ?? "").trim();
+
+  const current = diagnosticId ? await getCustomerReportData(supabase, diagnosticId) : null;
+  if (!current?.report) {
+    redirect(`${page}?error=${encodeURIComponent("Gere o relatório antes de editar.")}`);
+  }
+
+  try {
+    await saveCustomerReport(supabase, diagnosticId, {
+      ...current.report,
+      problem: text("problem"),
+      diagnosis: text("diagnosis"),
+      serviceType: text("service_type"),
+      serviceDescription: text("service_description"),
+      partsReplaced: parseReportLines(formData.get("parts")).map(([part, note]) => ({ part, note })),
+      checks: parseReportLines(formData.get("checks")).map(([item, result]) => ({ item, result })),
+      result: text("result"),
+      recommendations: text("recommendations"),
+      editedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    redirect(
+      `${page}?error=${encodeURIComponent(error instanceof Error ? error.message : "Falha ao salvar o relatório.")}`,
+    );
+  }
+
+  revalidatePath(page);
+  redirect(`${page}?message=${encodeURIComponent("Relatório salvo.")}`);
 }
 
 export async function reopenDiagnosticAction(formData: FormData) {

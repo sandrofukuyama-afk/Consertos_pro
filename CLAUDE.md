@@ -140,6 +140,20 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-20** — **Relatório de serviço para o cliente** (pedido do dono). Página `/diagnosticos/[id]/relatorio`
+  (botão "📄 Relatório para o cliente" no painel "Caso encerrado"): a IA escreve a partir do caso (fechamento,
+  testes, medições, conversa) — problema relatado, diagnóstico em linguagem simples, tipo de serviço, serviço
+  executado, peças substituídas (só as que o técnico disse ter trocado), verificações, resultado, recomendações —
+  em **Português ou Japonês** (escolha a cada geração), com **garantia de 90 dias** (só em caso `resolved`, a partir
+  da data de conclusão) e assinaturas. Técnico revisa/edita na própria página e usa "Salvar PDF / Compartilhar"
+  (impressão do navegador; no iPhone gera o PDF para LINE/WhatsApp/e-mail). Guardado em `diagnostics.customer_report`
+  (jsonb, migration `20261020090000`); formato e textos fixos pt/ja em `src/lib/customer-report.ts` (nome da oficina
+  **Casablanca Eletroshop** em `WORKSHOP_INFO`; endereço/telefone/e-mail vazios até o dono passar); IA em
+  `src/lib/ai/customer-report-llm.ts` (Opus do dia a dia, saída JSON, log `relatorio_cliente_claude`); serviço em
+  `src/lib/services/customer-report.ts`; ações `generateCustomerReportAction`/`updateCustomerReportAction`. O laudo
+  antigo (`/laudo`, sem link e com botão de imprimir quebrado em componente de servidor) redireciona para o novo.
+  Não testado com um caso real.
+
 - **2026-10-19** — Correção: o **parecer automático ao encerrar nunca era gerado**. Rodava com `after()` na mesma
   função do chat, e a resposta do "encerrando" (A1466, 18/10) levou ~4 min 40 s: a Vercel cortou a função em 300 s
   (`Task timed out after 300 seconds`, log de 11:03:59 UTC) logo depois de gravar a resposta. Agora o fim do chat

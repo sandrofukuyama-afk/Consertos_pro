@@ -689,7 +689,13 @@ export function DiagnosticBenchWorkspace({
                   <p className="whitespace-pre-wrap text-[var(--muted)]">{detail.resolvedCase.solution.procedure}</p>
                 </div>
               ) : null}
-              <form action={reopenDiagnosticAction} className="mt-4">
+              <Link
+                href={`/diagnosticos/${detail.id}/relatorio`}
+                className="mt-4 flex items-center justify-center rounded-full bg-[var(--accent-copper)] px-4 py-2.5 text-sm font-semibold text-white"
+              >
+                📄 Relatório para o cliente
+              </Link>
+              <form action={reopenDiagnosticAction} className="mt-3">
                 <input type="hidden" name="diagnostic_id" value={detail.id} />
                 <FormSubmitButton
                   idleLabel="Reabrir caso"
