@@ -137,6 +137,7 @@ const parsedFixture: ParsedBoardview = {
       yMm: 2.286,
     },
   ],
+  traces: [],
 };
 
 test("buildBoardviewLabModel derives component geometry and search hits", () => {

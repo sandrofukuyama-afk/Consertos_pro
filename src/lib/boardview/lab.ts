@@ -5,6 +5,7 @@ import type {
   BoardviewPadPin,
   BoardviewPoint,
   BoardviewTestPoint,
+  BoardviewTraceSegment,
   ParsedBoardview,
 } from "@/types/boardview";
 
@@ -120,6 +121,8 @@ export type BoardviewLabModel = {
   netsByName: Map<string, BoardviewNet>;
   testPointsByNetName: Map<string, BoardviewTestPoint[]>;
   padPinsByNetName: Map<string, BoardviewPadPin[]>;
+  /** Trilha real da net (GenCAD $ROUTES), quando o arquivo traz essa geometria. */
+  tracesByNetName: Map<string, BoardviewTraceSegment[]>;
   spatialIndex: SpatialIndex;
 };
 
@@ -249,6 +252,13 @@ export function buildBoardviewLabModel(
     testPointsByNetName.set(testPoint.netName, byNet);
   }
 
+  const tracesByNetName = new Map<string, BoardviewTraceSegment[]>();
+  for (const trace of parsed.traces) {
+    const byNet = tracesByNetName.get(trace.netName) ?? [];
+    byNet.push(trace);
+    tracesByNetName.set(trace.netName, byNet);
+  }
+
   return {
     parsed,
     components,
@@ -265,6 +275,7 @@ export function buildBoardviewLabModel(
     netsByName: new Map(parsed.nets.map((net) => [net.name, net] as const)),
     testPointsByNetName,
     padPinsByNetName,
+    tracesByNetName,
     spatialIndex: buildSpatialIndex(components, parsed.padPins, parsed.testPoints),
   };
 }
@@ -684,10 +695,10 @@ function isGroundNet(netName: string) {
 }
 
 /**
- * Linhas de ligacao ("ratsnest") a partir do item selecionado: o boardview nao
- * traz o desenho das trilhas, so quem esta ligado a quem, entao a ligacao vira
- * uma linha reta do ponto selecionado ate cada pino/test point da mesma net.
- * Terra e nets enormes sao puladas.
+ * Linhas de ligacao a partir do item selecionado. Quando o arquivo traz a
+ * trilha real da net (GenCAD $ROUTES), desenha o caminho de cobre de verdade;
+ * senao vira uma reta ponto-a-ponto ("ratsnest") do ponto selecionado ate
+ * cada pino/test point da mesma net. Terra e nets enormes sao puladas.
  */
 export function getSelectionConnections(
   model: BoardviewLabModel,
@@ -715,6 +726,7 @@ export function getSelectionConnections(
   const lines: BoardviewConnectionLine[] = [];
   const connectedRefs = new Set<string>();
   const skippedNets = new Set<string>();
+  const netsWithRealTraceDrawn = new Set<string>();
   let truncated = false;
 
   for (const origin of origins) {
@@ -740,14 +752,38 @@ export function getSelectionConnections(
     ];
 
     for (const target of targets) {
+      if (target.ref) {
+        connectedRefs.add(target.ref);
+      }
+    }
+
+    // Arquivo com trilha real (GenCAD $ROUTES): desenha o caminho de cobre
+    // de verdade em vez da reta ponto-a-ponto ("ratsnest"). So uma vez por
+    // net, mesmo que o componente tenha mais de um pino nela.
+    const realTrace = model.tracesByNetName.get(origin.netName);
+    if (realTrace?.length && !netsWithRealTraceDrawn.has(origin.netName)) {
+      netsWithRealTraceDrawn.add(origin.netName);
+      for (const segment of realTrace) {
+        if (lines.length >= CONNECTION_MAX_LINES) {
+          truncated = true;
+          break;
+        }
+        lines.push({
+          from: { xMil: segment.x1Mil, yMil: segment.y1Mil },
+          to: { xMil: segment.x2Mil, yMil: segment.y2Mil },
+          netName: origin.netName,
+          toSide: segment.side,
+        });
+      }
+      continue;
+    }
+
+    for (const target of targets) {
       if (lines.length >= CONNECTION_MAX_LINES) {
         truncated = true;
         break;
       }
       lines.push({ from: pointOf(origin), to: target.point, netName: origin.netName, toSide: target.side });
-      if (target.ref) {
-        connectedRefs.add(target.ref);
-      }
     }
   }
 

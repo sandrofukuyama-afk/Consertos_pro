@@ -6,6 +6,7 @@ import type {
   BoardviewPartKind,
   BoardviewPoint,
   BoardviewTestPoint,
+  BoardviewTraceSegment,
   ParsedBoardview,
 } from "@/types/boardview";
 
@@ -85,10 +86,15 @@ type RawTestPin = {
  * both can drive the same boardview lab viewer.
  *
  * GenCAD has no explicit board outline polygon in the sections we care
- * about ($BOARD only carries THICKNESS; the real outline lives in
- * $SHAPES/$MECH and would need full polygon resolution to recover), so
- * the contour here is a padded bounding box of every pad/test point
- * instead of the true board edge.
+ * about ($BOARD is per-footprint silkscreen artwork, not a single board
+ * edge polygon, and nothing else names an outline/profile), so the
+ * contour here is a padded bounding box of every pad/test point instead
+ * of the true board edge.
+ *
+ * $ROUTES, on the other hand, carries the real routed copper path per net
+ * (LINE/ARC segments grouped by LAYER and TRACK id, widths resolved from
+ * $TRACKS) — parsed into `traces` so the lab can draw the actual trace
+ * instead of a straight point-to-point "ratsnest" line.
  */
 export function parseGenCadBoardview(
   bytesOrBuffer: Uint8Array | ArrayBuffer,
@@ -101,6 +107,8 @@ export function parseGenCadBoardview(
   const rawComponents: RawComponent[] = [];
   const netByRefPin = new Map<string, string>();
   const rawTestPins: RawTestPin[] = [];
+  const trackWidthsMil = new Map<string, number>();
+  const traces: BoardviewTraceSegment[] = [];
 
   let section: string | null = null;
 
@@ -110,6 +118,12 @@ export function parseGenCadBoardview(
 
   let currentComponent: Partial<RawComponent> | null = null;
   let currentSignalName: string | null = null;
+
+  // Estado dentro de um bloco $ROUTES: ROUTE define a net, LAYER/TRACK ficam
+  // valendo para os LINE/ARC seguintes ate o proximo LAYER/TRACK/ROUTE.
+  let currentRouteNet: string | null = null;
+  let currentRouteSide: BoardviewMountingSide = "both";
+  let currentTrackId: string | null = null;
 
   function flushShape() {
     if (currentShapeName) {
@@ -236,6 +250,44 @@ export function parseGenCadBoardview(
             yMil: Number.parseFloat(tokens[3] ?? "0"),
             netName: tokens[4] ?? "",
             side: normalizeSide(tokens[tokens.length - 1]),
+          });
+        }
+        break;
+      }
+      case "TRACKS": {
+        if (keyword === "TRACK") {
+          const id = tokens[1] ?? "";
+          const widthMil = Number.parseFloat(tokens[2] ?? "0");
+          if (id) {
+            trackWidthsMil.set(id, widthMil);
+          }
+        }
+        break;
+      }
+      case "ROUTES": {
+        if (keyword === "ROUTE") {
+          currentRouteNet = tokens.slice(1).join(" ").trim() || null;
+          currentRouteSide = "both";
+          currentTrackId = null;
+        } else if (keyword === "LAYER") {
+          currentRouteSide = normalizeSide(tokens[1]);
+        } else if (keyword === "TRACK") {
+          currentTrackId = tokens[1] ?? null;
+        } else if ((keyword === "LINE" || keyword === "ARC") && currentRouteNet) {
+          const x1 = Number.parseFloat(tokens[1] ?? "0");
+          const y1 = Number.parseFloat(tokens[2] ?? "0");
+          const x2 = Number.parseFloat(tokens[3] ?? "0");
+          const y2 = Number.parseFloat(tokens[4] ?? "0");
+          // ARC traz tambem o centro (tokens[5]/[6]); desenhamos so a corda
+          // reta entre inicio e fim, sem a curvatura.
+          traces.push({
+            netName: currentRouteNet,
+            side: currentRouteSide,
+            widthMil: (currentTrackId && trackWidthsMil.get(currentTrackId)) || 0,
+            x1Mil: x1,
+            y1Mil: y1,
+            x2Mil: x2,
+            y2Mil: y2,
           });
         }
         break;
@@ -419,5 +471,6 @@ export function parseGenCadBoardview(
     padPins,
     nets,
     testPoints,
+    traces,
   };
 }

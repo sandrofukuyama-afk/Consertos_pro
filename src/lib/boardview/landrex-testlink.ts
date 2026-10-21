@@ -441,5 +441,6 @@ export function parseLandrexTestlinkBoardview(
     padPins,
     nets,
     testPoints,
+    traces: [],
   };
 }

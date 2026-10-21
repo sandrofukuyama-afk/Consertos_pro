@@ -82,6 +82,22 @@ export type BoardviewTestPoint = BoardviewPoint & {
   netName: string;
 };
 
+/**
+ * Segmento real de trilha de cobre (ou via), quando o arquivo traz essa
+ * geometria (hoje so GenCAD, secao $ROUTES). Arcos vem aproximados por uma
+ * corda reta entre inicio e fim (sem curvatura) para reaproveitar o mesmo
+ * desenho de linha reta do boardview inteiro.
+ */
+export type BoardviewTraceSegment = {
+  netName: string;
+  side: BoardviewMountingSide;
+  widthMil: number;
+  x1Mil: number;
+  y1Mil: number;
+  x2Mil: number;
+  y2Mil: number;
+};
+
 export type ParsedBoardview = {
   metadata: BoardviewMetadata;
   contour: BoardviewPoint[];
@@ -89,4 +105,6 @@ export type ParsedBoardview = {
   padPins: BoardviewPadPin[];
   nets: BoardviewNet[];
   testPoints: BoardviewTestPoint[];
+  /** Trilhas reais por net, quando o arquivo traz essa geometria (ver BoardviewTraceSegment). */
+  traces: BoardviewTraceSegment[];
 };

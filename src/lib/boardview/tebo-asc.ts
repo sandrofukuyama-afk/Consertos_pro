@@ -242,5 +242,6 @@ export function parseTeboAscBoardview(bytesOrBuffer: Uint8Array | ArrayBuffer): 
     padPins,
     nets,
     testPoints,
+    traces: [],
   };
 }

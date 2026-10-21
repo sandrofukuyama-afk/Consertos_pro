@@ -130,6 +130,7 @@ const parsedFixture: ParsedBoardview = {
       yMm: 2.286,
     },
   ],
+  traces: [],
 };
 
 function createFocus(overrides: Partial<InitialBoardviewFocus>): InitialBoardviewFocus {

@@ -53,6 +53,19 @@ const syntheticFixture = [
   "TESTPIN Probe_ 1000.000 2050.000 GND -1 -1 Test_Probe TOP",
   "$ENDTESTPINS",
   "",
+  "$TRACKS",
+  "TRACK 0 5.000",
+  "$ENDTRACKS",
+  "",
+  "$ROUTES",
+  "ROUTE NET_A",
+  "TRACK 0",
+  "LAYER TOP",
+  "LINE 1010.000 2000.000 900.000 2000.000",
+  "LINE 900.000 2000.000 505.000 500.000",
+  "ARC 505.000 500.000 495.000 500.000 500.000 500.000",
+  "$ENDROUTES",
+  "",
 ].join("\r\n");
 
 const fixtureBytes = new TextEncoder().encode(syntheticFixture);
@@ -100,6 +113,25 @@ test("parseGenCadBoardview resolves component placement, rotation and mirroring"
   // Contour is a padded bounding box of every pad/test point.
   assert.ok(parsed.metadata.bounds.minXMil < 495);
   assert.ok(parsed.metadata.bounds.maxXMil > 1010);
+});
+
+test("parseGenCadBoardview resolves real trace segments from $ROUTES with widths from $TRACKS", () => {
+  const parsed = parseGenCadBoardview(fixtureBytes);
+
+  assert.equal(parsed.traces.length, 3);
+  assert.ok(parsed.traces.every((segment) => segment.netName === "NET_A"));
+  assert.ok(parsed.traces.every((segment) => segment.side === "top"));
+  assert.ok(parsed.traces.every((segment) => segment.widthMil === 5));
+
+  const [first, , arc] = parsed.traces;
+  assert.equal(first?.x1Mil, 1010);
+  assert.equal(first?.y1Mil, 2000);
+  assert.equal(first?.x2Mil, 900);
+  assert.equal(first?.y2Mil, 2000);
+
+  // ARC vira corda reta entre inicio e fim, sem a curvatura.
+  assert.equal(arc?.x1Mil, 505);
+  assert.equal(arc?.x2Mil, 495);
 });
 
 test("parseGenCadBoardview throws a clear error when $COMPONENTS is empty", () => {

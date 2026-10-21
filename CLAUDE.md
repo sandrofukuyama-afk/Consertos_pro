@@ -64,8 +64,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   exportado por ferramentas como CAMCAD/Mentor Graphics) e .asc (Tebo-ICT, ex.: Surface)**, além de **.pdf**; `src/lib/boardview/parse.ts`
   detecta o formato pelo conteúdo (cabeçalho `$HEADER`/`GENCAD`), não pela extensão, então um `.cad` ou
   `.brd` com qualquer um dos dois conteúdos abre normalmente. GenCAD não traz o contorno da placa pronto
-  (só grava componentes/pads/nets/testpins), então o contorno exibido é a caixa delimitadora dos pads,
-  não o desenho real da borda. ASC são **5 arquivos** (Format/Parts/Pins/Nets/Nails), cada um vira um item da
+  (`$BOARD` é serigrafia por peça, não um polígono único de borda), então o contorno exibido é a caixa
+  delimitadora dos pads, não o desenho real da borda. **Trilha real de cobre** (não essa caixa): GenCAD traz
+  em `$ROUTES` o caminho real de cada net (`LINE`/`ARC` por `LAYER`/`TRACK`, largura de `$TRACKS`) —
+  `gencad.ts` lê isso em `traces` e o laboratório desenha o cobre de verdade ao tocar num ponto daquela net,
+  em vez da reta ponto-a-ponto ("ratsnest") que é o padrão quando o arquivo não traz essa geometria. Net com
+  muitos pinos (>80, ex.: barramento de memória) continua sem desenhar nada (mesmo limite de sempre), mesmo
+  tendo trilha real — vira ruído visual igual. ASC são **5 arquivos** (Format/Parts/Pins/Nets/Nails), cada um vira um item da
   biblioteca: ao abrir qualquer um, o servidor junta os irmãos da mesma pasta de origem
   (`buildAscBundle` em `src/lib/boardview/asc-bundle.ts`, ~1 MB, usado por `/api/technical-assets/[id]/content` e
   pela IA) e `tebo-asc.ts` lê o conjunto (o Pins.asc sozinho já monta a placa). `.bdv/.fz/.tvw` e BIOS continuam
@@ -146,6 +151,21 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-22** — Boardview GenCAD (`.cad`) passa a desenhar **trilha real de cobre**, não só a reta
+  ponto-a-ponto ("ratsnest"), ao tocar num ponto de uma net (pedido do dono: "tem como melhorar a exibição
+  do boardview?"). Investigando o arquivo real da MS-15631 (5,5 MB) achei `$ROUTES`: 2.202 nets, 52.487
+  segmentos de linha + 20.364 arcos reais, organizados por camada/largura — dado que o parser ignorava
+  completamente. Também achei `$BOARD` (506 blocos de serigrafia por peça) achando que seria o contorno real
+  da placa, mas não é — são desenhos de componente/texto em TOP e BOTTOM, sem nome que identifique a borda;
+  contorno da placa GenCAD continua sendo a caixa delimitadora dos pads (não dava pra fazer com confiança a
+  partir desses dados). `gencad.ts` lê `$TRACKS` (largura por id) e `$ROUTES` (`LINE`/`ARC` por `LAYER`/
+  `TRACK`, arco vira corda reta sem a curvatura) em `traces`; `lab.ts` (`getSelectionConnections`) usa a
+  trilha real quando existe pra aquela net, em vez da reta. Testado contra o arquivo real: parse 337 ms,
+  72.851 segmentos, uma net de exemplo (4 pinos) desenhou as 17 segmentos reais formando o caminho contínuo
+  certo. Net grande demais (>80 pinos, ex.: barramento de memória, 16 mil segmentos) continua pulada pelo
+  mesmo limite de sempre, mesmo tendo trilha real — vira ruído visual igual a antes. `.brd` (Landrex) e `.asc`
+  (Tebo) não têm essa geometria no arquivo, continuam só com a reta. Tipo novo `BoardviewTraceSegment`
+  (`types/boardview.ts`); teste novo no `gencad.test.mts`. Não testado visualmente no navegador.
 - **2026-10-20** — **IA cria no catálogo o aparelho do caso** (pedido do dono: "quando começa um caso, já deixa
   preenchido marca, modelo e placa; se não existe no catálogo, cria"). `atualizar_equipamento_do_caso`
   (`diagnostic-agent-tools.ts`) antes só ligava ao que já existia — o caso do Dell ficou "Dell Inspiron PF66F (BAL23
