@@ -792,6 +792,54 @@ function normalizeCatalogName(value: string) {
     .replace(/\s+/g, " ");
 }
 
+/** So letras/numeros, para comparar codigo de placa ignorando hifen/espaco/caixa. */
+function normalizeBoardCode(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dp: number[][] = Array.from({ length: rows }, (_unused, i) => {
+    const row = new Array<number>(cols).fill(0);
+    row[0] = i;
+    return row;
+  });
+  for (let j = 0; j < cols; j += 1) {
+    dp[0]![j] = j;
+  }
+  for (let i = 1; i < rows; i += 1) {
+    for (let j = 1; j < cols; j += 1) {
+      dp[i]![j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1]![j - 1]!
+          : 1 + Math.min(dp[i - 1]![j]!, dp[i]![j - 1]!, dp[i - 1]![j - 1]!);
+    }
+  }
+  return dp[rows - 1]![cols - 1]!;
+}
+
+/**
+ * Codigo de placa escrito com 1-2 caracteres diferentes do que ja esta no
+ * catalogo (typo de quem nomeou a pasta/zip de origem, ou leitura da foto) —
+ * sem essa checagem a ferramenta cria uma placa nova em vez de reconhecer a
+ * que ja existe, e os arquivos ja associados ficam "escondidos" atras da
+ * placa antiga enquanto essa nova (sem nada) vira a principal do caso (foi
+ * o que aconteceu com a Dell AM9: "DAAM9AMB8D0" no catalogo x "DA0AM9MB8D0"
+ * lido depois, distancia 2). So considera match com pelo menos 8 caracteres
+ * (codigo curto demais tem falso positivo facil) e distancia <= 2.
+ */
+function isLikelyBoardCodeTypo(a: string, b: string) {
+  const [x, y] = [normalizeBoardCode(a), normalizeBoardCode(b)];
+  if (!x || !y || x === y) {
+    return false;
+  }
+  if (Math.min(x.length, y.length) < 8) {
+    return false;
+  }
+  return levenshteinDistance(x, y) <= 2;
+}
+
 const EQUIPMENT_CATEGORIES: Record<string, string> = {
   Notebook: "notebook",
   Desktop: "desktop",
@@ -883,10 +931,33 @@ async function updateCaseEquipment(ctx: DiagnosticAgentToolContext, input: Recor
       .ilike("board_code", boardCode)
       .limit(1)
       .maybeSingle();
+
+    // Sem match exato: procura uma placa quase igual (typo de 1-2 caracteres,
+    // ex.: letra trocada no nome da pasta de origem) antes de criar uma nova —
+    // ver isLikelyBoardCodeTypo.
+    let fuzzyMatch: { id: string; board_code: string; manufacturer_id: string | null } | null = null;
+    if (!data?.id) {
+      const { data: candidates } = await sb.from("boards").select("id, board_code, manufacturer_id");
+      fuzzyMatch =
+        (candidates ?? []).find(
+          (candidate) =>
+            (!manufacturerId || candidate.manufacturer_id === manufacturerId || !candidate.manufacturer_id) &&
+            isLikelyBoardCodeTypo(candidate.board_code, boardCode),
+        ) ?? null;
+    }
+
     if (data?.id) {
       boardId = data.id as string;
       boardManufacturerId = (data.manufacturer_id as string | null) ?? null;
       linked.push(`placa ${data.board_code}`);
+      if (!boardManufacturerId && manufacturerId) {
+        await sb.from("boards").update({ manufacturer_id: manufacturerId }).eq("id", boardId);
+        boardManufacturerId = manufacturerId;
+      }
+    } else if (fuzzyMatch) {
+      boardId = fuzzyMatch.id;
+      boardManufacturerId = fuzzyMatch.manufacturer_id;
+      linked.push(`placa ${fuzzyMatch.board_code} (parecida com "${boardCode}", tratada como a mesma)`);
       if (!boardManufacturerId && manufacturerId) {
         await sb.from("boards").update({ manufacturer_id: manufacturerId }).eq("id", boardId);
         boardManufacturerId = manufacturerId;

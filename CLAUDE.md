@@ -146,11 +146,42 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    uma migration `alter type technical_asset_file_format add value 'cad'`, trocar `toDbFileFormat` para
    devolver `'cad'` direto, e então simplificar `isBoardviewFileFormat` para usar `file_format === 'cad'`
    como as demais.
+10. Reenviar o boardview `Dell 15-7559 AM9-DVT1 DAAM9AMB8D0 BoardView File.brd` (placa `DA0AM9MB8D0`) —
+    foi associado ao caso em 20/10 mas sumiu da biblioteca sem deixar rastro (não foi a consolidação de
+    22/10, confirmado pelas regras do banco; suspeita é o botão "Excluir" sem log de auditoria). Dono
+    precisa achar o arquivo de origem e reenviar.
+11. **Exclusão de arquivo técnico não deixa rastro** (achado investigando a pendência acima): o botão
+    "Excluir" da tela de associação apaga do banco e do Storage de vez, sem gravar em `change_history` nem
+    em nenhum outro log — se for clicado sem querer (ex.: tela confusa com placa duplicada, como no caso
+    acima), não dá pra saber depois quem apagou nem recuperar. Se for repetir, considerar logar a exclusão
+    (mesmo padrão de `change_history` usado em outras entidades) antes de apagar de verdade.
 
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-22** — Correção: caso Dell Inspiron 15 7559 (placa AM9) com a tela de associação vazia (relato do
+  dono, com foto — "porque quando abro o caso em outro PC os arquivos não aparecem"). **Não era sobre PC**
+  (app e banco são os mesmos em qualquer lugar): o caso tinha **duas placas cadastradas** para o mesmo
+  hardware físico. O vigia importou 2 BIOS sob `DAAM9AMB8D0` (erro de digitação que já vinha no nome do zip
+  de origem); minutos depois, `atualizar_equipamento_do_caso` leu o código certo da etiqueta, não reconheceu
+  a placa já existente (comparação exata, `DA0AM9MB8D0` ≠ `DAAM9AMB8D0`) e **criou uma segunda placa do
+  zero**, promovendo-a a principal do caso — a tela passou a mostrar essa 2ª placa (vazia) por padrão.
+  Consolidado à mão: os 2 BIOS e um esquema PDF órfão (`AM9A_MB_PVT_20150819.pdf`) movidos para
+  `DA0AM9MB8D0`; placas/modelo duplicados vazios apagados (sem uso em doadoras/medições, conferido antes).
+  Correção de raiz: `atualizar_equipamento_do_caso` (`diagnostic-agent-tools.ts`) agora também tenta achar
+  a placa por **distância de edição** (`isLikelyBoardCodeTypo`: Levenshtein ≤ 2, só para códigos com 8+
+  caracteres, pra não dar falso positivo em código curto) antes de criar uma nova — pega esse typo de 2
+  caracteres sem confundir placas genuinamente diferentes (testado: `DA0P5DMB8C0` × `DA0AM9MB8D0` e
+  `LA-D804P` × `LA-D802P`, placas reais e diferentes, continuam **não** batendo).
+  **Achado à parte, não resolvido**: a conversa do caso mostrou que a IA também tinha associado um boardview
+  (`Dell 15-7559 AM9-DVT1 DAAM9AMB8D0 BoardView File.brd`) em 20/10 — hoje esse arquivo não existe mais na
+  biblioteca, nem com board_id nulo. Confirmado que não foi a consolidação de hoje (a chave estrangeira
+  `technical_assets.board_id → boards` é `on delete set null`, nunca `cascade`; só o vínculo em
+  `technical_asset_links` apaga em cascata). Não existe registro de auditoria de exclusão de arquivo
+  (`change_history` não cobre isso) — suspeita mais provável é o botão "Excluir" da tela de associação
+  (apaga Storage + banco sem aviso nem rastro). Falta: o dono reenviar esse `.brd` se ainda tiver o arquivo
+  de origem.
 - **2026-10-22** — Boardview GenCAD (`.cad`) passa a desenhar **trilha real de cobre**, não só a reta
   ponto-a-ponto ("ratsnest"), ao tocar num ponto de uma net (pedido do dono: "tem como melhorar a exibição
   do boardview?"). Investigando o arquivo real da MS-15631 (5,5 MB) achei `$ROUTES`: 2.202 nets, 52.487
