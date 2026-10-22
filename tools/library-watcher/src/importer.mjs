@@ -39,6 +39,22 @@ export function fileFormatFor(ext) {
   return "other";
 }
 
+function compactBoardCode(value) {
+  return String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function levenshtein(a, b) {
+  let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
 function storagePathFor(hash, format, ext) {
   const suffix = ["pdf", "brd", "bdv"].includes(format)
     ? `.${format}`
@@ -146,10 +162,26 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
     return row.id;
   }
 
+  /**
+   * Placa ja cadastrada com codigo quase igual (ate 2 letras de diferenca, codigos
+   * com 8+ caracteres): pega erro de digitacao do nome do arquivo, ex.: DAAM9AMB8D0
+   * x DA0AM9MB8D0. Mesma regra de isLikelyBoardCodeTypo no app; LA-D804P x LA-D802P
+   * (placas diferentes, curtas) nao batem.
+   */
+  function findTypoBoard(boardCode) {
+    const code = compactBoardCode(boardCode);
+    if (code.length < 8) return null;
+    for (const [key, board] of boards) {
+      const other = compactBoardCode(key);
+      if (other.length >= 8 && other !== code && levenshtein(code, other) <= 2) return board;
+    }
+    return null;
+  }
+
   async function ensureBoard(manufacturerId, boardCode) {
     if (!boardCode) return null;
     const key = normalizeText(boardCode);
-    const known = boards.get(key);
+    const known = boards.get(key) ?? findTypoBoard(boardCode);
     if (known) {
       // Placa criada antes sem fabricante (ex.: esquema so com o codigo da placa).
       if (!known.manufacturerId && manufacturerId && !dryRun) {
@@ -205,8 +237,14 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
     const categoryId = await ensureCategory(item.categoria || "Notebook");
     const manufacturerId = await ensureManufacturer(item.fabricante);
     const boardId = await ensureBoard(manufacturerId, item.placa);
-    // Arquivo so com o codigo da placa (sem modelo): herda o modelo que a placa ja tem.
-    const modelId = (await ensureModel(manufacturerId, categoryId, item.modelo)) ?? (boardId ? modelOfBoard(boardId) : null);
+    // Modelo com o mesmo nome; senao o modelo que a placa ja tem (o nome do arquivo
+    // ou da IA raramente bate com o do catalogo: "15-7559" x "Inspiron 15 7559");
+    // so cria modelo novo quando a placa ainda nao tem nenhum.
+    const sameName = item.modelo && manufacturerId ? models.get(`${manufacturerId}|${normalizeText(item.modelo)}`) : null;
+    const modelId =
+      sameName ??
+      (boardId ? modelOfBoard(boardId) : null) ??
+      (await ensureModel(manufacturerId, categoryId, item.modelo));
     await ensureModelBoard(modelId, boardId);
     return { manufacturerId, modelId, boardId };
   }

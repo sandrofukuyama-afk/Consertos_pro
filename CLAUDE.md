@@ -146,10 +146,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
    uma migration `alter type technical_asset_file_format add value 'cad'`, trocar `toDbFileFormat` para
    devolver `'cad'` direto, e então simplificar `isBoardviewFileFormat` para usar `file_format === 'cad'`
    como as demais.
-10. Reenviar o boardview `Dell 15-7559 AM9-DVT1 DAAM9AMB8D0 BoardView File.brd` (placa `DA0AM9MB8D0`) —
-    foi associado ao caso em 20/10 mas sumiu da biblioteca sem deixar rastro (não foi a consolidação de
-    22/10, confirmado pelas regras do banco; suspeita é o botão "Excluir" sem log de auditoria). Dono
-    precisa achar o arquivo de origem e reenviar.
+10. ~~Reenviar o boardview `Dell 15-7559 AM9-DVT1 DAAM9AMB8D0 BoardView File.brd`~~ — reenviado pelo dono em
+    22/10 e ligado à placa `DA0AM9MB8D0` (ver registro de 22/10, vigia).
 11. **Exclusão de arquivo técnico não deixa rastro** (achado investigando a pendência acima): o botão
     "Excluir" da tela de associação apaga do banco e do Storage de vez, sem gravar em `change_history` nem
     em nenhum outro log — se for clicado sem querer (ex.: tela confusa com placa duplicada, como no caso
@@ -159,6 +157,20 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-22** — Vigia: "demora para aparecer" o boardview reenviado do Dell 7559 (relato do dono). **Não era
+  demora**: o `.brd` caiu na pasta às 11:41:31 e entrou no banco às 11:41:34 (vigia com `POLL_SECONDS=30`,
+  `STABLE_SECONDS=15`: um arquivo leva de segundos a ~1 min). Ele entrou na **placa errada**: o nome traz o erro de
+  digitação `DAAM9AMB8D0`, não havia regra para o 7559 e a IA do vigia devolveu modelo "15-7559" + essa placa, então
+  o vigia criou de novo a placa e o modelo duplicados que tinham sido apagados na consolidação do mesmo dia — e o caso
+  (placa `DA0AM9MB8D0`) não via o arquivo. Corrigido: arquivo `3396d723` movido para `DA0AM9MB8D0` / Inspiron 15 7559
+  (placa agora com esquema, 2 BIOS e boardview; resolve a pendência 10). `tools/library-watcher`: regra
+  `7559|da0am9mb|daam9amb` → Dell Inspiron 15 7559 / DA0AM9MB8D0; `importer.mjs` acha placa já cadastrada com
+  código quase igual (`findTypoBoard`, mesma regra do app: 8+ caracteres, até 2 letras de diferença) antes de criar
+  outra, e arquivo de placa conhecida usa o modelo dessa placa em vez de criar modelo novo com outro nome (só cria
+  se a placa ainda não tem modelo). Testado em simulação contra o catálogo real. Copiado para o ZimaOS (backup
+  `*.bak-20261022`); **falta reiniciar o vigia**. Placa `DAAM9AMB8D0` (`15de3d56`) e modelo "15-7559" (`311b86f2`)
+  ficaram vazios: apagar pelo SQL Editor (o modo automático bloqueia `delete`).
 
 - **2026-10-22** — Correção: o esquema PDF do Dell AM9 (`AM9A_MB_PVT_20150819.pdf`, consolidado nessa mesma
   placa horas antes) não aparecia na busca da tela de associação mesmo com placa/modelo/fabricante certos e

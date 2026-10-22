@@ -37,6 +37,8 @@ export const MODEL_RULES = [
   ["5567|la-d801p|lad801p|bal20|dell he", "Dell", "Notebook", "Inspiron 15 5567", "LA-D801P"],
   ["la-d802p|lad802p|bal21", "Dell", "Notebook", "Inspiron 15 5000 (BAL21)", "LA-D802P"],
   ["5565|la-d804p|lad804p|bal23", "Dell", "Notebook", "Inspiron 15 5565", "LA-D804P"],
+  // "DAAM9AMB8D0" e erro de digitacao que ja vem no nome dos arquivos de origem.
+  ["7559|da0am9mb|daam9amb", "Dell", "Notebook", "Inspiron 15 7559", "DA0AM9MB8D0"],
   ["e5550|zam80|la-a911p", "Dell", "Notebook", "Latitude E5550", "LA-A911P"],
   ["3581|la-g714p", "Dell", "Notebook", "Inspiron 15 3581", "LA-G714P"],
   ["p114g|19765|nakia", "Dell", "Notebook", "Inspiron (P114G) Nakia", "19765-1"],
