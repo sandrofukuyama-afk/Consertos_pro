@@ -73,7 +73,8 @@ export function DiagnosticChatComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(defaultMessage ?? "");
   const [photos, setPhotos] = useState<File[]>([]);
-  // "Pensar mais" vale so para a proxima mensagem (Opus com esforco alto: mais lento).
+  // "Claude forte" vale so para a proxima mensagem: esforco alto e investigacao a
+  // fundo (plano de medicao completo). Mais lento e mais caro.
   const [deep, setDeep] = useState(false);
   const [state, setState] = useState<SendState>({ phase: "idle" });
   // Mesmo id em todas as tentativas da mesma mensagem: se a primeira chegou ao
@@ -369,14 +370,14 @@ export function DiagnosticChatComposer({
           aria-pressed={deep}
           disabled={busy}
           onClick={() => setDeep((value) => !value)}
-          title="Usa a IA mais forte nesta mensagem (custa cerca do dobro). Use quando o caso travar."
+          title="Investiga o caso a fundo nesta mensagem (casos parecidos, esquema, boardview, datasheets) e devolve o diagnóstico provável com um plano de medição completo. Leva alguns minutos e custa mais (US$ 0,50 a 3)."
           className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
             deep
               ? "border-[var(--accent-copper)] bg-[var(--accent-copper)] text-white"
               : "border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--foreground)]"
           }`}
         >
-          🧠 Pensar mais{deep ? " ✓" : ""}
+          🧠 Claude forte{deep ? " ✓" : ""}
         </button>
         <p className="hidden text-[11px] text-[var(--muted)] sm:block">
           Enter envia • Shift+Enter quebra linha • medições e hipóteses citadas na conversa são registradas pela IA

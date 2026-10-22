@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildChatUserContent,
+  effortMessage,
   isClaudeChatConfigured,
   runClaudeDiagnosticAgent,
   type ClaudeChatProgressEvent,
@@ -113,6 +114,29 @@ const PERSONA_PROMPT = [
   "- Sem preambulo, sem conclusao, sem titulos nem secoes. Raciocinio so em meia",
   "  linha, quando o motivo do passo nao for obvio.",
   "- Portugues do Brasil; nada de JSON ou formulario.",
+].join("\n");
+
+// "Claude forte" (botao no chat): so para a pergunta em que foi pedido. Vai como
+// mensagem de sistema depois da pergunta (o prompt fixo nunca muda) e vale sobre
+// o "Formato da resposta" so nesta resposta.
+const DEEP_MODE_INSTRUCTIONS = [
+  "MODO CLAUDE FORTE, so para a pergunta do tecnico logo acima (nas seguintes volte",
+  "ao normal). O tecnico quer poupar tempo de bancada: investigue o caso a fundo",
+  "AGORA, antes de responder, em vez de ir um passo por vez.",
+  "- Comece por buscar_casos_resolvidos (mesma placa/modelo e o sintoma) e pelos",
+  "  registros do caso. Depois siga no esquema e no boardview toda a cadeia",
+  "  envolvida (rails, enables, power good, quem gera o que, o que pende em cada",
+  "  rail) e pesquise datasheet/falha conhecida na web se mudar a decisao.",
+  "- Confira nomes reais de nets, referencias, pinos e test points antes de citar.",
+  "- Registre ou atualize as hipoteses com o que apurou.",
+  "Resposta (pode ser mais longa que o normal, mas objetiva):",
+  "1. Diagnostico provavel: as 1-3 causas mais provaveis, em ordem, com o porque",
+  "   (cite casos resolvidos parecidos se houver).",
+  "2. **Plano de medicao completo**, em ordem, numa lista: o que medir, onde",
+  "   (referencia/pino/net/test point), condicao da placa (fonte/bateria, ligada ou",
+  "   nao), valor esperado e o que cada resultado indica. Agrupe o que da para medir",
+  "   na mesma condicao, para o tecnico fazer tudo de uma vez.",
+  "3. O que fazer se o plano confirmar a causa (troca, teste final).",
 ].join("\n");
 
 function buildCaseBrief(
@@ -290,7 +314,10 @@ export async function sendDiagnosticChatMessage(
   const caseBrief = buildCaseBrief(context, workbench, similarCases, relatedDocuments);
   const caseBriefHash = createHash("sha256").update(caseBrief).digest("hex");
 
+  // "Claude forte": esforco alto a partir desta pergunta (volta ao normal no fim
+  // da resposta, ver withEffortReset).
   const newMessages: ChatMessage[] = [
+    ...(options.deep ? [effortMessage(true)] : []),
     {
       role: "user",
       content: await buildChatUserContent(
@@ -302,9 +329,17 @@ export async function sendDiagnosticChatMessage(
   // O estado do caso vai como mensagem de sistema depois da pergunta, e so
   // quando mudou: as instrucoes fixas no topo nunca mudam (cache) e a conversa
   // guardada nunca e editada, so cresce.
-  if (caseBriefHash !== thread.caseBriefHash) {
+  const caseBriefChanged = caseBriefHash !== thread.caseBriefHash;
+  if (caseBriefChanged) {
     newMessages.push({ role: "system", content: caseBrief });
   }
+  if (options.deep) {
+    newMessages.push({ role: "system", content: DEEP_MODE_INSTRUCTIONS });
+  }
+  // Depois de uma resposta do "Claude forte", o esforco volta ao normal para as
+  // proximas mensagens (a conversa so cresce: nada e apagado nem editado).
+  const withEffortReset = (messages: ChatMessage[]) =>
+    options.deep ? [...messages, effortMessage(false)] : messages;
 
   const actions: string[] = [];
   const wroteToCase = { value: false };
@@ -340,7 +375,7 @@ export async function sendDiagnosticChatMessage(
           {
             role: "user",
             content: await buildChatUserContent(
-              `${newMessages.length > 1 ? `${caseBrief}\n\n---\n\n` : ""}${userRawText}`,
+              `${caseBriefChanged ? `${caseBrief}\n\n---\n\n` : ""}${userRawText}${options.deep ? `\n\n---\n\n${DEEP_MODE_INSTRUCTIONS}` : ""}`,
               newAttachments.map((item) => ({ mimeType: item.mimeType, base64: item.base64 })),
               { inline: true },
             ),
@@ -362,11 +397,13 @@ export async function sendDiagnosticChatMessage(
     // Guarda a pergunta mesmo sem resposta, para a IA saber o que foi dito.
     await saveChatThread(supabase, diagnosticId, caseBriefHash, [
       ...thread.messages,
-      ...newMessages,
-      {
-        role: "assistant",
-        content: [{ type: "text", text: "(A resposta a esta mensagem falhou por erro técnico e não chegou ao técnico.)" }],
-      },
+      ...withEffortReset([
+        ...newMessages,
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "(A resposta a esta mensagem falhou por erro técnico e não chegou ao técnico.)" }],
+        },
+      ]),
     ]).catch(() => undefined);
     throw error;
   }
@@ -377,7 +414,7 @@ export async function sendDiagnosticChatMessage(
   try {
     await saveChatThread(supabase, diagnosticId, caseBriefHash, [
       ...thread.messages,
-      ...result.appendedMessages,
+      ...withEffortReset(result.appendedMessages),
     ]);
   } catch (error) {
     // A resposta ja existe: nunca perde-la por falha ao guardar a conversa
@@ -387,8 +424,7 @@ export async function sendDiagnosticChatMessage(
     console.error("[chat] falha ao guardar a conversa completa; guardando so o texto:", threadSaveIssue);
     await saveChatThread(supabase, diagnosticId, caseBriefHash, [
       ...thread.messages,
-      ...newMessages,
-      { role: "assistant", content: [{ type: "text", text: replyText }] },
+      ...withEffortReset([...newMessages, { role: "assistant", content: [{ type: "text", text: replyText }] }]),
     ]).catch((fallbackError) => console.error("[chat] falha tambem ao guardar so o texto:", fallbackError));
   }
 
@@ -467,7 +503,8 @@ function toPlainTextHistory(messages: ChatMessage[]): ChatMessage[] {
     }
 
     const role = message.role === "assistant" ? "assistant" : "user";
-    const text = message.role === "system" ? `[Estado do caso naquele momento]\n${parts.join("\n")}` : parts.join("\n");
+    const label = parts[0].startsWith("MODO CLAUDE FORTE") ? "Instrução daquela mensagem" : "Estado do caso naquele momento";
+    const text = message.role === "system" ? `[${label}]\n${parts.join("\n")}` : parts.join("\n");
     plain.push({ role, content: [{ type: "text", text }] });
   }
 

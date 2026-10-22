@@ -16,9 +16,9 @@ type SavedChatPhoto = {
   storagePath: string;
 };
 
-// A rota do chat pode rodar ate 300 s; passado isso, uma pergunta sem resposta
+// A rota do chat pode rodar ate 800 s; passado isso, uma pergunta sem resposta
 // nao esta mais sendo processada e pode ser respondida de novo.
-const CHAT_TURN_MAX_RUNTIME_MS = 330_000;
+const CHAT_TURN_MAX_RUNTIME_MS = 830_000;
 
 /**
  * "Tentar de novo" reenvia o mesmo client_message_id. Se a pergunta ja foi
@@ -202,7 +202,7 @@ export async function postDiagnosticChatMessage(
   }
 
   // A IA encerrou o caso: a tela pede o parecer tecnico num pedido separado
-  // (aqui nao cabe: a resposta longa ja pode ter gasto quase os 300 s da funcao).
+  // (aqui nao cabe: a resposta longa ja pode ter gasto boa parte do tempo da funcao).
   return { closedCase };
 }
 

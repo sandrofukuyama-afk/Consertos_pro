@@ -167,6 +167,21 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "buscar_casos_resolvidos",
+    description:
+      "Procura casos JA ENCERRADOS da oficina parecidos com este: mesma placa, mesmo modelo e/ou palavras (sintoma, componente, net, codigo de placa). Devolve para cada um o relato, o resumo, a causa confirmada, a solucao aplicada e as medicoes fora da faixa. Use no comeco de um caso e sempre que travar: um defeito ja resolvido na mesma placa costuma encurtar o diagnostico.",
+    input_schema: {
+      type: "object",
+      properties: {
+        palavras: {
+          type: "string",
+          description:
+            "Palavras para procurar, em qualquer ordem (ex.: 'nao liga PU28', 'curto 3VALW', 'DA0P5DMB8C0'). Vazio = so pela placa/modelo deste caso.",
+        },
+      },
+    },
+  },
+  {
     name: "registrar_medicao",
     description:
       "Grava no caso uma medicao que o TECNICO informou ter feito. Nunca registre valores esperados, estimados ou inventados como medidos.",
@@ -675,6 +690,120 @@ async function readCaseRecords(ctx: DiagnosticAgentToolContext) {
     medicoes: measurements.data ?? [],
     hipoteses: hypotheses.data ?? [],
     testes: tests.data ?? [],
+  };
+}
+
+type ResolvedCaseRow = {
+  id: string;
+  case_status: string;
+  resolution_summary: string | null;
+  final_failure_mode: string | null;
+  repair_outcome: string | null;
+  created_at: string;
+  diagnostics: {
+    id: string;
+    equipment_label: string | null;
+    initial_problem_report: string | null;
+    current_summary: string | null;
+    primary_board_id: string | null;
+    equipment_model_id: string | null;
+  } | null;
+  confirmed_causes: Array<{ title: string | null; technical_explanation: string | null }> | null;
+  applied_solutions: Array<{ title: string | null; procedure_description: string | null }> | null;
+};
+
+const MAX_RESOLVED_CASES = 6;
+const MAX_RESOLVED_CASE_MEASUREMENTS = 8;
+
+async function searchResolvedCases(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
+  const words = normalizeCatalogName(readString(input, "palavras") ?? "")
+    .split(" ")
+    .filter((word) => word.length >= 2);
+
+  const [{ data: current }, { data: rows, error }] = await Promise.all([
+    ctx.supabase
+      .from("diagnostics")
+      .select("primary_board_id, equipment_model_id")
+      .eq("id", ctx.diagnosticId)
+      .maybeSingle(),
+    ctx.supabase
+      .from("resolved_cases")
+      .select(
+        "id, case_status, resolution_summary, final_failure_mode, repair_outcome, created_at, diagnostics(id, equipment_label, initial_problem_report, current_summary, primary_board_id, equipment_model_id), confirmed_causes(title, technical_explanation), applied_solutions(title, procedure_description)",
+      )
+      .order("created_at", { ascending: false })
+      .range(0, 999),
+  ]);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const scored = ((rows ?? []) as unknown as ResolvedCaseRow[])
+    .filter((row) => row.diagnostics && row.diagnostics.id !== ctx.diagnosticId)
+    .map((row) => {
+      const diagnostic = row.diagnostics!;
+      const sameBoard = Boolean(current?.primary_board_id && diagnostic.primary_board_id === current.primary_board_id);
+      const sameModel = Boolean(
+        current?.equipment_model_id && diagnostic.equipment_model_id === current.equipment_model_id,
+      );
+      const haystack = normalizeCatalogName(
+        [
+          diagnostic.equipment_label,
+          diagnostic.initial_problem_report,
+          diagnostic.current_summary,
+          row.resolution_summary,
+          row.final_failure_mode,
+          ...(row.confirmed_causes ?? []).flatMap((cause) => [cause.title, cause.technical_explanation]),
+          ...(row.applied_solutions ?? []).flatMap((solution) => [solution.title, solution.procedure_description]),
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+      const matchedWords = words.filter((word) => haystack.includes(word)).length;
+      return { row, sameBoard, sameModel, matchedWords, score: (sameBoard ? 5 : 0) + (sameModel ? 3 : 0) + matchedWords };
+    })
+    .filter((item) => item.sameBoard || item.sameModel || item.matchedWords > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_RESOLVED_CASES);
+
+  const diagnosticIds = scored.map((item) => item.row.diagnostics!.id);
+  const { data: measurements } = diagnosticIds.length
+    ? await ctx.supabase
+        .from("measurements")
+        .select("diagnostic_id, point_label, measured_value_text, unit, expected_value_text, measurement_context")
+        .in("diagnostic_id", diagnosticIds)
+        .eq("is_out_of_range", true)
+        .order("measured_at", { ascending: true })
+    : { data: [] };
+
+  ctx.actions.push(`Casos resolvidos: buscou ${words.length ? `"${words.join(" ")}"` : "pela placa/modelo"}`);
+
+  return {
+    encontrados: scored.length,
+    casos: scored.map(({ row, sameBoard, sameModel }) => {
+      const diagnostic = row.diagnostics!;
+      return {
+        equipamento: diagnostic.equipment_label,
+        mesma_placa: sameBoard,
+        mesmo_modelo: sameModel,
+        resultado: row.case_status,
+        relato: diagnostic.initial_problem_report?.slice(0, 300) ?? null,
+        resumo: (row.resolution_summary ?? diagnostic.current_summary)?.slice(0, 500) ?? null,
+        modo_de_falha: row.final_failure_mode,
+        causa: (row.confirmed_causes ?? []).map((cause) => `${cause.title}: ${cause.technical_explanation ?? ""}`.slice(0, 400)),
+        solucao: (row.applied_solutions ?? []).map((solution) =>
+          `${solution.title}: ${solution.procedure_description ?? ""}`.slice(0, 400),
+        ),
+        medicoes_fora_da_faixa: (measurements ?? [])
+          .filter((measurement) => measurement.diagnostic_id === diagnostic.id)
+          .slice(0, MAX_RESOLVED_CASE_MEASUREMENTS)
+          .map(
+            (measurement) =>
+              `${measurement.point_label}: ${measurement.measured_value_text ?? "?"}${measurement.unit ? ` ${measurement.unit}` : ""}${measurement.expected_value_text ? ` (esperado ${measurement.expected_value_text})` : ""}`,
+          ),
+      };
+    }),
   };
 }
 
@@ -1272,6 +1401,7 @@ const TOOL_HANDLERS: Record<
   ler_pagina_do_esquema: readSchematicPage,
   valores_de_referencia: readReferenceValues,
   consultar_registros_do_caso: readCaseRecords,
+  buscar_casos_resolvidos: searchResolvedCases,
   registrar_medicao: recordMeasurement,
   registrar_hipotese: recordHypothesis,
   atualizar_hipotese: updateHypothesis,

@@ -5,7 +5,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { postDiagnosticChatMessage } from "@/lib/services/diagnostic-chat-post";
 import { createClient } from "@/lib/supabase/server";
 
-export const maxDuration = 300;
+// "Claude forte" investiga com ate 25 voltas e pode levar varios minutos (Vercel
+// Pro com Fluid compute aceita ate 800 s).
+export const maxDuration = 800;
 
 // Envia a mensagem do chat e devolve a resposta da IA aos poucos (uma linha JSON
 // por evento), para o tecnico ver o texto sendo escrito em vez de esperar tudo.

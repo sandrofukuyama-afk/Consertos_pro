@@ -22,10 +22,14 @@ const DEFAULT_CLAUDE_DEEP_EFFORT = "high";
 const CLAUDE_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
 // Voltas de consulta por mensagem. A conversa inteira fica em cache, entao cada
 // volta extra custa pouco; o limite so evita que uma resposta se arraste.
+// "Claude forte" investiga o caso a fundo de uma vez: bem mais voltas.
 const MAX_AGENT_ITERATIONS = 10;
-// A conversa completa (com tudo o que a IA consultou) e reenviada a cada
-// mensagem. Passando deste tamanho, a API resume o inicio automaticamente.
-const COMPACTION_TRIGGER_TOKENS = 100_000;
+const MAX_DEEP_AGENT_ITERATIONS = 25;
+// A conversa completa (com tudo o que a IA consultou) e reenviada a cada volta,
+// e reler e o que mais custa num caso longo (Dell 7559: ~190 mil tokens por
+// resposta em 22/10). Passando deste tamanho, a API resume o inicio. 50 mil e o
+// minimo aceito; era 100 mil ate 22/10.
+const COMPACTION_TRIGGER_TOKENS = 60_000;
 const COMPACTION_INSTRUCTIONS = [
   "Resuma o inicio desta conversa de diagnostico de placa para o tecnico continuar sem perder nada.",
   "Mantenha obrigatoriamente: equipamento/placa; cada medicao com ponto, condicao da placa",
@@ -41,6 +45,9 @@ const CHAT_BETAS = [
   "server-side-fallback-2026-07-01",
   "compact-2026-01-12",
   "thinking-binding-controls-2026-08-01",
+  // Esforco por mensagem ("Claude forte"): trocar o esforco no topo do pedido
+  // invalidaria o cache da conversa inteira (e de novo na mensagem seguinte).
+  "mid-conversation-output-config-2026-07-01",
 ];
 // Modo de seguranca: o minimo possivel (historico so em texto, sem raciocinio
 // salvo), para responder mesmo se a API recusar algo do pedido completo.
@@ -67,6 +74,14 @@ export function getClaudeChatEffort(deep = false): ClaudeEffort {
     return configured;
   }
   return deep ? DEFAULT_CLAUDE_DEEP_EFFORT : DEFAULT_CLAUDE_CHAT_EFFORT;
+}
+
+/**
+ * Mensagem de sistema sem texto que troca o esforco de raciocinio dali em diante
+ * sem invalidar o cache. "Claude forte" sobe antes da pergunta e volta depois.
+ */
+export function effortMessage(deep: boolean): Anthropic.Beta.BetaMessageParam {
+  return { role: "system", content: [], output_config: { effort: getClaudeChatEffort(deep) } };
 }
 
 export function isClaudeChatConfigured() {
@@ -274,7 +289,10 @@ export async function runClaudeDiagnosticAgent(args: {
   /** Mensagens novas desta vez: a do tecnico e, se mudou, o estado do caso. */
   newMessages: Anthropic.Beta.BetaMessageParam[];
   toolContext: DiagnosticAgentToolContext;
-  /** "Pensar mais": usa o modelo mais forte (e mais caro) nesta mensagem. */
+  /**
+   * "Claude forte": mais voltas de consulta nesta mensagem. O esforco maior vem
+   * por mensagem de sistema na conversa (ver effortMessage), nao do topo.
+   */
   deep?: boolean;
   /** Recebe o texto conforme a IA escreve e as consultas que ela faz. */
   onProgress?: (event: ClaudeChatProgressEvent) => void;
@@ -287,7 +305,10 @@ export async function runClaudeDiagnosticAgent(args: {
 
   const client = new Anthropic();
   const requestedModel = getClaudeChatModelName(Boolean(args.deep));
-  const effort = getClaudeChatEffort(Boolean(args.deep));
+  // Esforco do topo sempre o mesmo (cache). No modo de seguranca nao ha esforco
+  // por mensagem, entao o "Claude forte" usa o do topo.
+  const effort = getClaudeChatEffort(Boolean(args.safeMode && args.deep));
+  const maxIterations = args.deep ? MAX_DEEP_AGENT_ITERATIONS : MAX_AGENT_ITERATIONS;
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     ...DIAGNOSTIC_AGENT_TOOLS,
     { type: "web_search_20260209", name: "web_search", max_uses: 3 },
@@ -312,8 +333,8 @@ export async function runClaudeDiagnosticAgent(args: {
   let pausedText = "";
   const sources: string[] = [];
 
-  for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration += 1) {
-    const isLastIteration = iteration === MAX_AGENT_ITERATIONS - 1;
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    const isLastIteration = iteration === maxIterations - 1;
     const stream = client.beta.messages.stream({
       model: requestedModel,
       max_tokens: MAX_OUTPUT_TOKENS,
@@ -361,6 +382,17 @@ export async function runClaudeDiagnosticAgent(args: {
     // trocar de modelo no meio) e as buscas na web, cobradas a parte.
     const webSearches = message.usage.server_tool_use?.web_search_requests ?? 0;
     webSearchCount += webSearches;
+    // O resumo automatico (compactacao) e uma chamada a parte, fora do uso do topo.
+    for (const entry of message.usage.iterations ?? []) {
+      if (entry.type !== "compaction") continue;
+      costUsd += estimateCostUsd(message.model, entry.input_tokens, entry.output_tokens, {
+        cacheReadTokens: entry.cache_read_input_tokens,
+        cacheWriteTokens: entry.cache_creation_input_tokens,
+        cacheWrite1hTokens: entry.cache_creation?.ephemeral_1h_input_tokens ?? 0,
+      });
+      tokensInput += entry.input_tokens;
+      tokensOutput += entry.output_tokens;
+    }
     costUsd +=
       estimateCostUsd(message.model, message.usage.input_tokens, message.usage.output_tokens, {
         cacheReadTokens: message.usage.cache_read_input_tokens ?? 0,
@@ -417,7 +449,7 @@ export async function runClaudeDiagnosticAgent(args: {
     );
     const nextUserContent: Anthropic.Beta.BetaContentBlockParam[] = [...toolResults];
 
-    if (iteration === MAX_AGENT_ITERATIONS - 2) {
+    if (iteration === maxIterations - 2) {
       nextUserContent.push({
         type: "text",
         text: "Limite de consultas desta resposta atingido. Responda agora ao técnico com o que já foi apurado e diga o que falta verificar.",

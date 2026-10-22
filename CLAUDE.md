@@ -32,8 +32,13 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   `diagnostic-agent-tools.ts`). Dia a dia em **Opus 5.5 esforço `medium`** desde 19/10 (`ANTHROPIC_CHAT_MODEL`/
   `ANTHROPIC_CHAT_EFFORT`; em `high` de 18 a 19/10 algumas respostas pensavam 2–4 min) — Opus desde 18/10 — o dono relatou que o Sonnet 5.5 esforço `medium` (usado até então
   pra cortar custo) não dava conta de casos mais difíceis e precisou terminar um diagnóstico (MS-1563) pelo
-  Claude Code por fora. Botão **"🧠 Pensar mais"** e o parecer técnico usam **Opus 5.5 esforço `high`**
-  (`ANTHROPIC_CHAT_DEEP_MODEL`/`ANTHROPIC_CHAT_DEEP_EFFORT`).
+  Claude Code por fora. Botão **"🧠 Claude forte"** (era "Pensar mais") e o parecer técnico usam **Opus 5.5 esforço
+  `high`** (`ANTHROPIC_CHAT_DEEP_MODEL`/`ANTHROPIC_CHAT_DEEP_EFFORT`). No chat o esforço do topo do pedido é sempre o do
+  dia a dia; o "Claude forte" sobe o esforço por **mensagem de sistema sem texto** (`effortMessage`, beta
+  `mid-conversation-output-config-2026-07-01`) antes da pergunta e volta ao normal depois da resposta — trocar o
+  esforço do topo invalidaria o cache da conversa inteira. Ele também tem até **25 voltas** e instruções próprias
+  (`DEEP_MODE_INSTRUCTIONS` em `diagnostic-chat.ts`: casos resolvidos parecidos + esquema/boardview a fundo →
+  diagnóstico provável + **plano de medição completo**). Rota do chat com `maxDuration = 800`.
 - **Envio do chat**: o composer (`diagnostic-chat-composer.tsx`) faz `fetch` em `POST /api/diagnosticos/[id]/chat`,
   que devolve a resposta **aos poucos** (NDJSON: `text`, `tools`, `ping` a cada 10 s, `done`/`error`); no fim a tela
   faz `router.refresh()`. Sem sinal por 45 s (90 s no primeiro) → aviso "Tentar de novo" sem perder o texto.
@@ -45,10 +50,10 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   **Só cresce, nunca editar mensagens antigas** (quebra o cache e o raciocínio salvo; contas novas levam 400).
   As instruções fixas no `system` nunca mudam; o estado do caso vai como mensagem `role: "system"` depois da
   pergunta, só quando muda (`case_brief_hash`). Cache de 1 h na última mensagem do técnico; compactação
-  automática da API a partir de 100 mil tokens. Fotos vão pela Files API (file_id). Casos antigos ganham a
+  automática da API a partir de **60 mil tokens** (era 100 mil até 22/10; mínimo aceito 50 mil). Fotos vão pela Files API (file_id). Casos antigos ganham a
   conversa montada uma vez a partir do texto de `ai_responses`. Se a API recusar o pedido (400) antes de qualquer
   ação, o chat responde em **modo de segurança** (histórico em texto) e marca `memoryMode: "fallback"` na resposta.
-- **Custo da IA**: cada mensagem do chat é um loop de até **10 voltas**.
+- **Custo da IA**: cada mensagem do chat é um loop de até **10 voltas** (25 no "Claude forte").
   Limites: web_search 3, web_fetch 2 (máx. 4000 tokens por página), instruções fixas em cache de 1 h.
   Ferramentas devolvem pouco: net com até 30 componentes/10 test points, busca no esquema 8 páginas,
   página do esquema 8000 caracteres, valores de referência 60 (constantes no topo de `diagnostic-agent-tools.ts`).
@@ -157,6 +162,23 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-22** — **"Claude forte" no chat do caso** (pedido do dono: "algo mais inteligente que me poupe tempo pra
+  diagnosticar"; antes ele terminava casos difíceis pelo Claude Code). O botão "🧠 Pensar mais" virou **"🧠 Claude
+  forte"**: nessa mensagem a IA investiga a fundo de uma vez (até 25 voltas em vez de 10, esforço `high`) e devolve as
+  causas mais prováveis + um **plano de medição completo** agrupado por condição da placa, em vez de um passo por vez.
+  Ferramenta nova `buscar_casos_resolvidos` (casos encerrados da oficina por mesma placa/modelo e palavras, com causa,
+  solução e medições fora da faixa; disponível no chat normal também). Hoje só há 7 casos encerrados e quase nenhum com
+  causa/solução estruturadas — fica útil conforme a IA encerrar casos com `encerrar_diagnostico`. Esforço alto por
+  mensagem de sistema (não pelo topo do pedido) para não perder o cache; rota do chat com `maxDuration` 800 s. **Mais
+  barato nos casos longos:** compactação a partir de 60 mil tokens (era 100 mil) — no Dell 7559 as últimas respostas
+  reliam ~190 mil tokens; e o custo agora inclui a chamada de compactação (vinha fora do `usage` do topo). Estimativa: o
+  "Claude forte" custa US$ 0,50–3 por uso. Decisões: rodar na Vercel (não no ZimaOS: atualizar lá é manual e depende
+  da oficina); consulta livre ao banco (SQL) **não** foi feita — o modo automático do Claude Code bloqueou por ser
+  superfície de execução arbitrária; trocada pela ferramenta específica só de leitura. Alterações no sistema pela IA
+  com cartão Confirmar/Cancelar ficaram para depois. **Não testado com chamada real** (sem chave da Anthropic local):
+  conferir após o 1º uso que `memoryMode` continua `"full"` (se a API recusar o esforço por mensagem, o chat cai no
+  modo de segurança e grava `memoryFallbackReason`).
 
 - **2026-10-22** — "O chat é muito fraco, não guarda a memória" (dono, caso Dell 7559 `857c806d`). Conferido: a
   memória estava inteira (40 respostas `memoryMode: "full"`, 16 medições gravadas, 1 compactação com bom resumo). As
