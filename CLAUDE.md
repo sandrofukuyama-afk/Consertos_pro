@@ -158,6 +158,16 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-22** — Vigia **usa os aparelhos dos casos abertos** como referência (observação do dono: "no início do
+  chat eu coloquei o modelo, a placa e a versão — isso não deveria acontecer"). O caso 7559 (`857c806d`) começou com
+  "dell inspiron 15-7559 p57f daam9amb8d0 rev d" e o chat gravou certo (Inspiron 15 7559 / DA0AM9MB8D0), mas o vigia
+  nunca consultava os casos: a IA dele olhava só o nome do arquivo. Agora `openCaseEquipment()` (`importer.mjs`, casos
+  draft/active/waiting_input com fabricante/modelo/placas do catálogo, 1 consulta por rodada) vai no pedido da IA
+  (`ai-classify.mjs`): "se o arquivo for de um desses aparelhos, devolva exatamente esses nomes, mesmo com erro de
+  digitação no código da placa". Somado ao `findTypoBoard` e ao "modelo da placa" do mesmo dia. Copiado para o ZimaOS
+  (backup `*.bak-20261022`); **falta reiniciar o vigia**. Não testado com a IA de verdade (a chave da IA do vigia só
+  existe no `.env` do ZimaOS); a lista dos casos foi conferida no banco real.
+
 - **2026-10-22** — Vigia: "demora para aparecer" o boardview reenviado do Dell 7559 (relato do dono). **Não era
   demora**: o `.brd` caiu na pasta às 11:41:31 e entrou no banco às 11:41:34 (vigia com `POLL_SECONDS=30`,
   `STABLE_SECONDS=15`: um arquivo leva de segundos a ~1 min). Ele entrou na **placa errada**: o nome traz o erro de

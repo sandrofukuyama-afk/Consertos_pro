@@ -35,7 +35,22 @@ export function isAiClassifyEnabled() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
-export async function aiClassify(relativePath, kind) {
+function openCasesText(openCases) {
+  if (!openCases?.length) return "";
+  const lines = openCases.map((item) =>
+    `- ${[item.fabricante, item.modelo, item.placa].filter(Boolean).join(" | ")}${item.rotulo ? ` (caso: ${item.rotulo})` : ""}`,
+  );
+  return [
+    "",
+    "Aparelhos na bancada agora (casos abertos, com os nomes do catalogo). Quase sempre o arquivo e de um deles:",
+    "se for, devolva EXATAMENTE esses fabricante/modelo/placa, mesmo que o nome do arquivo escreva diferente ou",
+    "tenha erro de digitacao no codigo da placa (ex.: DAAM9AMB8D0 no arquivo = DA0AM9MB8D0 no catalogo).",
+    "Se nao for de nenhum, ignore a lista.",
+    ...lines,
+  ].join("\n");
+}
+
+export async function aiClassify(relativePath, kind, openCases = []) {
   if (!isAiClassifyEnabled()) {
     return null;
   }
@@ -50,7 +65,9 @@ export async function aiClassify(relativePath, kind) {
       fallbacks: "default",
       output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
       system: SYSTEM,
-      messages: [{ role: "user", content: `Tipo detectado: ${kind}\nCaminho: ${relativePath}` }],
+      messages: [
+        { role: "user", content: `Tipo detectado: ${kind}\nCaminho: ${relativePath}${openCasesText(openCases)}` },
+      ],
     });
 
     if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {

@@ -315,5 +315,33 @@ export async function createLibraryImporter(supabase, { uploaderEmail, dryRun = 
     return asset.id;
   }
 
-  return { created, hasHash, ensureTargets, importFile };
+  /**
+   * Aparelhos dos casos abertos ({ fabricante, modelo, placa }), com os nomes do
+   * catalogo: a IA do vigia usa como referencia, ja que quase sempre o arquivo
+   * enviado e do aparelho que esta na bancada. Carregado uma vez por rodada.
+   */
+  let openCases = null;
+  async function openCaseEquipment() {
+    if (openCases) return openCases;
+    const { data, error } = await supabase
+      .from("diagnostics")
+      .select("equipment_label, manufacturers(name), equipment_models(model_name), diagnostic_boards(boards(board_code))")
+      .in("status", ["draft", "active", "waiting_input"])
+      .limit(50);
+    if (error) {
+      openCases = [];
+      return openCases;
+    }
+    openCases = (data ?? [])
+      .map((row) => ({
+        fabricante: row.manufacturers?.name ?? "",
+        modelo: row.equipment_models?.model_name ?? "",
+        placa: (row.diagnostic_boards ?? []).map((link) => link.boards?.board_code).filter(Boolean).join(", "),
+        rotulo: row.equipment_label ?? "",
+      }))
+      .filter((item) => item.modelo || item.placa);
+    return openCases;
+  }
+
+  return { created, hasHash, ensureTargets, importFile, openCaseEquipment };
 }

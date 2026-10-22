@@ -152,7 +152,7 @@ async function processItem(itemPath, importer) {
       }
 
       if (item.incompleto && isAiClassifyEnabled()) {
-        const guess = await aiClassify(relativePath, item.tipo);
+        const guess = await aiClassify(relativePath, item.tipo, await importer.openCaseEquipment());
         if (guess) {
           item = {
             ...item,
