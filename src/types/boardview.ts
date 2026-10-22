@@ -6,7 +6,8 @@ export type BoardviewVariant =
   | "encoded-landrex-testlink"
   | "plain-text-or-unknown-variant"
   | "gencad-1.4"
-  | "tebo-ict-asc";
+  | "tebo-ict-asc"
+  | "brd2-text";
 
 export type BoardviewPoint = {
   xMil: number;
@@ -35,7 +36,7 @@ export type BoardviewCounts = {
 };
 
 export type BoardviewMetadata = {
-  format: "landrex-testlink" | "gencad" | "tebo-asc";
+  format: "landrex-testlink" | "gencad" | "tebo-asc" | "brd2";
   variant: BoardviewVariant;
   sourceEncoding: "latin1";
   declaredCounts: BoardviewCounts;

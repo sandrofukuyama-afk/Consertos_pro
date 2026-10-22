@@ -60,7 +60,7 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   `metadata.display_name` (nunca na descrição, que guarda o caminho de origem com "Bios").
   Mesma lógica na IA, na Biblioteca, em `/busca`, no painel do caso e no bot (`technical-library-search.ts`).
 - Supabase devolve no máximo 1000 linhas por consulta: paginar com `.range()`.
-- O laboratório (`/boardview/lab`) lê **.brd (Landrex testlink), .cad (GenCAD 1.4, texto puro —
+- O laboratório (`/boardview/lab`) lê **.brd (Landrex testlink ou BRD2 texto, `brd2.ts`), .cad (GenCAD 1.4, texto puro —
   exportado por ferramentas como CAMCAD/Mentor Graphics) e .asc (Tebo-ICT, ex.: Surface)**, além de **.pdf**; `src/lib/boardview/parse.ts`
   detecta o formato pelo conteúdo (cabeçalho `$HEADER`/`GENCAD`), não pela extensão, então um `.cad` ou
   `.brd` com qualquer um dos dois conteúdos abre normalmente. GenCAD não traz o contorno da placa pronto
@@ -157,6 +157,22 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-10-22** — "O chat é muito fraco, não guarda a memória" (dono, caso Dell 7559 `857c806d`). Conferido: a
+  memória estava inteira (40 respostas `memoryMode: "full"`, 16 medições gravadas, 1 compactação com bom resumo). As
+  falhas reais: (1) **os boardviews do caso nunca abriram** ("Não foi possível localizar os blocos esperados do
+  boardview Landrex/Testlink"): o `.brd` é **BRD2** (texto `BRDOUT/NETS/PARTS/PINS/NAILS`, o do OpenBoardView). Sem
+  placa, a IA usou referências do esquema PVT, que não existem na rev D (PU13), e mandou gravar o "4M no U15" — no
+  boardview real o U15 é chaveador de alimentação e só existe **um** chip de BIOS (U16); o regulador da DDR é o PU4.
+  Parser novo `src/lib/boardview/brd2.ts` (+ teste), ligado em `parse.ts`: **17 `.brd` da biblioteca que não abriam
+  agora abrem** (Dell 7559, Quanta FF9/FFG/QLM, Sony Vaio HK1/HK5, GL10FH, 08212…; 7559: 1.963 peças, 9.822 pinos,
+  52 ms). Continuam sem abrir: 4 `.bdv` criptografados (Acer LA-6901P, LA-J871P, LAL181P, QD-BLBD) e 2 `.brd` binários
+  (LA-D802P, LA-D801P com senha). (2) Na volta da compactação a pergunta do técnico ficou fora do resumo e foi
+  ignorada: `COMPACTION_INSTRUCTIONS` agora manda guardar o relato inicial/comportamento da placa, o que foi conferido
+  no boardview × só no esquema, e terminar com a última mensagem do técnico literal. (3) Esqueceu que a placa liga
+  sozinha com a fonte e pediu "só fonte, sem ligar": regra nova no `PERSONA_PROMPT` (reler o comportamento da placa,
+  responder primeiro o que foi perguntado, conferir referência no boardview antes de medir/retirar/gravar e contar
+  os chips de flash antes de gravar BIOS). Mudança de prompt descarta o raciocínio antigo uma vez (`drop_block`).
 
 - **2026-10-22** — Correção: arquivos já associados não apareciam ao abrir o caso **Dell 7559** (`857c806d`) —
   relato do dono "em outros PCs". **Não é por PC** (mesmo banco/app em qualquer lugar); os outros 2 casos abertos

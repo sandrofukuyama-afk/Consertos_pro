@@ -1,3 +1,4 @@
+import { Brd2ParserError, isBrd2Boardview, parseBrd2Boardview } from "@/lib/boardview/brd2";
 import { GenCadParserError, isGenCadBoardview, parseGenCadBoardview } from "@/lib/boardview/gencad";
 import { isTeboAscBoardview, parseTeboAscBoardview, TeboAscParserError } from "@/lib/boardview/tebo-asc";
 import {
@@ -6,11 +7,11 @@ import {
 } from "@/lib/boardview/landrex-testlink";
 import type { ParsedBoardview } from "@/types/boardview";
 
-export { GenCadParserError, LandrexBoardviewParserError, TeboAscParserError };
+export { Brd2ParserError, GenCadParserError, LandrexBoardviewParserError, TeboAscParserError };
 
 /**
- * Detects the boardview text format (GenCAD 1.4 or Landrex/Testlink
- * encoded .brd) and parses it into the shared ParsedBoardview shape.
+ * Detects the boardview text format (GenCAD 1.4, Tebo ASC, BRD2 or
+ * Landrex/Testlink encoded .brd) and parses it into the shared ParsedBoardview shape.
  * Content is sniffed rather than relying on the file extension, since
  * both formats commonly travel under loosely-named extensions
  * (.cad, .brd, .bdv) depending on which tool exported them.
@@ -24,6 +25,10 @@ export function parseBoardviewFile(bytes: Uint8Array | ArrayBuffer): ParsedBoard
 
   if (isTeboAscBoardview(input)) {
     return parseTeboAscBoardview(input);
+  }
+
+  if (isBrd2Boardview(input)) {
+    return parseBrd2Boardview(input);
   }
 
   return parseLandrexTestlinkBoardview(input);

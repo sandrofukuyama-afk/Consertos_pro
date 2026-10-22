@@ -32,6 +32,10 @@ const COMPACTION_INSTRUCTIONS = [
   "(fonte/bateria plugadas, ligada ou nao) e valor; o que o tecnico ja informou ou respondeu;",
   "nets, componentes, test points e paginas de esquema/boardview ja localizados e o que se",
   "concluiu deles; hipoteses com status; o que ja foi descartado; o proximo passo combinado.",
+  "Mantenha tambem o relato inicial com o comportamento da placa (ex.: liga sozinha ao conectar",
+  "a fonte, cicla, sem imagem) e quais referencias foram conferidas no boardview da placa real",
+  "e quais vieram so do esquema de outra revisao. Termine com a ULTIMA mensagem do tecnico",
+  "copiada literalmente, marcada como pergunta pendente que deve ser respondida agora.",
 ].join(" ");
 const CHAT_BETAS = [
   "server-side-fallback-2026-07-01",
