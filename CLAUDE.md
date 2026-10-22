@@ -160,6 +160,18 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-22** — Correção: o esquema PDF do Dell AM9 (`AM9A_MB_PVT_20150819.pdf`, consolidado nessa mesma
+  placa horas antes) não aparecia na busca da tela de associação mesmo com placa/modelo/fabricante certos e
+  campo de texto vazio — só os 2 BIOS apareciam (relato do dono, com foto mostrando os filtros exatamente
+  certos). Causa: `searchTechnicalAssets()` só calcula `manufacturerId` de um arquivo a partir do
+  `metadata` ou do vínculo em `technical_asset_links` — nunca a partir do `board_id`/`equipment_model_id`
+  gravados **direto** na linha (que é como esse PDF ficou, sem link nem metadata de fabricante, por ter sido
+  associado pelo laboratório boardview em vez de importado pelo vigia). `manufacturerId` ficava `null`, e
+  com o filtro "Fabricante: Dell" ativo e texto vazio, o arquivo era descartado — mesmo bug de fundo dos
+  arquivos "sem associação forte" que a correção de 18/10 tentou consertar, só que por um caminho diferente
+  (fabricante calculado errado, não placa/modelo). Agora a busca também consulta `boards`/`equipment_models`
+  pelos ids gravados direto na linha como último fallback. Confirmado contra os dados reais: o fabricante da
+  placa/modelo do PDF bate com Dell, o arquivo deve voltar a aparecer.
 - **2026-10-22** — Correção: caso Dell Inspiron 15 7559 (placa AM9) com a tela de associação vazia (relato do
   dono, com foto — "porque quando abro o caso em outro PC os arquivos não aparecem"). **Não era sobre PC**
   (app e banco são os mesmos em qualquer lugar): o caso tinha **duas placas cadastradas** para o mesmo

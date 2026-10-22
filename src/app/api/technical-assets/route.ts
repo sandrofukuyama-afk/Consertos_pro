@@ -866,6 +866,26 @@ async function searchTechnicalAssets(request: Request) {
   const normalizedQuery = normalizeSearchText(query);
   const hasSpecificQuery = queryTokens.some((token) => !GENERIC_SEARCH_TOKENS.has(token));
 
+  // Fabricante por `board_id`/`equipment_model_id` gravado direto na linha (sem
+  // vinculo em technical_asset_links e sem metadata.manufacturerId -- caso de
+  // arquivo associado via board_id/equipment_model_id direto, ex.: upload pelo
+  // laboratorio boardview): sem isso, manufacturerId ficava nulo e o arquivo
+  // sumia de qualquer busca com o filtro de fabricante ativo.
+  const directBoardIds = Array.from(new Set(rows.map((row) => row.board_id).filter((id): id is string => Boolean(id))));
+  const directModelIds = Array.from(
+    new Set(rows.map((row) => row.equipment_model_id).filter((id): id is string => Boolean(id))),
+  );
+  const [{ data: directBoards }, { data: directModels }] = await Promise.all([
+    directBoardIds.length
+      ? supabase.from("boards").select("id, manufacturer_id").in("id", directBoardIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; manufacturer_id: string | null }> }),
+    directModelIds.length
+      ? supabase.from("equipment_models").select("id, manufacturer_id").in("id", directModelIds)
+      : Promise.resolve({ data: [] as Array<{ id: string; manufacturer_id: string | null }> }),
+  ]);
+  const manufacturerIdByBoardId = new Map((directBoards ?? []).map((board) => [board.id, board.manufacturer_id]));
+  const manufacturerIdByModelId = new Map((directModels ?? []).map((model) => [model.id, model.manufacturer_id]));
+
   const items = rows
     .map((row) => {
       const matchingLink =
@@ -912,6 +932,8 @@ async function searchTechnicalAssets(request: Request) {
           metadataManufacturerId ??
           modelRelation?.manufacturer_id ??
           boardRelation?.manufacturer_id ??
+          (resolvedEquipmentModelId ? manufacturerIdByModelId.get(resolvedEquipmentModelId) : null) ??
+          (resolvedBoardId ? manufacturerIdByBoardId.get(resolvedBoardId) : null) ??
           null,
         manufacturerName: metadataManufacturerName,
         description: String(metadata.description ?? "").trim() || null,
