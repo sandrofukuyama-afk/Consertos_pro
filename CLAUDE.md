@@ -158,6 +158,17 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-10-22** — Correção: arquivos já associados não apareciam ao abrir o caso **Dell 7559** (`857c806d`) —
+  relato do dono "em outros PCs". **Não é por PC** (mesmo banco/app em qualquer lugar); os outros 2 casos abertos
+  (Surface, Dell 5565) estavam certos. Causa na tela do caso (`getDiagnosticDetail` em `diagnostics.ts`): com
+  `equipment_details.associatedTechnicalAssetIds` preenchido ela mostrava **só** esses arquivos — e o único escolhido
+  era o `.brd` antigo que sumiu da biblioteca (pendência 11), então o caso ficava vazio mesmo com 4 arquivos na placa.
+  E arquivos gravados direto na placa (`technical_assets.board_id`) sem linha em `technical_asset_links` (esquema e 2
+  BIOS, consolidação de 22/10) nunca apareciam. Agora: escolhidos primeiro **e depois** o resto da placa/modelo do
+  caso, incluindo os gravados direto na placa/modelo (consulta nova em `technical_assets`). Dados: vínculos criados
+  para os 3 arquivos, boardview escolhido = `.brd` reenviado (`3396d723`), esquema = `AM9A_MB_PVT_20150819.pdf`
+  (`350bd2dc`), rótulo "Dell Inspiron 15 7559 (DA0AM9MB8D0)". Não testado visualmente no navegador.
+
 - **2026-10-22** — Vigia **usa os aparelhos dos casos abertos** como referência (observação do dono: "no início do
   chat eu coloquei o modelo, a placa e a versão — isso não deveria acontecer"). O caso 7559 (`857c806d`) começou com
   "dell inspiron 15-7559 p57f daam9amb8d0 rev d" e o chat gravou certo (Inspiron 15 7559 / DA0AM9MB8D0), mas o vigia

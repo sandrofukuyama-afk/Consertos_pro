@@ -112,6 +112,19 @@ type TechnicalAssetRow = {
     | null;
 };
 
+type DirectTechnicalAssetRow = {
+  id: string;
+  original_filename: string;
+  asset_type: string;
+  file_format: string;
+  file_size_bytes: number;
+  created_at: string;
+  board_id: string | null;
+  equipment_model_id: string | null;
+  boards: { board_code: string | null } | Array<{ board_code: string | null }> | null;
+  equipment_models: { model_name: string | null } | Array<{ model_name: string | null }> | null;
+};
+
 type DiagnosticTechnicalAssetLinkRow = {
   technical_asset_id: string;
   board_id: string | null;
@@ -679,6 +692,7 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     referenceMeasurements,
     technicalAssetLinksResult,
     preferredTechnicalAssetsResult,
+    directTechnicalAssetsResult,
   ] =
     await Promise.all([
       Promise.resolve(
@@ -791,6 +805,27 @@ export async function getDiagnosticDetail(diagnosticId: string) {
             )
             .in("id", technicalAssetPreferences.associatedTechnicalAssetIds)
         : Promise.resolve({ data: [] as TechnicalAssetRow[] }),
+      // Arquivos gravados direto na placa/modelo sem linha em technical_asset_links
+      // (ex.: associados pelo laboratorio): sem isso o caso nao os mostrava.
+      technicalAssetLinkFilters.length > 0
+        ? supabase
+            .from("technical_assets")
+            .select(
+              `
+                id,
+                original_filename,
+                asset_type,
+                file_format,
+                file_size_bytes,
+                created_at,
+                board_id,
+                equipment_model_id,
+                boards(board_code),
+                equipment_models(model_name)
+              `,
+            )
+            .or(technicalAssetLinkFilters.join(","))
+        : Promise.resolve({ data: [] as DirectTechnicalAssetRow[] }),
     ]);
 
   const attachments = attachmentsList;
@@ -912,31 +947,45 @@ export async function getDiagnosticDetail(diagnosticId: string) {
 
   const contextualTechnicalAssets = Array.from(
     new Map(
-      ((technicalAssetLinksResult.data ?? []) as DiagnosticTechnicalAssetLinkRow[])
-        .map((linkRow) => {
-          const asset = pickRelation(linkRow.technical_assets);
-          if (!asset) {
-            return null;
-          }
-
-          return [
-            asset.id,
-            buildTechnicalAssetItem(asset, {
-              boardId: linkRow.board_id ?? null,
-              equipmentModelId: linkRow.equipment_model_id ?? null,
-              boardName: pickRelation(linkRow.boards)?.board_code ?? null,
-              modelName: pickRelation(linkRow.equipment_models)?.model_name ?? null,
-            }),
-          ] as const;
-        })
-        .filter(
-          (
-            entry,
-          ): entry is readonly [
-            string,
-            DiagnosticDetail["technicalAssets"][number],
-          ] => Boolean(entry),
+      [
+        ...((directTechnicalAssetsResult.data ?? []) as DirectTechnicalAssetRow[]).map(
+          (row) =>
+            [
+              row.id,
+              buildTechnicalAssetItem(row, {
+                boardId: row.board_id ?? null,
+                equipmentModelId: row.equipment_model_id ?? null,
+                boardName: pickRelation(row.boards)?.board_code ?? null,
+                modelName: pickRelation(row.equipment_models)?.model_name ?? null,
+              }),
+            ] as const,
         ),
+        ...((technicalAssetLinksResult.data ?? []) as DiagnosticTechnicalAssetLinkRow[])
+          .map((linkRow) => {
+            const asset = pickRelation(linkRow.technical_assets);
+            if (!asset) {
+              return null;
+            }
+
+            return [
+              asset.id,
+              buildTechnicalAssetItem(asset, {
+                boardId: linkRow.board_id ?? null,
+                equipmentModelId: linkRow.equipment_model_id ?? null,
+                boardName: pickRelation(linkRow.boards)?.board_code ?? null,
+                modelName: pickRelation(linkRow.equipment_models)?.model_name ?? null,
+              }),
+            ] as const;
+          })
+          .filter(
+            (
+              entry,
+            ): entry is readonly [
+              string,
+              DiagnosticDetail["technicalAssets"][number],
+            ] => Boolean(entry),
+          ),
+      ],
     ).values(),
   );
 
@@ -984,10 +1033,13 @@ export async function getDiagnosticDetail(diagnosticId: string) {
     ).values(),
   );
 
-  const technicalAssets = (
-    technicalAssetPreferences.associatedTechnicalAssetIds.length
-      ? preferredTechnicalAssets
-      : contextualTechnicalAssets
+  // Escolhidos para o caso primeiro, depois o resto da placa/modelo. Antes, com
+  // escolhidos gravados, so eles apareciam — e se o escolhido tinha sido apagado
+  // da biblioteca o caso ficava sem nenhum arquivo (Dell 7559, 22/10).
+  const technicalAssets = Array.from(
+    new Map(
+      [...preferredTechnicalAssets, ...contextualTechnicalAssets].map((asset) => [asset.id, asset] as const),
+    ).values(),
   ).sort((left, right) => {
     const leftPreferredIndex = technicalAssetPreferences.associatedTechnicalAssetIds.indexOf(left.id);
     const rightPreferredIndex = technicalAssetPreferences.associatedTechnicalAssetIds.indexOf(
