@@ -7,9 +7,11 @@ import {
   buildChatUserContent,
   effortMessage,
   isClaudeChatConfigured,
+  type ChatEffortMode,
   runClaudeDiagnosticAgent,
   type ClaudeChatProgressEvent,
 } from "@/lib/ai/assistant-llm-claude";
+import { isSimpleChatMessage } from "@/lib/ai/chat-effort";
 import { getSpecialistAgent } from "@/lib/domain/specialist-agents";
 import {
   getDiagnosticAssistantContext,
@@ -57,6 +59,11 @@ const PERSONA_PROMPT = [
   "  existirem. Se nenhum arquivo estiver ativo, procure na biblioteca pelo codigo da",
   "  placa ou modelo e ative o arquivo certo; se nao existir, diga isso e trabalhe com",
   "  conhecimento geral e pesquisa na web, deixando claro o que e inferencia.",
+  "- Economize voltas: cada volta de consultas reenvia a conversa inteira. Planeje o",
+  "  que precisa saber e peca tudo de uma vez, com varias ferramentas na mesma volta",
+  "  (em paralelo). Para componentes e nets, prefira investigar_pontos (ate 4 de uma",
+  "  vez: boardview + paginas do esquema + medicoes ja feitas). Registrar medicao e",
+  "  hipotese pode ir na mesma volta das consultas.",
   "- Mantenha o caso registrado: quando o tecnico informar uma medicao, grave-a com",
   "  registrar_medicao; registre hipoteses com evidencias, e fortaleca, enfraqueca,",
   "  descarte ou confirme as existentes conforme os resultados; mantenha o resumo do",
@@ -314,10 +321,15 @@ export async function sendDiagnosticChatMessage(
   const caseBrief = buildCaseBrief(context, workbench, similarCases, relatedDocuments);
   const caseBriefHash = createHash("sha256").update(caseBrief).digest("hex");
 
-  // "Claude forte": esforco alto a partir desta pergunta (volta ao normal no fim
-  // da resposta, ver withEffortReset).
+  // "Claude forte": esforco alto a partir desta pergunta; mensagem simples ("ok",
+  // "deu 19 V"): esforco baixo. Volta ao normal no fim da resposta (withEffortReset).
+  const effortMode: ChatEffortMode = options.deep
+    ? "deep"
+    : isSimpleChatMessage(trimmedMessage, newAttachments.length)
+      ? "light"
+      : "normal";
   const newMessages: ChatMessage[] = [
-    ...(options.deep ? [effortMessage(true)] : []),
+    ...(effortMode !== "normal" ? [effortMessage(effortMode)] : []),
     {
       role: "user",
       content: await buildChatUserContent(
@@ -336,10 +348,10 @@ export async function sendDiagnosticChatMessage(
   if (options.deep) {
     newMessages.push({ role: "system", content: DEEP_MODE_INSTRUCTIONS });
   }
-  // Depois de uma resposta do "Claude forte", o esforco volta ao normal para as
-  // proximas mensagens (a conversa so cresce: nada e apagado nem editado).
+  // Depois de uma resposta com esforco trocado, volta ao normal para as proximas
+  // mensagens (a conversa so cresce: nada e apagado nem editado).
   const withEffortReset = (messages: ChatMessage[]) =>
-    options.deep ? [...messages, effortMessage(false)] : messages;
+    effortMode !== "normal" ? [...messages, effortMessage("normal")] : messages;
 
   const actions: string[] = [];
   const wroteToCase = { value: false };
@@ -440,6 +452,7 @@ export async function sendDiagnosticChatMessage(
       modelName: result.modelName,
       agentActions: actions,
       memoryMode: fallbackReason ? "fallback" : "full",
+      effortMode,
       // Custo estimado desta resposta (US$), para o contador de gastos do chat.
       costUsd: Math.round(result.costUsd * 10_000) / 10_000,
       ...(fallbackReason ? { memoryFallbackReason: fallbackReason } : {}),

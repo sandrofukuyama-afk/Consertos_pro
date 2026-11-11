@@ -126,6 +126,24 @@ export const DIAGNOSTIC_AGENT_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
   {
+    name: "investigar_pontos",
+    description:
+      "Consulta combinada, numa volta so, de 1 a 4 componentes ou nets: para cada um traz o detalhe do boardview (pinos e nets, ou componentes e test points da net), as paginas do esquema onde aparece (com trecho) e as medicoes ja registradas no caso com esse nome. Prefira esta a chamar detalhar_componente, detalhar_net e buscar_no_esquema separadas.",
+    input_schema: {
+      type: "object",
+      properties: {
+        alvos: {
+          type: "array",
+          items: { type: "string" },
+          minItems: 1,
+          maxItems: 4,
+          description: "Referencias ou nets exatas, ex.: [\"PU4\", \"+1.2V_DDR\"].",
+        },
+      },
+      required: ["alvos"],
+    },
+  },
+  {
     name: "buscar_no_esquema",
     description:
       "Procura um termo (net, componente, sinal) no texto do esquema PDF ativo e devolve as paginas onde aparece com um trecho de contexto.",
@@ -600,6 +618,95 @@ async function searchSchematic(ctx: DiagnosticAgentToolContext, input: Record<st
       vezes: match.occurrences,
       trecho: match.excerpt,
     })),
+  };
+}
+
+const MAX_INVESTIGATE_TARGETS = 4;
+const MAX_INVESTIGATE_SCHEMATIC_PAGES = 3;
+const MAX_INVESTIGATE_MEASUREMENTS = 6;
+
+function toolErrorText(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Junta boardview, esquema e medicoes de varios pontos numa volta so: cada volta
+ * a menos e uma releitura a menos da conversa inteira (custo e tempo).
+ */
+async function investigatePoints(ctx: DiagnosticAgentToolContext, input: Record<string, unknown>) {
+  const rawTargets = Array.isArray(input.alvos) ? input.alvos : [];
+  const targets = [
+    ...new Set(rawTargets.filter((item): item is string => typeof item === "string").map((item) => item.trim())),
+  ]
+    .filter(Boolean)
+    .slice(0, MAX_INVESTIGATE_TARGETS);
+
+  if (!targets.length) {
+    throw new ToolInputError("Informe em 'alvos' de 1 a 4 componentes ou nets.");
+  }
+
+  const [boardview, schematic, measurements] = await Promise.all([
+    ctx.workbench.loadBoardview().catch(() => null),
+    ctx.workbench.loadSchematicPages().catch(() => null),
+    ctx.supabase
+      .from("measurements")
+      .select("point_label, measured_value_text, unit, expected_value_text, is_out_of_range, measurement_context, measured_at")
+      .eq("diagnostic_id", ctx.diagnosticId)
+      .order("measured_at", { ascending: false })
+      .limit(100),
+  ]);
+  const measurementRows = (measurements.data ?? []) as Array<{ point_label: string | null } & Record<string, unknown>>;
+
+  const results = await Promise.all(
+    targets.map(async (target) => {
+      const upper = target.toUpperCase();
+      const entry: Record<string, unknown> = { alvo: target };
+
+      if (boardview) {
+        const isComponent = boardview.model.componentsByRef.has(target.toLowerCase());
+        const isNet = [...boardview.model.netsByName.keys()].some((name) => name.toUpperCase() === upper);
+        try {
+          if (isComponent) {
+            entry.componente = await describeComponent(ctx, { referencia: target });
+          } else if (isNet) {
+            entry.net = await describeNet(ctx, { net: target });
+          } else {
+            const suggestions = searchBoardviewLabModel(boardview.model, target, "both", 8).map((hit) => hit.title);
+            entry.boardview = `Nao encontrado no boardview. Parecidos: ${suggestions.join(", ") || "nenhum"}.`;
+          }
+        } catch (error) {
+          entry.boardview = toolErrorText(error);
+        }
+      }
+
+      if (schematic) {
+        const matches = findSchematicPdfMatches(schematic.pages, target);
+        entry.esquema = {
+          total_de_paginas_com_o_termo: matches.length,
+          paginas: matches.slice(0, MAX_INVESTIGATE_SCHEMATIC_PAGES).map((match) => ({
+            pagina: match.pageNumber,
+            trecho: match.excerpt,
+          })),
+        };
+      }
+
+      const measured = measurementRows
+        .filter((row) => (row.point_label ?? "").toUpperCase().includes(upper))
+        .slice(0, MAX_INVESTIGATE_MEASUREMENTS);
+      if (measured.length) {
+        entry.medicoes_ja_feitas = measured;
+      }
+
+      return entry;
+    }),
+  );
+
+  ctx.actions.push(`Investigou ${targets.join(", ")}`);
+
+  return {
+    ...(boardview ? { boardview: boardview.asset.title } : { aviso_boardview: "Nenhum boardview ativo neste caso." }),
+    ...(schematic ? { esquema: schematic.asset.title } : { aviso_esquema: "Nenhum esquema ativo neste caso." }),
+    resultados: results,
   };
 }
 
@@ -1397,6 +1504,7 @@ const TOOL_HANDLERS: Record<
   buscar_no_boardview: searchBoardview,
   detalhar_componente: describeComponent,
   detalhar_net: describeNet,
+  investigar_pontos: investigatePoints,
   buscar_no_esquema: searchSchematic,
   ler_pagina_do_esquema: readSchematicPage,
   valores_de_referencia: readReferenceValues,

@@ -76,12 +76,22 @@ export function getClaudeChatEffort(deep = false): ClaudeEffort {
   return deep ? DEFAULT_CLAUDE_DEEP_EFFORT : DEFAULT_CLAUDE_CHAT_EFFORT;
 }
 
+/** Esforco de mensagem simples ("ok", "deu 19 V"): ver isSimpleChatMessage. */
+export function getClaudeChatLightEffort(): ClaudeEffort {
+  const configured = process.env.ANTHROPIC_CHAT_LIGHT_EFFORT as ClaudeEffort | undefined;
+  return configured && CLAUDE_EFFORT_LEVELS.includes(configured) ? configured : "low";
+}
+
+export type ChatEffortMode = "normal" | "deep" | "light";
+
 /**
  * Mensagem de sistema sem texto que troca o esforco de raciocinio dali em diante
- * sem invalidar o cache. "Claude forte" sobe antes da pergunta e volta depois.
+ * sem invalidar o cache. "Claude forte" sobe e mensagem simples desce antes da
+ * pergunta; depois da resposta volta ao normal.
  */
-export function effortMessage(deep: boolean): Anthropic.Beta.BetaMessageParam {
-  return { role: "system", content: [], output_config: { effort: getClaudeChatEffort(deep) } };
+export function effortMessage(mode: ChatEffortMode): Anthropic.Beta.BetaMessageParam {
+  const effort = mode === "light" ? getClaudeChatLightEffort() : getClaudeChatEffort(mode === "deep");
+  return { role: "system", content: [], output_config: { effort } };
 }
 
 export function isClaudeChatConfigured() {

@@ -164,6 +164,19 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-11-12** — Chat mais econômico e mais rápido (sugestões 1 e 2 escolhidas pelo dono). (1) **Esforço
+  automático**: mensagem simples sem foto, até 80 caracteres, sem pergunta nem palavra de análise/sintoma grave ("ok",
+  "feito", "deu 19,5 V no PQ708") vai com esforço `low` (`isSimpleChatMessage` em `src/lib/ai/chat-effort.ts`, teste
+  `chat-effort.test.mts`; variável opcional `ANTHROPIC_CHAT_LIGHT_EFFORT`), pelo mesmo mecanismo do "Claude forte"
+  (mensagem de sistema só com `output_config`, sem quebrar o cache; volta ao normal depois). Cada resposta grava
+  `effortMode` (`normal`/`light`/`deep`) no `structured_response_json` para medir. (2) **Menos voltas**: ferramenta
+  nova `investigar_pontos` (1–4 componentes/nets numa chamada: boardview + até 3 páginas do esquema com trecho +
+  medições já registradas com aquele nome) e regra no `PERSONA_PROMPT` para pedir tudo numa volta, em paralelo — cada
+  volta a menos é uma releitura a menos da conversa inteira. Mudar ferramentas/prompt descarta o raciocínio salvo uma
+  vez por conversa (`drop_block`). Não testado com chamada real; conferir depois de 1 semana de uso o custo por
+  mensagem e a fatia de `light` (base: semana de 19/10, US$ 0,135 por mensagem estimado, ~US$ 0,11 com o preço certo
+  de leitura de cache).
+
 - **2026-11-12** — Conferido como o chat gasta créditos (pedido do dono). Semana de 19/10, Opus 5.5: 174 mensagens,
   US$ 23,41 estimados (média US$ 0,135, mediana 0,09, máx. 0,88); gravação de cache 1 h ~45%, leitura de cache ~33%,
   saída ~21%. Última mensagem do chat em 24/10. Correção: a estimativa cobrava leitura de cache a 10% da entrada
