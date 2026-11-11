@@ -1,19 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
 
-// Precos em USD por 1 milhao de tokens [entrada, saida]. O mais especifico vem primeiro.
-const PRICES: Array<[RegExp, number, number]> = [
+// Precos em USD por 1 milhao de tokens [entrada, saida, leitura de cache?].
+// O mais especifico vem primeiro. Sem leitura de cache informada = 10% da entrada.
+// Opus 5.5 e Sonnet 5.5 cobram a leitura de cache a 5% da entrada (0,20 e 0,10).
+const PRICES: Array<[RegExp, number, number, number?]> = [
   [/^gpt-4o-mini/, 0.15, 0.6],
   [/^text-embedding-3-small/, 0.02, 0],
   [/^claude-fable/, 10, 50],
-  [/^claude-opus-5-5/, 4, 20],
+  [/^claude-opus-5-5/, 4, 20, 0.2],
   [/^claude-opus/, 5, 25],
+  [/^claude-sonnet-5-5/, 2, 10, 0.1],
   [/^claude-sonnet-5/, 2, 10],
   [/^claude-sonnet/, 3, 15],
   [/^claude-haiku-5-5/, 0.1, 0.5],
   [/^claude-haiku/, 1, 5],
 ];
 
-// Cache do Claude: leitura custa 10% da entrada; gravacao 125% (5 min) ou 200% (1 h).
+// Cache do Claude: leitura padrao 10% da entrada (ver tabela acima); gravacao
+// 125% (5 min) ou 200% (1 h).
 const CACHE_READ_FACTOR = 0.1;
 const CACHE_WRITE_FACTOR = 1.25;
 const CACHE_WRITE_1H_FACTOR = 2;
@@ -35,14 +39,17 @@ export function estimateCostUsd(
   completionTokens: number,
   cache: CacheUsage = {},
 ) {
-  const [, inputPerMillion, outputPerMillion] = PRICES.find(([pattern]) => pattern.test(model)) ?? [null, 0, 0];
+  const [, inputPerMillion, outputPerMillion, cacheReadPerMillion] = PRICES.find(([pattern]) =>
+    pattern.test(model),
+  ) ?? [null, 0, 0];
+  const cacheReadPrice = cacheReadPerMillion ?? inputPerMillion * CACHE_READ_FACTOR;
   const cacheRead = cache.cacheReadTokens ?? 0;
   const cacheWrite = cache.cacheWriteTokens ?? 0;
   const cacheWrite1h = Math.min(cache.cacheWrite1hTokens ?? 0, cacheWrite);
 
   return (
     (promptTokens * inputPerMillion +
-      cacheRead * inputPerMillion * CACHE_READ_FACTOR +
+      cacheRead * cacheReadPrice +
       (cacheWrite - cacheWrite1h) * inputPerMillion * CACHE_WRITE_FACTOR +
       cacheWrite1h * inputPerMillion * CACHE_WRITE_1H_FACTOR +
       completionTokens * outputPerMillion) /

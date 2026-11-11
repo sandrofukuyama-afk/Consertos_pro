@@ -59,7 +59,8 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
   página do esquema 8000 caracteres, valores de referência 60 (constantes no topo de `diagnostic-agent-tools.ts`).
   A tela do caso mostra só a última troca; a conversa inteira fica em `/diagnosticos/[id]/historico`.
   `ai_token_logs` separa `cache_read_tokens`/`cache_write_tokens`; `estimated_cost_usd` usa a tabela
-  de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo); cache de 5 min = 1,25x, de 1 h = 2x. Parecer estruturado (`assistant-llm.ts`) também usa Claude;
+  de preços em `src/lib/services/token-logger.ts` (atualizar ao trocar de modelo); cache de 5 min = 1,25x, de 1 h = 2x;
+  leitura de cache = 10% da entrada, exceto Opus 5.5 (US$ 0,20/M) e Sonnet 5.5 (US$ 0,10/M), que são 5% (3ª coluna da tabela). Parecer estruturado (`assistant-llm.ts`) também usa Claude;
   OpenAI só como reserva sem chave Anthropic.
 - **Busca da biblioteca é por palavras em qualquer ordem**, no nome do arquivo e em
   `metadata.display_name` (nunca na descrição, que guarda o caminho de origem com "Bios").
@@ -162,6 +163,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 ## Registro de mudanças
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
+
+- **2026-11-12** — Conferido como o chat gasta créditos (pedido do dono). Semana de 19/10, Opus 5.5: 174 mensagens,
+  US$ 23,41 estimados (média US$ 0,135, mediana 0,09, máx. 0,88); gravação de cache 1 h ~45%, leitura de cache ~33%,
+  saída ~21%. Última mensagem do chat em 24/10. Correção: a estimativa cobrava leitura de cache a 10% da entrada
+  para todo modelo, mas Opus 5.5 e Sonnet 5.5 cobram 5% (US$ 0,20 e 0,10 por milhão) — "Gasto no caso" e
+  `estimated_cost_usd` mostravam a mais (a semana acima seria ~US$ 19,60). `token-logger.ts`: 3ª coluna opcional
+  na tabela `PRICES` com o preço da leitura de cache. Valores já gravados (logs e `costUsd` das respostas) não foram
+  recalculados.
 
 - **2026-10-22** — **"Claude forte" no chat do caso** (pedido do dono: "algo mais inteligente que me poupe tempo pra
   diagnosticar"; antes ele terminava casos difíceis pelo Claude Code). O botão "🧠 Pensar mais" virou **"🧠 Claude
