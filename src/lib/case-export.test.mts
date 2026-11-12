@@ -68,5 +68,26 @@ test("gera o Markdown com instrucoes, arquivos, medicoes e conversa", () => {
 
 test("nome do arquivo sem acento nem espaco", () => {
   assert.equal(buildCaseExportFileName(detail), "caso-dell-inspiron-15-7559-da0am9mb8d0-857c806d.md");
-  assert.equal(buildCaseExportFileName({ id: "abcdef123", label: "Placa de vídeo RTX 3060 ç" }), "caso-placa-de-video-rtx-3060-c-abcdef12.md");
+  assert.equal(
+    buildCaseExportFileName({ id: "abcdef123", label: "Placa de vídeo RTX 3060 ç", category: "Placa de vídeo", initialReport: "" }),
+    "caso-placa-de-video-rtx-3060-c-abcdef12.md",
+  );
+});
+
+test("caso sem modelo usa o aparelho do comeco do relato", () => {
+  const semModelo = {
+    id: "61a704c2-0000",
+    label: "Nao classificado",
+    category: "Nao classificado",
+    initialReport: "iPhone 14 problemas com a camera frontal , nao funciona",
+  };
+  assert.equal(buildCaseExportFileName(semModelo), "caso-iphone-14-61a704c2.md");
+  assert.equal(
+    buildCaseExportFileName({ ...semModelo, label: "Dell Notebook", category: "Notebook", initialReport: "Dell Inspiron 5565, não liga" }),
+    "caso-dell-inspiron-5565-61a704c2.md",
+  );
+  assert.equal(
+    buildCaseExportFileName({ ...semModelo, initialReport: "" }),
+    "caso-nao-classificado-61a704c2.md",
+  );
 });

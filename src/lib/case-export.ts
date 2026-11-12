@@ -55,8 +55,37 @@ function slug(value: string) {
   );
 }
 
-export function buildCaseExportFileName(detail: Pick<DiagnosticDetail, "id" | "label">) {
-  return `caso-${slug(detail.label)}-${detail.id.slice(0, 8)}.md`;
+// Rotulo de reserva da tela do caso (sem modelo nem equipment_label): so a categoria.
+const GENERIC_LABEL = /^(n[aã]o classificado|equipamento sem (nome|modelo))$/i;
+// Onde o relato deixa de falar do aparelho e passa a falar do defeito.
+const REPORT_STOP_WORDS = new Set(
+  "problema problemas com sem nao não defeito que quando liga ligando desliga apos após depois esta está tem foi nao, não, - – : , .".split(
+    " ",
+  ),
+);
+const MAX_REPORT_NAME_WORDS = 4;
+
+/** Nome do aparelho do caso; sem modelo/rotulo, o comeco do relato ("iPhone 14 problemas..." → "iPhone 14"). */
+export function caseDeviceName(detail: Pick<DiagnosticDetail, "label" | "category" | "initialReport">) {
+  const label = detail.label.trim();
+  const isGeneric = !label || GENERIC_LABEL.test(label) || label.toLowerCase().endsWith(detail.category.trim().toLowerCase());
+  if (!isGeneric) {
+    return label;
+  }
+
+  const words: string[] = [];
+  for (const raw of (detail.initialReport ?? "").split(/\s+/)) {
+    const word = raw.replace(/[,.;:!?]+$/, "");
+    if (!word || REPORT_STOP_WORDS.has(word.toLowerCase())) break;
+    words.push(word);
+    if (raw !== word || words.length >= MAX_REPORT_NAME_WORDS) break;
+  }
+
+  return words.join(" ") || label || "caso";
+}
+
+export function buildCaseExportFileName(detail: Pick<DiagnosticDetail, "id" | "label" | "category" | "initialReport">) {
+  return `caso-${slug(caseDeviceName(detail))}-${detail.id.slice(0, 8)}.md`;
 }
 
 export function buildCaseExportMarkdown(input: CaseExportInput) {
@@ -65,7 +94,7 @@ export function buildCaseExportMarkdown(input: CaseExportInput) {
   const lines: string[] = [];
 
   lines.push(
-    `# Caso de bancada: ${detail.label}`,
+    `# Caso de bancada: ${caseDeviceName(detail)}`,
     "",
     `Exportado do ConsertosPro em ${input.generatedAt.toLocaleString("pt-BR", { timeZone: "Asia/Tokyo" })} (horário do Japão).`,
     `Caso no app: ${caseUrl}`,
@@ -91,7 +120,7 @@ export function buildCaseExportMarkdown(input: CaseExportInput) {
   );
 
   lines.push("## Aparelho", "");
-  lines.push(`- Equipamento: ${detail.label}`);
+  lines.push(`- Equipamento: ${caseDeviceName(detail)}`);
   lines.push(`- Categoria: ${detail.category}`);
   lines.push(`- Fabricante / modelo: ${detail.manufacturer} / ${detail.model}`);
   if (detail.serialNumber) lines.push(`- Série: ${detail.serialNumber}`);

@@ -171,6 +171,9 @@ Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
   chat do app), aparelho, relato, resumo, encerramento, arquivos técnicos com **link do Storage válido 7 dias** (baixa
   sem login, `curl`), medições, hipóteses e a conversa inteira em texto. Montagem pura em `src/lib/case-export.ts`
   (teste `case-export.test.mts`); a rota usa `getDiagnosticDetail`. Fotos do chat não vão (só a contagem).
+  Ajuste no mesmo dia (relato do dono, caso iPhone 14 `61a704c2` baixava `caso-nao-classificado-…md`): caso sem
+  modelo/rótulo tem como rótulo só a categoria; agora `caseDeviceName()` usa o começo do relato até a 1ª palavra de
+  defeito ("problemas", "não", "com"… ou vírgula, máx. 4 palavras) → `caso-iphone-14-61a704c2.md`, também no título.
 
 - **2026-11-12** — Chat mais econômico e mais rápido (sugestões 1 e 2 escolhidas pelo dono). (1) **Esforço
   automático**: mensagem simples sem foto, até 80 caracteres, sem pergunta nem palavra de análise/sintoma grave ("ok",
