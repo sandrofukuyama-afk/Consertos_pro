@@ -378,12 +378,19 @@ export function DiagnosticBenchWorkspace({
               Converse como num chat: diga o que mediu, mande fotos, pergunte o próximo passo.
             </p>
           </div>
-          {hasTechnicalFiles ? (
-            <div className="flex gap-2">
-              {boardviewHref ? <ActionLink href={boardviewHref} label="Boardview" target={labTabTarget(detail.id)} /> : null}
-              {schematicHref ? <ActionLink href={schematicHref} label="Esquema" target={labTabTarget(detail.id)} /> : null}
-            </div>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {boardviewHref ? <ActionLink href={boardviewHref} label="Boardview" target={labTabTarget(detail.id)} /> : null}
+            {schematicHref ? <ActionLink href={schematicHref} label="Esquema" target={labTabTarget(detail.id)} /> : null}
+            {/* Caso em Markdown para continuar no Claude Code (plano Pro), sem credito de API. */}
+            <a
+              href={`/api/diagnosticos/${detail.id}/exportar`}
+              download
+              title="Baixa o caso (relato, medições, hipóteses, conversa e links dos arquivos) para continuar no Claude Code"
+              className="whitespace-nowrap rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:border-[rgba(109,94,242,0.45)]"
+            >
+              ⬇ Claude Code
+            </a>
+          </div>
         </div>
 
         {hiddenMessageCount ? (

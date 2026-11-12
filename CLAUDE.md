@@ -164,6 +164,14 @@ Regras de codificação/acentos: ver `AGENTS.md` (rodar `npm run check:encoding`
 
 Mais recente primeiro. Uma linha por entrega, com a data e o que mudou.
 
+- **2026-11-12** — **Exportar caso para o Claude Code** (pedido do dono: usar o plano Pro, que não serve para a API do
+  app — a `ANTHROPIC_API_KEY` é cobrada à parte e usar o login do plano no app vai contra os termos). Botão
+  "⬇ Claude Code" no topo do chat do caso → `GET /api/diagnosticos/[id]/exportar` baixa `caso-<rótulo>-<id>.md` com
+  instruções para o Claude Code (conduzir a bancada, conferir referência no boardview, resumo final para colar no
+  chat do app), aparelho, relato, resumo, encerramento, arquivos técnicos com **link do Storage válido 7 dias** (baixa
+  sem login, `curl`), medições, hipóteses e a conversa inteira em texto. Montagem pura em `src/lib/case-export.ts`
+  (teste `case-export.test.mts`); a rota usa `getDiagnosticDetail`. Fotos do chat não vão (só a contagem).
+
 - **2026-11-12** — Chat mais econômico e mais rápido (sugestões 1 e 2 escolhidas pelo dono). (1) **Esforço
   automático**: mensagem simples sem foto, até 80 caracteres, sem pergunta nem palavra de análise/sintoma grave ("ok",
   "feito", "deu 19,5 V no PQ708") vai com esforço `low` (`isSimpleChatMessage` em `src/lib/ai/chat-effort.ts`, teste
